@@ -11,6 +11,7 @@ import html
 import json
 import pathlib
 import re
+import unicodedata
 
 from . import colour, icons, palettes
 from .figures import FIGURES
@@ -372,6 +373,13 @@ class Site:
 
     # -- pages
 
+    def repeats_title(self, slug, sid):
+        """True when a section's heading says what the page title already says, in both languages of the pair."""
+        def same(code):
+            fold = lambda t: unicodedata.normalize("NFC", t or "").casefold()
+            return fold(self.pack_section(code, slug, sid).get("title")) == fold(self.title(code, slug))
+        return same(self.frm) and same(self.to)
+
     def render_section(self, slug, section):
         frm, to, sid = self.frm, self.to, section["id"]
         rows = []
@@ -395,8 +403,11 @@ class Site:
                         for code in (frm, to) for sec in [self.pack_section(code, slug, sid)] if sec.get("intro"))
         box = "".join(f'<div class="box"><h3>{self.commentary(code, sec["box"]["title"])}</h3><p>{self.markup(code, sec["box"]["body"])}</p></div>'
                       for code in (frm, to) for sec in [self.pack_section(code, slug, sid)] if sec.get("box"))
-        return (f'<section id="{sid}"><h2>{self.inline(frm, self.pack_section(frm, slug, sid)["title"])}'
-                f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>{intro}'
+        heading = ""
+        if not self.repeats_title(slug, sid):
+            heading = (f'<h2>{self.inline(frm, self.pack_section(frm, slug, sid)["title"])}'
+                       f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>')
+        return (f'<section id="{sid}">{heading}{intro}'
                 f'<table class="terms"><thead><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
                 f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
                 f'<tbody>{"".join(rows)}</tbody></table>{box}</section>')

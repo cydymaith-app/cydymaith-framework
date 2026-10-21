@@ -65,7 +65,8 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
   - [ ] **Try it with VoiceOver, and right to left** (switch the fixture interface to its right-to-left language).
   - [x] **Site search in the rail.** Done: the button is hidden until `search.js` runs (so without scripts there is no control that does nothing), then opens the card.
   - [ ] Consider a "recent" row of tiles on the home page for the last topics visited, only if it can be kept on the device and without nudging anyone to return.
-- [ ] **Entries should not repeat the title.** A topic's title already gives the English and Cymraeg names, and the table heading row ("Temperature  Tymheredd") and the column headers (ENGLISH, CYMRAEG) repeat them. Leave out what the title or column headers already say, so more of each entry fits on screen. Check the same on every topic page.
+- [x] **Entries should not repeat the title.** Done: a section heading that matches the page title in both languages (case and normal form ignored) is left out (`repeats_title` in `phrasebook/site.py`); the section keeps its `id`, so links still land. Column headers stay, as they name the languages and appear once per table.
+  - [ ] Add a test that a section titled like its page has no `<h2>`, and look at the topic pages in a browser.
 
 ## Done
 
