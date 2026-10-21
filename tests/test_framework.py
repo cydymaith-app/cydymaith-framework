@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import fixture  # noqa: E402
 import phrasebook  # noqa: E402
-from phrasebook import cli, content, plural  # noqa: E402
+from phrasebook import channels, cli, content, dictionary, plural  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
 from phrasebook.messages import Messages  # noqa: E402
 
@@ -446,6 +446,96 @@ class CommentaryLanguageTests(Scratch):
         fixture.edit(proj / "packs" / "qab" / "pack.json", lambda d: d.update(commentary_lang="Not A Code"))
         with self.assertRaises(ContentError):
             content.validate(content.read(proj))
+
+
+# ---------------------------------------------------------------- listen-first rows, order lines and linked tiles
+
+
+class ListenFirstTests(Scratch):
+    def site(self, proj, pair=("qaa", "qab")):
+        raw = content.read(proj)
+        return phrasebook.Site(raw, content.pick_edition(raw)[1], pair=pair), raw
+
+    def test_other_forms_a_word_is_heard_as_are_shown_under_its_row_in_the_language_they_are_written_in(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].update(also=["qab uno"])
+        )
+        page = self.site(proj)[0].render_all()["p1.html"]
+        self.assertRegex(page, r'<tr class="also-row"><td colspan="2"><span class="also-label">.*?Also heard as.*?</span> ')
+        self.assertIn('<span class="also-form" lang="qab">qab uno</span>', page)
+
+    def test_only_a_row_that_has_other_forms_gets_an_extra_row(self):
+        page = self.site(self.project())[0].render_all()["p1.html"]
+        self.assertEqual(page.count('class="also-row"'), 1)
+
+    def test_the_other_forms_must_be_new_non_empty_texts(self):
+        for bad in ([""], "qab one", ["qab one"], ["x", "x"]):
+            proj = self.project()
+            fixture.edit(
+                proj / "packs" / "qab" / "pages" / "p1.json",
+                lambda d, bad=bad: d["sections"]["s1"]["concepts"]["c1"].update(also=bad),
+            )
+            with self.assertRaises(ContentError, msg=repr(bad)):
+                content.validate(content.read(proj))
+
+    def test_the_dictionary_carries_the_other_forms_for_search(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].update(also=["qab uno"])
+        )
+        site, raw = self.site(proj)
+        entry = next(e for e in dictionary.index(raw, content.pick_edition(raw)[1])["entries"] if e["concept"] == "c1")
+        self.assertEqual(entry["also"], {"qab": ["qab uno"]})
+        self.assertEqual([t["text"] for t in entry["terms"]["qab"]], ["qab one"])
+
+    def test_a_section_can_say_in_what_order_its_words_run(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d["sections"]["s1"].update(order="lightest to heaviest")
+        )
+        page = self.site(proj)[0].render_all()["p1.html"]
+        self.assertRegex(page, r'<p class="order">.*?Order: lightest to heaviest.*?</p>')
+
+    def test_a_group_shows_the_pages_it_links_to_as_tiles_after_its_own(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "structure.json",
+            lambda d: d.update(groups=[{"id": "g1", "pages": ["p1"], "links": ["points"]}, {"id": "g2", "pages": ["points"]}]),
+        )
+        fixture.edit(proj / "packs" / "qab" / "pack.json", lambda d: d["groups"].update(g2="qab group two"))
+        fixture.edit(proj / "packs" / "qaa" / "pack.json", lambda d: d["groups"].update(g2="qaa group two"))
+        fixture.edit(proj / "packs" / "qac" / "pack.json", lambda d: d["groups"].update(g2="qac group two"))
+        pages = self.site(proj)[0].render_all()
+        g1 = pages["group-g1.html"]
+        self.assertLess(g1.index('href="p1.html"'), g1.index('href="points.html"'))
+        self.assertIn('href="points.html"', pages["group-g2.html"])
+
+    def test_a_link_must_name_a_page_that_is_not_already_in_the_group(self):
+        for links in (["nowhere"], ["p1"], ["points", "points"]):
+            proj = self.project()
+            fixture.edit(proj / "structure.json", lambda d, links=links: d["groups"][0].update(links=links))
+            with self.assertRaises(ContentError, msg=repr(links)):
+                content.validate(content.read(proj))
+
+    def test_a_held_back_page_leaves_the_links_that_point_at_it_and_a_link_does_not_keep_a_group_alive(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "structure.json",
+            lambda d: d.update(
+                groups=[
+                    {"id": "g1", "pages": ["p1"]},
+                    {"id": "g2", "pages": ["points"], "links": ["p1"]},
+                    {"id": "g3", "pages": [], "links": ["points"]},
+                ]
+            ),
+        )
+        for code in fixture.LANGS:
+            fixture.edit(proj / "packs" / code / "pack.json", lambda d: d["groups"].update(g2="two", g3="three"))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: [s.update(status="development") for s in d["sections"]])
+        selected = channels.select(content.read(proj))
+        self.assertEqual([g["id"] for g in selected["structure"]["groups"]], ["g2"])
+        self.assertEqual(selected["structure"]["groups"][0]["links"], [])
 
 
 # ---------------------------------------------------------------- text rules

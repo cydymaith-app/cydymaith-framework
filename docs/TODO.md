@@ -25,6 +25,9 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
   - [ ] Consider an "only my variety" mode that hides the other forms, if dimming proves too busy.
   - [ ] Varieties are one flat axis today. Add a second axis (for example formal and colloquial) only if the content needs it.
   - [ ] Research and add more regional pairs, and check each label. Confirm the dimming has enough contrast in the dark theme.
+- [x] **Listen-first rows, "also heard as", section order and linked tiles.** Done: the first language leads each row (the language heard), `also` forms are chips that search can find, a section can state its order, and a group can show a tile for a page that lives in another group. See `FRAMEWORK.md`.
+  - [ ] Show the regional form's label and the `also` forms on the lookup card as a hint of why a word matched.
+  - [ ] Show linked pages in `tree.json`, once something reads it.
 - [ ] **Choose the language pair ("from" and "to").** This replaces the old "swap direction" item and covers any number of languages.
   - Render every language of the edition into each page (all cells present, two shown), so size grows linearly with languages. Without scripts it shows the edition's default pair.
   - Needs table rows turned into CSS grid rows so columns can be reordered. Keep table semantics with explicit roles.

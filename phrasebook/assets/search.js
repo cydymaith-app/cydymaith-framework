@@ -75,7 +75,8 @@
     return dictionary.entries.map(function (entry, order) {
       var texts = {};
       langs.forEach(function (lang) {
-        texts[lang] = (entry.terms[lang] || []).map(function (t) { return t.text; });
+        texts[lang] = (entry.terms[lang] || []).map(function (t) { return t.text; })
+          .concat((entry.also && entry.also[lang]) || []);
       });
       return { order: order, entry: entry, keys: keysOf(texts, langs) };
     });

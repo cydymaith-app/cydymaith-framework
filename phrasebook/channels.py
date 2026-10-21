@@ -52,6 +52,8 @@ def select(raw, channel=RELEASE):
             pack["pages"].pop(slug, None)
     for group in out["structure"]["groups"]:
         group["pages"] = [slug for slug in group.get("pages", []) if slug in kept]
+        if "links" in group:
+            group["links"] = [slug for slug in group["links"] if slug in kept]
     out["structure"]["groups"] = [g for g in out["structure"]["groups"] if g["pages"]]
     return out
 

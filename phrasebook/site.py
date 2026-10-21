@@ -45,7 +45,12 @@ class Site:
         self.icons = {name: icons.markup(text) for name, text in raw["icons"].items()}
         self.ui_icons = {f.stem: icons.markup(f.read_text(encoding="utf-8")) for f in sorted(UI_ICONS.glob("*.svg"))}
         self.groups = [
-            {"id": g["id"], "icon": g.get("icon"), "pages": [s for s in g["pages"] if s in self.slugs]}
+            {
+                "id": g["id"],
+                "icon": g.get("icon"),
+                "pages": [s for s in g["pages"] if s in self.slugs],
+                "links": [s for s in g.get("links", []) if s in self.slugs],
+            }
             for g in raw["structure"]["groups"]
         ]
         self.groups = [g for g in self.groups if g["pages"]]
@@ -448,6 +453,21 @@ class Site:
                 forms = "".join(self.form_markup(to, f, s, "l2") for f, s in zip(ft, self.show_sets(to, ft)))
                 cell = f'<span class="forms">{forms}</span>'
             rows.append(f'<tr id="{sid}.{cid}">{head}<td>{cell}{notes}</td></tr>')
+            also = "".join(
+                f'<span class="also-form"{self.la(code)}>{e(a)}</span>'
+                for code, c in ((frm, cf), (to, ct))
+                for a in c.get("also", [])
+            )
+            if also:
+                rows.append(
+                    f'<tr class="also-row"><td colspan="2"><span class="also-label">{self.h("also_heard")}</span> {also}</td></tr>'
+                )
+        order = "".join(
+            f'<p class="order">{self.h("section_order", order=self.markup(code, sec["order"]))}</p>'
+            for code in (frm, to)
+            for sec in [self.pack_section(code, slug, sid)]
+            if sec.get("order")
+        )
         intro = "".join(
             f'<p class="intro">{self.markup(code, sec["intro"])}</p>'
             for code in (frm, to)
@@ -467,7 +487,7 @@ class Site:
                 f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>'
             )
         return (
-            f'<section id="{sid}">{heading}{intro}'
+            f'<section id="{sid}">{heading}{order}{intro}'
             f'<div class="card"><table class="terms pair"><thead class="sr-only"><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
             f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>'
@@ -576,7 +596,7 @@ class Site:
         )
         pages = [
             self.tile(f"{slug}.html", self.title(frm, slug), self.title(to, slug), self.skel[slug].get("icon"))
-            for slug in group["pages"]
+            for slug in group["pages"] + group["links"]
         ]
         return head + self.tiles(pages)
 

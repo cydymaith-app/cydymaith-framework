@@ -161,6 +161,15 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .card{margin-top:.75rem;padding:.25rem 1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
 .card .terms{margin-top:0;border-top:0}
 .card .terms tbody tr:first-child{border-top:0}
+/* listen-first rows: the first language is the one heard, so it leads and is strong; the second sits at the end, muted */
+.terms.pair th.l1{font-weight:700;font-size:1.2rem;line-height:1.3}
+.terms.pair td{text-align:end;color:var(--muted)}
+.terms.pair td .l2{font:400 1rem/1.3 var(--font-ui)}
+.terms.pair .also-row{border-top:0}
+.terms.pair .also-row td{padding:0 0 .6rem;text-align:start;font-size:.92rem;color:var(--ink)}
+.also-label{color:var(--accent);font-weight:600;margin-inline-end:.35rem}
+.also-form{display:inline-block;margin-block:.1rem;margin-inline-end:.3rem;padding:.05rem .45rem;border-radius:6px;background:var(--bg);font-family:var(--font-l2);font-weight:500}
+.order{max-width:38rem;margin:.25rem 0 0;color:var(--muted);font-size:.85rem}
 .note{display:block;margin-top:.2rem;font:400 .82rem/1.4 var(--font-ui);color:var(--muted)}
 .note [lang]{font-family:var(--font-l2)}
 

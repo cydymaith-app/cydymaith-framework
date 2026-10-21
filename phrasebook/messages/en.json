@@ -9,6 +9,8 @@
   "previous": "Previous",
   "next": "Next",
   "pair_label": "{first} → {second}",
+  "also_heard": "Also heard as",
+  "section_order": "Order: {order}",
   "page_title": "{page} | {site}",
   "sources_link": "Sources and licences",
   "home_about": "{about} {link}.",

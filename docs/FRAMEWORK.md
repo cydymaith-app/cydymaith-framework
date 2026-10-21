@@ -50,6 +50,11 @@ python3 build.py dist --screenshots DIR     # ...or into DIR
 
 A concept is `{ "text": "...", "note": "...", "source": "id" }` or `{ "forms": [{ "text": "...", "varieties": ["north"] }] }`. A concept missing from a pack is simply not shown for that language.
 
+- **`also`** (optional, a list of texts in the pack's own language): other forms the word is heard as, such as a changed beginning or a plural. They show as small chips in a full-width row under the word, headed by the message `also_heard`, and are added to `dictionary.json` as `also`, so search finds the word from any of them. Search shows only the word's own terms, never the `also` forms. A form may not repeat the word or itself.
+- **`order`** (optional, on a section in a pack, commentary in the pack's `commentary_lang`): one line saying what order the rows run in, such as "lightest to heaviest". Shown under the section heading as the message `section_order`.
+- **Listen-first rows.** The first language of the pair is the one heard, so its text leads (large, strong, left in a left-to-right page) and the second sits at the end of the same row, muted. The pair comes from the edition's `default_pair`, so a project for people who listen to a language puts that language first.
+- **Linked tiles** (`"links": ["slug"]` on a group in `structure.json`): the group shows a tile for a page that lives in another group, after its own tiles. The page stays in the one group that lists it in `pages` (that group is its Back and trail), so a shared page such as days or places is written once. A link must name an existing page that the group does not list itself. A link never keeps a group alive: a group with no pages of its own is dropped from a channel, and a link to a held-back page is dropped. Linked tiles are not repeated in `tree.json`.
+
 ### Pack fields
 
 - `code`: a lower-case BCP 47 tag (`fr`, `zh-hant`, `cy-gwent`). It must match the folder name.

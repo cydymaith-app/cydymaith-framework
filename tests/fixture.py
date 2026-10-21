@@ -64,7 +64,7 @@ def make_project(root, interface="qaa", ui_extra=None):
             if code == "qab"
             else {"text": f"{code} two", "note": f"A note on {{{{{code} two}}}}"}
         )
-        c1 = {"text": f"{code} one", **({"source": "dr"} if code == "qab" else {})}
+        c1 = {"text": f"{code} one", **({"source": "dr", "also": ["qab uno"]} if code == "qab" else {})}
         c3 = {"text": f"{code} three", **({"source": "pd"} if code == "qaa" else {})}
         write(
             root / "packs" / code / "pages" / "p1.json",
@@ -76,6 +76,7 @@ def make_project(root, interface="qaa", ui_extra=None):
                     sid: {
                         "title": f"{code} section {sid}",
                         "intro": f"An intro with {{{{{code} word}}}}",
+                        **({"order": "in an order"} if sid == "s1" and code == "qab" else {}),
                         "concepts": {cid: concept},
                     }
                     for sid, cid, concept in (("s1", "c1", c1), ("s2", "c2", c2), ("s3", "c3", c3))

@@ -114,6 +114,15 @@ def validate(raw):
             raise ContentError(f"structure.json lists '{slug}' but pages/{slug}.json does not exist")
     if len(set(listed)) != len(listed):
         raise ContentError("structure.json lists a page more than once")
+    for g in structure["groups"]:
+        linked = g.get("links", [])
+        for slug in linked:
+            if slug not in pages:
+                raise ContentError(f"structure.json: group {g['id']!r} links to '{slug}' but pages/{slug}.json does not exist")
+            if slug in g.get("pages", []):
+                raise ContentError(f"structure.json: group {g['id']!r} both lists and links '{slug}'; list it once")
+        if len(set(linked)) != len(linked):
+            raise ContentError(f"structure.json: group {g['id']!r} links a page more than once")
     for slug in pages:
         if slug not in listed:
             raise ContentError(f"pages/{slug}.json is not listed in any group in structure.json")
@@ -279,6 +288,13 @@ def validate_concept(where, cid, c, variety_ids):
     forms = c.get("forms")
     if bool(c.get("text")) == bool(forms):
         raise ContentError(f"{where}: concept {cid!r} needs exactly one of 'text' or 'forms'")
+    also = c.get("also", [])
+    if not isinstance(also, list) or any(not isinstance(a, str) or not a.strip() for a in also):
+        raise ContentError(f"{where}: concept {cid!r}: 'also' must be a list of non-empty texts")
+    shown = [c["text"]] if c.get("text") else [f.get("text") for f in forms]
+    for a in also:
+        if a in shown or also.count(a) > 1:
+            raise ContentError(f"{where}: concept {cid!r}: 'also' repeats {a!r}")
     if not forms:
         return
     if not variety_ids:

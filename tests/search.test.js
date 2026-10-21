@@ -28,6 +28,9 @@ const DICTIONARY = {
     { concept: "four", terms: { aa: [{ text: "Hello", varieties: [] }],
                                 bb: [{ text: "Shwmae", varieties: ["south"] }, { text: "Sut mae", varieties: ["north"] }] },
       pages: [{ slug: "talk", href: "talk.html#say.four", title: { aa: "Talking", bb: "Siarad" } }] },
+    { concept: "six", terms: { aa: [{ text: "Flooding", varieties: [] }], bb: [{ text: "Llifogydd", varieties: [] }] },
+      also: { bb: ["lifogydd"] },
+      pages: [{ slug: "weather", href: "weather.html#rain.six", title: { aa: "Weather", bb: "Tywydd" } }] },
     { concept: "five", terms: { aa: [{ text: "Wind", varieties: [] }], bb: [{ text: "Gwynt ŵy", varieties: [] }] },
       pages: [{ slug: "weather", href: "weather.html#wind.five", title: { aa: "Weather", bb: "Tywydd" } }] },
   ],
@@ -112,4 +115,10 @@ test("topics: each page appears once, found by its title in either language, and
 test("pageOf: the topic a link belongs to, without the row it points at", () => {
   assert.equal(pageOf("weather.html#sky.one"), "weather.html");
   assert.equal(pageOf("weather.html"), "weather.html");
+});
+
+test("rank: a form a word is also heard as finds the word, which is shown by its own terms", () => {
+  const words = prepareWords(DICTIONARY, LANGS);
+  assert.deepEqual(concepts(rank(words, "lifogydd", LANGS)), ["six"]);
+  assert.deepEqual(concepts(rank(words, "llifogydd", LANGS)), ["six"]);
 });
