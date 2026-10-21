@@ -77,6 +77,7 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
 - [ ] News section. Law, crime & policing, Politics, Economics, Business, Finance.
 - [ ] Sport section. Football, Rugby, Cricket, Athletics - (can keep expanding).
 - [ ] Travel/transport section incliding roads/traffic news and How place names are constructed in Welsh. Eg. Rhos, llys, maes, pentre, pen, dref, caer, llan, ffordd, lon, etc
+- [ ] Technology. Begin with app development as we develop this app, keep it updated with findings.
 
 
 ## Done
