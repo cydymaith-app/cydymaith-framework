@@ -5,6 +5,7 @@ Languages use the private-use codes qaa, qab and qac:
     qab  Betan    left to right, two varieties (x and y)
     qac  Gammic   right to left
 """
+
 import json
 import pathlib
 
@@ -33,42 +34,88 @@ def make_project(root, interface="qaa", ui_extra=None):
     root = pathlib.Path(root)
     ui_extra = ui_extra or {}
     write(root / "structure.json", {"groups": [{"id": "g1", "pages": ["p1", "points"]}]})
-    write(root / "pages" / "p1.json", {"sections": [{"id": "s1", "concepts": ["c1"]}, {"id": "s2", "concepts": ["c2"]},
-                                                       {"id": "s3", "concepts": ["c3"]}]})
-    write(root / "pages" / "points.json", {"figure": "compass-rose",
-                                           "sections": [{"id": "dirs", "concepts": FIGURE_CONCEPTS["compass-rose"]}]})
+    write(
+        root / "pages" / "p1.json",
+        {"sections": [{"id": "s1", "concepts": ["c1"]}, {"id": "s2", "concepts": ["c2"]}, {"id": "s3", "concepts": ["c3"]}]},
+    )
+    write(
+        root / "pages" / "points.json",
+        {"figure": "compass-rose", "sections": [{"id": "dirs", "concepts": FIGURE_CONCEPTS["compass-rose"]}]},
+    )
     for code, (name, direction) in LANGS.items():
-        meta = {"code": code, "name": name, "dir": direction, "names": {interface: name},
-                "ui": {"endonym": ENDONYMS[code], **ui_extra.get(code, {})},
-                "groups": {"g1": f"{code} group"},
-                "sources": [{"id": "own", "title": "Test author", "licence": "own"},
-                            {"id": "pd", "title": "Old book", "licence": "public-domain"},
-                            {"id": "dr", "title": "Rough draft", "licence": "draft"}]}
+        meta = {
+            "code": code,
+            "name": name,
+            "dir": direction,
+            "names": {interface: name},
+            "ui": {"endonym": ENDONYMS[code], **ui_extra.get(code, {})},
+            "groups": {"g1": f"{code} group"},
+            "sources": [
+                {"id": "own", "title": "Test author", "licence": "own"},
+                {"id": "pd", "title": "Old book", "licence": "public-domain"},
+                {"id": "dr", "title": "Rough draft", "licence": "draft"},
+            ],
+        }
         if code == "qab":
             meta["varieties"] = [{"id": "x", "name": "Xish", "short": "X"}, {"id": "y", "name": "Yish", "short": "Y"}]
         write(root / "packs" / code / "pack.json", meta)
-        c2 = ({"forms": [{"text": f"{code} two-x", "varieties": ["x"]}, {"text": f"{code} two-y", "varieties": ["y"]}]}
-              if code == "qab" else {"text": f"{code} two", "note": f"A note on {{{{{code} two}}}}"})
+        c2 = (
+            {"forms": [{"text": f"{code} two-x", "varieties": ["x"]}, {"text": f"{code} two-y", "varieties": ["y"]}]}
+            if code == "qab"
+            else {"text": f"{code} two", "note": f"A note on {{{{{code} two}}}}"}
+        )
         c1 = {"text": f"{code} one", **({"source": "dr"} if code == "qab" else {})}
         c3 = {"text": f"{code} three", **({"source": "pd"} if code == "qaa" else {})}
-        write(root / "packs" / code / "pages" / "p1.json", {
-            "title": f"{code} page", "source": "own", "lede": f"{code} lede",
-            "sections": {sid: {"title": f"{code} section {sid}", "intro": f"An intro with {{{{{code} word}}}}",
-                               "concepts": {cid: concept}}
-                         for sid, cid, concept in (("s1", "c1", c1), ("s2", "c2", c2), ("s3", "c3", c3))}})
-        write(root / "packs" / code / "pages" / "points.json", {
-            "title": f"{code} points", "source": "own",
-            "sections": {"dirs": {"title": f"{code} directions",
-                                  "concepts": {c: {"text": f"{code}-{c}"} for c in FIGURE_CONCEPTS["compass-rose"]}}}})
-    write(root / "editions" / "demo.json", {
-        "name": "Demo Book", "languages": list(LANGS), "interface": interface, "default_pair": ["qaa", "qab"],
-        "home": {"headline": {c: f"{c} headline" for c in LANGS}, "lede": {"qaa": "A lede."}, "about": {"qaa": "Lorem ipsum."}}})
+        write(
+            root / "packs" / code / "pages" / "p1.json",
+            {
+                "title": f"{code} page",
+                "source": "own",
+                "lede": f"{code} lede",
+                "sections": {
+                    sid: {
+                        "title": f"{code} section {sid}",
+                        "intro": f"An intro with {{{{{code} word}}}}",
+                        "concepts": {cid: concept},
+                    }
+                    for sid, cid, concept in (("s1", "c1", c1), ("s2", "c2", c2), ("s3", "c3", c3))
+                },
+            },
+        )
+        write(
+            root / "packs" / code / "pages" / "points.json",
+            {
+                "title": f"{code} points",
+                "source": "own",
+                "sections": {
+                    "dirs": {
+                        "title": f"{code} directions",
+                        "concepts": {c: {"text": f"{code}-{c}"} for c in FIGURE_CONCEPTS["compass-rose"]},
+                    }
+                },
+            },
+        )
+    write(
+        root / "editions" / "demo.json",
+        {
+            "name": "Demo Book",
+            "languages": list(LANGS),
+            "interface": interface,
+            "default_pair": ["qaa", "qab"],
+            "home": {
+                "headline": {c: f"{c} headline" for c in LANGS},
+                "lede": {"qaa": "A lede."},
+                "about": {"qaa": "Lorem ipsum."},
+            },
+        },
+    )
     return root
 
 
 def pseudo(template):
     """A pseudo-translation: accented look-alikes inside « », placeholders untouched."""
     import re
+
     table = str.maketrans("aeiouAEIOUcnst", "àéîõüÀÉÎÕÜçñšţ")
     parts = re.split(r"(\{\w+\})", template)
     return "«" + "".join(p if p.startswith("{") else p.translate(table) for p in parts) + "»"

@@ -8,6 +8,7 @@ its pack pages and its place in structure.json.
     python3 build.py dist                          release: held-back sections are left out
     python3 build.py dist --channel development    everything, including held-back sections
 """
+
 import copy
 
 from .errors import ContentError
@@ -57,4 +58,3 @@ def select(raw, channel=RELEASE):
 
 def _concepts(page):
     return {c for s in page["sections"] for c in s["concepts"]}
-

@@ -4,6 +4,7 @@ A fake browser stands in for the real one, so these need no browser installed: i
 it is at that moment, and writes a small file where the screenshot should go. Run from the repo root:
 python3 -m unittest discover -s tests -v
 """
+
 import pathlib
 import re
 import sys
@@ -33,8 +34,9 @@ class FakeBrowser:
     def __call__(self, command, target, timeout=None):
         url = next(a for a in command if a.startswith("file:"))
         page = pathlib.Path(urllib.request.url2pathname(urllib.parse.urlparse(url).path))
-        self.calls.append({"command": command, "target": pathlib.Path(target), "html": page.read_text(encoding="utf-8"),
-                           "page": page.name})
+        self.calls.append(
+            {"command": command, "target": pathlib.Path(target), "html": page.read_text(encoding="utf-8"), "page": page.name}
+        )
         if self.write:
             pathlib.Path(target).write_bytes(PNG)
 
@@ -60,9 +62,14 @@ class ShootingTests(Scratch):
         fake, taken, out = self.take("all")
         self.assertEqual(len(fake.calls), 5 * 2)  # five palettes, light and dark, one page
         self.assertEqual(len(taken), 10)
-        self.assertEqual(sorted(p.name for p in out.glob("*.png")),
-                         sorted(f"{pal}-{v}.png" for pal in ("default", "high-contrast", "red-green", "red-green-safe", "blue-yellow-safe")
-                                for v in ("light", "dark")))
+        self.assertEqual(
+            sorted(p.name for p in out.glob("*.png")),
+            sorted(
+                f"{pal}-{v}.png"
+                for pal in ("default", "high-contrast", "red-green", "red-green-safe", "blue-yellow-safe")
+                for v in ("light", "dark")
+            ),
+        )
 
     def test_the_one_page_is_the_first_topic_with_a_drawing_because_it_shows_the_most_colour(self):
         fake, _, _ = self.take("pages")
@@ -78,6 +85,7 @@ class ShootingTests(Scratch):
 
     def raw_without_figures(self):
         import copy
+
         raw = copy.deepcopy(self.raw)
         for page in raw["pages"].values():
             page.pop("figure", None)
@@ -171,14 +179,18 @@ class ShootingTests(Scratch):
 
 
 class ThemedPageTests(unittest.TestCase):
-    PAGE = '<!doctype html>\n<html lang="en" data-storage="x" data-parent="y.html">\n<head>\n<script src="a.js"></script>\n' \
-           '<script>\nvar x = 1;\n</script>\n<title>t</title></head><body><html></html></body></html>\n'
+    PAGE = (
+        '<!doctype html>\n<html lang="en" data-storage="x" data-parent="y.html">\n<head>\n<script src="a.js"></script>\n'
+        "<script>\nvar x = 1;\n</script>\n<title>t</title></head><body><html></html></body></html>\n"
+    )
 
     def test_scripts_of_both_kinds_go_and_the_theme_is_added_to_the_first_html_tag_only(self):
         page = screenshots.themed(self.PAGE, "high-contrast", "dark", "default")
         self.assertNotIn("<script", page)
         self.assertNotIn("var x", page)
-        self.assertIn('<html lang="en" data-storage="x" data-parent="y.html" data-theme="dark" data-palette="high-contrast">', page)
+        self.assertIn(
+            '<html lang="en" data-storage="x" data-parent="y.html" data-theme="dark" data-palette="high-contrast">', page
+        )
         self.assertEqual(page.count("data-theme"), 1)
         self.assertIn("<title>t</title>", page)
 
@@ -285,8 +297,11 @@ class EndingTheBrowserTests(unittest.TestCase):
         target.stat.return_value = mock.Mock(st_size=100)
         proc = mock.Mock()
         proc.poll.return_value = None
-        with mock.patch.object(screenshots.subprocess, "Popen", return_value=proc), \
-                mock.patch.object(screenshots, "end") as end, mock.patch.object(screenshots.time, "sleep"):
+        with (
+            mock.patch.object(screenshots.subprocess, "Popen", return_value=proc),
+            mock.patch.object(screenshots, "end") as end,
+            mock.patch.object(screenshots.time, "sleep"),
+        ):
             screenshots.run_browser(["b"], target, timeout=5)
         end.assert_called_once_with(proc)
 

@@ -19,8 +19,15 @@ def build(site):
     frm, to = site.frm, site.to
 
     def node(nid, level, first, second, href=None, icon=None, children=None):
-        return {"id": nid, "level": level, "icon": icon, "first": first, "second": second, "href": href,
-                "children": children or []}
+        return {
+            "id": nid,
+            "level": level,
+            "icon": icon,
+            "first": first,
+            "second": second,
+            "href": href,
+            "children": children or [],
+        }
 
     groups = []
     for gi, group in enumerate(site.groups, 1):
@@ -33,19 +40,46 @@ def build(site):
                 for wi, cid in enumerate(site.rows(slug, section), 1):
                     text_from = site.forms_of(site.concept(frm, slug, sid, cid))[0]["text"]
                     text_to = site.forms_of(site.concept(to, slug, sid, cid))[0]["text"]
-                    words.append(node(f"{gi}.{pi}.{si}.{wi}", "word", label(site, frm, text_from), label(site, to, text_to),
-                                      href=f"{slug}.html#{sid}.{cid}"))
-                sections.append(node(
-                    f"{gi}.{pi}.{si}", "section",
-                    label(site, frm, site.pack_section(frm, slug, sid)["title"]),
-                    label(site, to, site.pack_section(to, slug, sid)["title"]),
-                    href=f"{slug}.html#{sid}", children=words))
-            pages.append(node(
-                f"{gi}.{pi}", "page", label(site, frm, site.title(frm, slug)), label(site, to, site.title(to, slug)),
-                href=f"{slug}.html", icon=site.skel[slug].get("icon"), children=sections))
-        groups.append(node(
-            str(gi), "group", label(site, frm, site.group_title(frm, group["id"])),
-            label(site, to, site.group_title(to, group["id"])), icon=group.get("icon"), children=pages))
+                    words.append(
+                        node(
+                            f"{gi}.{pi}.{si}.{wi}",
+                            "word",
+                            label(site, frm, text_from),
+                            label(site, to, text_to),
+                            href=f"{slug}.html#{sid}.{cid}",
+                        )
+                    )
+                sections.append(
+                    node(
+                        f"{gi}.{pi}.{si}",
+                        "section",
+                        label(site, frm, site.pack_section(frm, slug, sid)["title"]),
+                        label(site, to, site.pack_section(to, slug, sid)["title"]),
+                        href=f"{slug}.html#{sid}",
+                        children=words,
+                    )
+                )
+            pages.append(
+                node(
+                    f"{gi}.{pi}",
+                    "page",
+                    label(site, frm, site.title(frm, slug)),
+                    label(site, to, site.title(to, slug)),
+                    href=f"{slug}.html",
+                    icon=site.skel[slug].get("icon"),
+                    children=sections,
+                )
+            )
+        groups.append(
+            node(
+                str(gi),
+                "group",
+                label(site, frm, site.group_title(frm, group["id"])),
+                label(site, to, site.group_title(to, group["id"])),
+                icon=group.get("icon"),
+                children=pages,
+            )
+        )
     return groups
 
 
@@ -61,5 +95,10 @@ def document(site):
             collect(item["children"])
 
     collect(nodes)
-    return {"version": 1, "lang": site.interface, "dir": site.dir_of(site.interface),
-            "icons": {name: site.icons[name] for name in sorted(used)}, "nodes": nodes}
+    return {
+        "version": 1,
+        "lang": site.interface,
+        "dir": site.dir_of(site.interface),
+        "icons": {name: site.icons[name] for name in sorted(used)},
+        "nodes": nodes,
+    }

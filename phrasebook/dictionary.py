@@ -13,6 +13,7 @@ Each page lists where the word is: href is the page with the id of the word's ro
 link lands on the word. Entries follow the order of the pages in structure.json. Braces that mark the language's own text in notes
 are removed, so a term is the plain word or phrase.
 """
+
 from .content import pages_in_order
 
 BRACES = ("{{", "}}")
@@ -35,8 +36,7 @@ def index(raw, edition):
     entries = {}
     for slug in pages_in_order(raw):
         page = raw["pages"][slug]
-        titles = {code: raw["packs"][code]["pages"][slug]["title"]
-                  for code in languages if slug in raw["packs"][code]["pages"]}
+        titles = {code: raw["packs"][code]["pages"][slug]["title"] for code in languages if slug in raw["packs"][code]["pages"]}
         for section in page["sections"]:
             for cid in section["concepts"]:
                 entry = entries.setdefault(cid, {"concept": cid, "terms": {}, "pages": []})

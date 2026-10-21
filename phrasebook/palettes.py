@@ -22,6 +22,7 @@ These checks are a safeguard, not a substitute for asking people who see colour 
 The page picks a palette with data-palette="<id>" on <html> and a variant with data-theme="light|dark", or follows
 the system's light/dark setting when data-theme is absent. See css() for the selectors.
 """
+
 import json
 import pathlib
 import re
@@ -66,10 +67,14 @@ def validate(palettes, lang_code):
         if not ID.match(pid):
             raise ContentError(f"{where}: the file name must be lower case letters, digits and hyphens, starting with a letter")
         if not isinstance(palette, dict) or set(palette) - KEYS:
-            raise ContentError(f"{where}: unknown keys {sorted(set(palette) - KEYS) if isinstance(palette, dict) else palette!r}; "
-                               f"allowed: {', '.join(sorted(KEYS))}")
+            raise ContentError(
+                f"{where}: unknown keys {sorted(set(palette) - KEYS) if isinstance(palette, dict) else palette!r}; "
+                f"allowed: {', '.join(sorted(KEYS))}"
+            )
         names = palette.get("names", {})
-        if not isinstance(names, dict) or any(not lang_code.match(k) or not isinstance(v, str) or not v for k, v in names.items()):
+        if not isinstance(names, dict) or any(
+            not lang_code.match(k) or not isinstance(v, str) or not v for k, v in names.items()
+        ):
             raise ContentError(f"{where}: 'names' must map language codes to the palette's name in that language")
         if "notes" in palette and (not isinstance(palette["notes"], str) or not palette["notes"].strip()):
             raise ContentError(f"{where}: 'notes' must be non-empty text")
@@ -85,7 +90,9 @@ def validate(palettes, lang_code):
                 raise ContentError(f"{where}: '{variant}' needs exactly the colours {', '.join(ROLES)}")
             for role, text in roles.items():
                 if colour.parse(text) is None:
-                    raise ContentError(f"{where}: {variant} {role} is not a colour ('#rrggbb', 'oklch(L C h)' or 'oklab(L a b)'): {text!r}")
+                    raise ContentError(
+                        f"{where}: {variant} {role} is not a colour ('#rrggbb', 'oklch(L C h)' or 'oklab(L a b)'): {text!r}"
+                    )
         resolved = resolve(palette)
         check_scheme(where, resolved)
         for variant, colours in resolved.items():
@@ -110,7 +117,9 @@ def check_contrast(where, colours, level, kind=None):
         for ground in ("bg", "surface"):
             ratio = colour.contrast(colours[role], colours[ground])
             if ratio < needed:
-                raise ContentError(f"{where}: {role} on {ground}{seen} has contrast {ratio:.2f}:1; level {level} needs {needed}:1")
+                raise ContentError(
+                    f"{where}: {role} on {ground}{seen} has contrast {ratio:.2f}:1; level {level} needs {needed}:1"
+                )
     graphic = LEVELS[level]["graphic"]  # the icon drawn on a tile is a graphic, not text (WCAG 1.4.11)
     if colour.contrast(colours["on-tile"], colours["tile"]) < graphic:
         ratio = colour.contrast(colours["on-tile"], colours["tile"])
@@ -127,8 +136,10 @@ def check_colour_vision(where, colours, level, kind):
     for other in ("ink", "muted"):
         gap = colour.distance(seen["accent"], seen[other])
         if gap < SEPARATION:
-            raise ContentError(f"{where}: with {kind} vision the accent is hard to tell from {other} "
-                               f"(distance {gap:.3f}, needs {SEPARATION}); change its lightness or chroma")
+            raise ContentError(
+                f"{where}: with {kind} vision the accent is hard to tell from {other} "
+                f"(distance {gap:.3f}, needs {SEPARATION}); change its lightness or chroma"
+            )
 
 
 def tokens(colours):
@@ -148,6 +159,8 @@ def css(palettes, ids):
         resolved = resolve(palettes[pid])
         mark = "" if pid == DEFAULT else f'[data-palette="{pid}"]'
         out.append(f":root{mark}{{{tokens(resolved['light'])};color-scheme:light}}")
-        out.append(f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{tokens(resolved["dark"])};color-scheme:dark}}}}')
+        out.append(
+            f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{tokens(resolved["dark"])};color-scheme:dark}}}}'
+        )
         out.append(f':root{mark}[data-theme="dark"]{{{tokens(resolved["dark"])};color-scheme:dark}}')
     return "\n".join(out) + "\n"

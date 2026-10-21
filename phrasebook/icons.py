@@ -11,6 +11,7 @@ An accepted icon is rewritten as one line of markup for inlining: it takes the t
 follows the palette and forced-colours mode, is marked aria-hidden because the label beside it says the same
 thing, and makes no request.
 """
+
 import re
 import xml.etree.ElementTree as ET
 
@@ -22,11 +23,42 @@ ET.register_namespace("", SVG_NS)
 NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 SHAPES = {"path", "circle", "line", "polyline", "polygon", "rect", "ellipse", "g"}
 CENTRE = {f"c{axis}" for axis in "xy"}  # SVG's centre attributes, spelt this way: a test forbids bare language codes here
-ATTRIBUTES = {"d", "r", "rx", "ry", "x", "y", "x1", "y1", "x2", "y2", "points", "width", "height",
-              "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "fill-rule", "clip-rule",
-              "opacity", "transform"} | CENTRE
-ROOT_ATTRIBUTES = {"viewBox", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "xmlns",
-                   "width", "height", "class"}
+ATTRIBUTES = {
+    "d",
+    "r",
+    "rx",
+    "ry",
+    "x",
+    "y",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "points",
+    "width",
+    "height",
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "fill-rule",
+    "clip-rule",
+    "opacity",
+    "transform",
+} | CENTRE
+ROOT_ATTRIBUTES = {
+    "viewBox",
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "xmlns",
+    "width",
+    "height",
+    "class",
+}
 UNSAFE_VALUE = re.compile(r"url\s*\(|javascript:|data:|&", re.IGNORECASE)
 KEPT_ROOT = ("viewBox", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin")
 

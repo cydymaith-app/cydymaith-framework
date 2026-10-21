@@ -14,6 +14,7 @@ Text may hold {placeholders}. A message that depends on a count is a table of CL
 Placeholders are checked against the English catalogue, so a translator cannot break a message by mistake.
 Numbers are written as plain digits; locale digit shapes and grouping are not implemented (see docs/FRAMEWORK.md).
 """
+
 import html
 import json
 import pathlib
@@ -140,4 +141,6 @@ class Messages:
             if found - allowed:
                 raise ContentError(f"{where}: message {key!r} uses unknown placeholders: {', '.join(sorted(found - allowed))}")
             if not isinstance(template, dict) and found != allowed:
-                raise ContentError(f"{where}: message {key!r} must use exactly the placeholders: {', '.join(sorted(allowed)) or 'none'}")
+                raise ContentError(
+                    f"{where}: message {key!r} must use exactly the placeholders: {', '.join(sorted(allowed)) or 'none'}"
+                )

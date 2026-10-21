@@ -3,6 +3,7 @@
 Framework behaviour runs on the neutral fixture; the project's own icons and tree are checked at the end.
 The panel script's moves are tested in nav.test.js. Run from the repo root: python3 -m unittest discover -s tests -v
 """
+
 import json
 import pathlib
 import re
@@ -20,8 +21,10 @@ from phrasebook import content, icons, tree  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
 from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 
-SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' \
-      'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="x">{body}</svg>'
+SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="x">{body}</svg>'
+)
 GOOD = SVG.format(body='<path d="M4 4l16 16" /><circle cx="12" cy="12" r="3" />')
 
 
@@ -102,7 +105,10 @@ class IconParsingTests(unittest.TestCase):
 
     def test_the_framework_ships_only_its_three_interface_icons_with_their_licence(self):
         found = sorted(p for p in ENGINE.rglob("*.svg"))
-        self.assertEqual([f.relative_to(ENGINE).as_posix() for f in found], ["ui-icons/arrow--left.svg", "ui-icons/search.svg", "ui-icons/settings.svg"])
+        self.assertEqual(
+            [f.relative_to(ENGINE).as_posix() for f in found],
+            ["ui-icons/arrow--left.svg", "ui-icons/search.svg", "ui-icons/settings.svg"],
+        )
         self.assertIn("Apache", (ENGINE / "ui-icons" / "LICENSE").read_text(encoding="utf-8"))
         assets = (ROOT / "docs" / "ASSETS.md").read_text(encoding="utf-8")
         for f in found:
@@ -117,14 +123,24 @@ class IconSiteTests(Scratch):
         add_icon(proj, "doc")
         name_icons(proj, group="weather", page="doc")
         pages = self.built(proj)
-        self.assertIn('<a class="tile-link" href="group-g1.html"><span class="tile"><svg class="icon" aria-hidden="true"', pages["index.html"])
-        self.assertIn('<a class="tile-link" href="p1.html"><span class="tile"><svg class="icon" aria-hidden="true"', pages["group-g1.html"])
-        self.assertIn('<span class="tile-name"><span class="l1">qaa group</span><span class="l2" lang="qab">qab group</span></span>', pages["index.html"])
+        self.assertIn(
+            '<a class="tile-link" href="group-g1.html"><span class="tile"><svg class="icon" aria-hidden="true"',
+            pages["index.html"],
+        )
+        self.assertIn(
+            '<a class="tile-link" href="p1.html"><span class="tile"><svg class="icon" aria-hidden="true"', pages["group-g1.html"]
+        )
+        self.assertIn(
+            '<span class="tile-name"><span class="l1">qaa group</span><span class="l2" lang="qab">qab group</span></span>',
+            pages["index.html"],
+        )
         self.assertIn('<span class="l1">qaa page</span><span class="l2" lang="qab">qab page</span>', pages["group-g1.html"])
 
     def test_a_tile_with_no_icon_holds_its_name_and_keeps_the_names_beneath(self):
         pages = self.built(self.project())
-        self.assertIn('<span class="tile"><span class="tile-text" aria-hidden="true">qaa group</span></span>', pages["index.html"])
+        self.assertIn(
+            '<span class="tile"><span class="tile-text" aria-hidden="true">qaa group</span></span>', pages["index.html"]
+        )
         self.assertIn('<span class="l1">qaa group</span>', pages["index.html"])
 
     def test_the_only_icons_without_a_project_icon_are_the_frames_own(self):
@@ -285,7 +301,9 @@ class TreeTests(Scratch):
 
         def sections(out):
             doc = json.loads((out / "tree.json").read_text(encoding="utf-8"))
-            return [s["href"] for g in doc["nodes"] for p in g["children"] for s in p["children"] if s["href"].startswith("p1.html#")]
+            return [
+                s["href"] for g in doc["nodes"] for p in g["children"] for s in p["children"] if s["href"].startswith("p1.html#")
+            ]
 
         self.assertNotIn("p1.html#s2", sections(release))
         self.assertIn("p1.html#s2", sections(development))
@@ -317,7 +335,16 @@ class FrameTests(Scratch):
 
     def test_the_old_sidebar_menu_and_panel_are_gone_from_every_page(self):
         for name, page in self.pages.items():
-            for gone in ('class="tree"', 'class="side"', "nav-toggle", "menu-btn", "data-explore", "<dialog", "data-panel", "panel-"):
+            for gone in (
+                'class="tree"',
+                'class="side"',
+                "nav-toggle",
+                "menu-btn",
+                "data-explore",
+                "<dialog",
+                "data-panel",
+                "panel-",
+            ):
                 self.assertNotIn(gone, page, f"{name}: {gone}")
 
     def test_every_page_has_the_rail_with_settings_and_the_title_in_the_top_bar(self):
@@ -354,7 +381,9 @@ class FrameTests(Scratch):
         page = self.pages["p1.html"]
         self.assertIn('<a class="rail-link back" href="group-g1.html" data-back aria-label="Back"', page)
         trail = re.search(r'<ol class="trail">(.*?)</ol>', page).group(1)
-        self.assertEqual(re.findall(r'<li>(?:<a href="([^"]+)"|<span aria-current="page")', trail), ["index.html", "group-g1.html", ""])
+        self.assertEqual(
+            re.findall(r'<li>(?:<a href="([^"]+)"|<span aria-current="page")', trail), ["index.html", "group-g1.html", ""]
+        )
         self.assertEqual(trail.count('aria-current="page"'), 1)
         self.assertIn('class="pager"', page)
 
@@ -370,23 +399,31 @@ class FrameTests(Scratch):
 
     def test_the_rail_has_search_then_back_then_settings_and_the_title_bar_has_neither_button(self):
         page = self.pages["p1.html"]
-        rail = page[page.index('<nav class="rail"'):page.index("</nav>", page.index('<nav class="rail"'))]
+        rail = page[page.index('<nav class="rail"') : page.index("</nav>", page.index('<nav class="rail"'))]
         self.assertLess(rail.index('class="rail-link search"'), rail.index('class="rail-link back"'))
         self.assertLess(rail.index('class="rail-link back"'), rail.index('href="settings.html"'))
-        bar = page[page.index('<header class="topbar">'):page.index("</header>")]
+        bar = page[page.index('<header class="topbar">') : page.index("</header>")]
         self.assertNotIn("<button", bar)
         self.assertNotIn("data-back", bar)
 
     def test_the_search_button_is_hidden_until_the_script_that_runs_it_has_loaded(self):
         for name, page in self.pages.items():
-            self.assertIn('<button type="button" class="rail-link search" id="search-button" hidden aria-label="Search" '
-                          'title="Search" aria-expanded="false" aria-controls="search-card">', page, name)
-            self.assertNotIn(" disabled", page[page.index('id="search-button"'):page.index("</button>", page.index('id="search-button"'))], name)
+            self.assertIn(
+                '<button type="button" class="rail-link search" id="search-button" hidden aria-label="Search" '
+                'title="Search" aria-expanded="false" aria-controls="search-card">',
+                page,
+                name,
+            )
+            self.assertNotIn(
+                " disabled",
+                page[page.index('id="search-button"') : page.index("</button>", page.index('id="search-button"'))],
+                name,
+            )
 
     def test_every_page_holds_the_shut_search_card_with_its_messages_and_the_pair(self):
         for name, page in self.pages.items():
             self.assertIn('<div class="search-layer" hidden>', page, name)
-            card = page[page.index('<div class="search-card"'):]
+            card = page[page.index('<div class="search-card"') :]
             self.assertIn('id="search-card" role="search" aria-label="Search" inert', card, name)
             self.assertIn('data-dictionary="dictionary.json"', card, name)
             self.assertIn('data-pair="[[&quot;qaa&quot;, &quot;ltr&quot;], [&quot;qab&quot;, &quot;ltr&quot;]]"', card, name)
@@ -402,7 +439,7 @@ class FrameTests(Scratch):
         self.assertTrue((self.out / "search.js").is_file())
 
     def test_the_home_page_has_search_and_settings_but_no_back(self):
-        rail = self.pages["index.html"][self.pages["index.html"].index('<nav class="rail"'):]
+        rail = self.pages["index.html"][self.pages["index.html"].index('<nav class="rail"') :]
         self.assertIn('class="rail-link search"', rail)
         self.assertNotIn('class="rail-link back"', rail)
 
@@ -410,7 +447,7 @@ class FrameTests(Scratch):
         page = self.pages["index.html"]
         self.assertLess(page.index('<header class="topbar">'), page.index('<nav class="rail"'))
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
-        self.assertIn("grid-column:1/-1", css[css.index(".topbar{"):css.index(".rail{")])
+        self.assertIn("grid-column:1/-1", css[css.index(".topbar{") : css.index(".rail{")])
 
     def test_tiles_name_their_topic_in_both_languages_and_the_icon_is_decorative(self):
         page = self.pages["index.html"]
@@ -430,8 +467,14 @@ class FrameTests(Scratch):
 
     def test_every_page_but_home_names_its_parent_and_home_names_none(self):
         self.assertNotIn("data-parent", self.pages["index.html"].split("</head>")[0].split("<head>")[0])
-        expected = {"group-g1.html": "index.html", "p1.html": "group-g1.html", "points.html": "group-g1.html",
-                    "settings.html": "index.html", "how-to.html": "settings.html", "sources.html": "settings.html"}
+        expected = {
+            "group-g1.html": "index.html",
+            "p1.html": "group-g1.html",
+            "points.html": "group-g1.html",
+            "settings.html": "index.html",
+            "how-to.html": "settings.html",
+            "sources.html": "settings.html",
+        }
         for name, parent in expected.items():
             self.assertIn(f' data-parent="{parent}">', self.pages[name].split("<head>")[0], name)
 
@@ -466,7 +509,7 @@ class FrameTests(Scratch):
         self.assertIn("window.PageRevealEvent)return", self.pages["p1.html"])
 
     def test_the_pager_still_links_topics_in_order(self):
-        self.assertIn('href="points.html"', self.pages["p1.html"][self.pages["p1.html"].index('class="pager"'):])
+        self.assertIn('href="points.html"', self.pages["p1.html"][self.pages["p1.html"].index('class="pager"') :])
 
 
 class MobileFirstTests(unittest.TestCase):
@@ -480,20 +523,20 @@ class MobileFirstTests(unittest.TestCase):
         self.assertIsNone(re.search(r"@media \(max-width", self.CSS), "no desktop-first media query")
 
     def test_the_base_layout_is_two_tiles_across_and_widens_on_bigger_screens(self):
-        base = self.CSS[:self.CSS.index("/* wider screens */")]
+        base = self.CSS[: self.CSS.index("/* wider screens */")]
         self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", base)
-        wider = self.CSS[self.CSS.index("/* wider screens */"):]
+        wider = self.CSS[self.CSS.index("/* wider screens */") :]
         self.assertIn("repeat(3,", wider)
         self.assertIn("repeat(4,", wider)
 
     def test_touch_targets_are_at_least_44_pixels(self):
         for rule in (".rail-link{",):
-            self.assertIn("2.75rem", self.CSS[self.CSS.index(rule):self.CSS.index("}", self.CSS.index(rule))], rule)
+            self.assertIn("2.75rem", self.CSS[self.CSS.index(rule) : self.CSS.index("}", self.CSS.index(rule))], rule)
 
     def test_a_page_reached_from_its_parent_slides_in_without_leaving_a_transform_behind(self):
         self.assertIn("@keyframes slide-in{from{transform:translateX(100%)}", self.CSS)
         self.assertIn(".slide-in main{animation:slide-in", self.CSS)
-        rule = self.CSS[self.CSS.index(".slide-in main{"):self.CSS.index("}", self.CSS.index(".slide-in main{"))]
+        rule = self.CSS[self.CSS.index(".slide-in main{") : self.CSS.index("}", self.CSS.index(".slide-in main{"))]
         self.assertIn("backwards", rule)
         self.assertNotIn("forwards", rule, "a filled-forwards animation would override the drag's own transform")
         self.assertNotIn(" both", rule)
@@ -509,13 +552,13 @@ class MobileFirstTests(unittest.TestCase):
         self.assertIn(':root[dir="rtl"]{--slide:-100%}', self.CSS)
 
     def test_the_search_card_slides_out_from_behind_the_rail_inside_a_layer_that_clips_it(self):
-        layer = self.CSS[self.CSS.index(".search-layer{"):self.CSS.index("}", self.CSS.index(".search-layer{"))]
+        layer = self.CSS[self.CSS.index(".search-layer{") : self.CSS.index("}", self.CSS.index(".search-layer{"))]
         self.assertIn("inset-inline-start:var(--rail)", layer)
         self.assertIn("overflow:hidden", layer)
         self.assertIn("pointer-events:none", layer)
         self.assertIn(".search-layer[hidden]{display:none}", self.CSS)
         self.assertIn(".rail-link[hidden]{display:none}", self.CSS)
-        shut = self.CSS[self.CSS.index(".search-card{"):self.CSS.index("}", self.CSS.index(".search-card{"))]
+        shut = self.CSS[self.CSS.index(".search-card{") : self.CSS.index("}", self.CSS.index(".search-card{"))]
         self.assertIn("visibility:hidden", shut)
         self.assertIn("translateX(calc(var(--slide) * -1))", shut)
         self.assertIn(".search-card[data-open]{visibility:visible;transform:none", self.CSS)
@@ -525,15 +568,15 @@ class MobileFirstTests(unittest.TestCase):
         self.assertIn(".terms tr{scroll-margin-top:", self.CSS)
 
     def test_the_slide_comes_from_the_other_side_in_right_to_left(self):
-        self.assertIn('@keyframes slide-in-rtl{from{transform:translateX(-100%)}', self.CSS)
+        self.assertIn("@keyframes slide-in-rtl{from{transform:translateX(-100%)}", self.CSS)
         self.assertIn(':root[dir="rtl"].slide-in main{animation-name:slide-in-rtl}', self.CSS)
 
     def test_the_page_hands_horizontal_touches_to_the_drag_and_keeps_scrolling_and_zoom(self):
-        main = self.CSS[self.CSS.index("\nmain{"):self.CSS.index("}", self.CSS.index("\nmain{"))]
+        main = self.CSS[self.CSS.index("\nmain{") : self.CSS.index("}", self.CSS.index("\nmain{"))]
         self.assertIn("touch-action:pan-y pinch-zoom", main)
 
     def test_a_card_off_screen_cannot_make_the_page_scroll_sideways(self):
-        app = self.CSS[self.CSS.index(".app{"):self.CSS.index("}", self.CSS.index(".app{"))]
+        app = self.CSS[self.CSS.index(".app{") : self.CSS.index("}", self.CSS.index(".app{"))]
         self.assertIn("overflow-x:clip", app)
 
     def test_reduced_motion_turns_every_animation_and_transition_off(self):
@@ -541,6 +584,7 @@ class MobileFirstTests(unittest.TestCase):
 
     def test_pages_set_the_viewport_for_a_phone(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp:
             phrasebook.build(pathlib.Path(tmp) / "dist", project_dir=fixture.make_project(pathlib.Path(tmp) / "proj"))
             page = (pathlib.Path(tmp) / "dist" / "index.html").read_text(encoding="utf-8")
@@ -568,8 +612,16 @@ class HowToTests(Scratch):
     def test_it_covers_the_moves_the_keys_the_swipes_and_the_buttons(self):
         page = self.pages["how-to.html"]
         messages = json.loads((ENGINE / "messages" / "en.json").read_text(encoding="utf-8"))
-        for key in ("how_to_keys_open", "how_to_touch_open", "how_to_keys_back", "how_to_touch_back",
-                    "how_to_keys_along", "how_to_touch_along", "how_to_keys_settings", "how_to_touch_settings"):
+        for key in (
+            "how_to_keys_open",
+            "how_to_touch_open",
+            "how_to_keys_back",
+            "how_to_touch_back",
+            "how_to_keys_along",
+            "how_to_touch_along",
+            "how_to_keys_settings",
+            "how_to_touch_settings",
+        ):
             self.assertIn(messages[key].split(".")[0], page, key)
         self.assertIn("<table", page)
 
@@ -641,7 +693,7 @@ class SettingsPageTests(Scratch):
         self.assertIn('<a class="rail-link back" href="index.html" data-back aria-label="Back"', page)
 
     def test_without_scripts_the_page_says_why_there_is_nothing_to_choose(self):
-        self.assertIn("<noscript><p class=\"intro\">", self.pages["settings.html"])
+        self.assertIn('<noscript><p class="intro">', self.pages["settings.html"])
 
     def test_the_page_is_precached_so_it_works_offline(self):
         self.assertIn('"settings.html"', (self.out / "sw.js").read_text(encoding="utf-8"))
@@ -675,6 +727,7 @@ class NoVisibleNumberingTests(unittest.TestCase):
 
     def test_the_address_stays_in_the_data_for_tests_and_linking(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp:
             phrasebook.build(pathlib.Path(tmp) / "dist", project_dir=fixture.make_project(pathlib.Path(tmp) / "proj"))
             doc = json.loads((pathlib.Path(tmp) / "dist" / "tree.json").read_text(encoding="utf-8"))

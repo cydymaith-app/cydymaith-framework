@@ -3,6 +3,7 @@
 The point of these tests: the engine (phrasebook/) must work, and must be reusable, with nothing of the
 English and Welsh project in it. Run from the repo root:  python3 -m unittest discover -s tests -v
 """
+
 import atexit
 import contextlib
 import io
@@ -134,8 +135,16 @@ class EngineIsLanguageNeutral(unittest.TestCase):
 
     def test_the_engine_stylesheet_uses_logical_properties(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
-        for physical in ("margin-left", "margin-right", "padding-left", "padding-right", "border-left",
-                         "border-right:1px", "text-align:left", "text-align:right"):
+        for physical in (
+            "margin-left",
+            "margin-right",
+            "padding-left",
+            "padding-right",
+            "border-left",
+            "border-right:1px",
+            "text-align:left",
+            "text-align:right",
+        ):
             self.assertNotIn(physical, css, f"use a logical property instead of {physical}")
 
 
@@ -149,7 +158,10 @@ class FixtureBuildTests(Scratch):
         cls.ed = content.pick_edition(cls.raw)[1]
 
     def test_a_project_the_engine_has_never_seen_builds(self):
-        self.assertEqual(set(self.pages), {"index.html", "group-g1.html", "p1.html", "points.html", "sources.html", "how-to.html", "settings.html"})
+        self.assertEqual(
+            set(self.pages),
+            {"index.html", "group-g1.html", "p1.html", "points.html", "sources.html", "how-to.html", "settings.html"},
+        )
 
     def test_no_trace_of_the_real_project_in_the_output(self):
         for name, text in self.pages.items():
@@ -210,15 +222,17 @@ class PluralRuleTests(unittest.TestCase):
         self.assertEqual(self.cats("cy", [0, 1, 2, 3, 6, 4, 11]), ["zero", "one", "two", "few", "many", "other", "other"])
 
     def test_russian(self):
-        self.assertEqual(self.cats("ru", [1, 2, 5, 11, 21, 22, 25, 111]),
-                         ["one", "few", "many", "many", "one", "few", "many", "many"])
+        self.assertEqual(
+            self.cats("ru", [1, 2, 5, 11, 21, 22, 25, 111]), ["one", "few", "many", "many", "one", "few", "many", "many"]
+        )
 
     def test_polish(self):
         self.assertEqual(self.cats("pl", [1, 2, 5, 12, 22, 0]), ["one", "few", "many", "many", "few", "many"])
 
     def test_arabic(self):
-        self.assertEqual(self.cats("ar", [0, 1, 2, 3, 10, 11, 99, 100]),
-                         ["zero", "one", "two", "few", "few", "many", "many", "other"])
+        self.assertEqual(
+            self.cats("ar", [0, 1, 2, 3, 10, 11, 99, 100]), ["zero", "one", "two", "few", "few", "many", "many", "other"]
+        )
 
     def test_irish_and_scottish_gaelic(self):
         self.assertEqual(self.cats("ga", [1, 2, 4, 8, 11]), ["one", "two", "few", "many", "other"])
@@ -268,8 +282,9 @@ class MessageTests(unittest.TestCase):
     def test_placeholders_are_filled_and_html_mode_escapes_only_the_message(self):
         m = Messages(packs_with(qaa={"home_about": "<b>{about}</b> & {link}"}))
         self.assertEqual(m.format("qaa", "home_about", about="a", link="b")[0], "<b>a</b> & b")
-        self.assertEqual(m.format("qaa", "home_about", html_mode=True, about="<i>a</i>", link="b")[0],
-                         "&lt;b&gt;<i>a</i>&lt;/b&gt; &amp; b")
+        self.assertEqual(
+            m.format("qaa", "home_about", html_mode=True, about="<i>a</i>", link="b")[0], "&lt;b&gt;<i>a</i>&lt;/b&gt; &amp; b"
+        )
 
     def test_a_count_selects_the_plural_form_of_the_messages_own_language(self):
         m = Messages(packs_with(qaa={"entries": {"one": "{n} uno", "other": "{n} mas"}}), engine_dir=PLURAL_ENGINE)
@@ -289,8 +304,16 @@ class MessageTests(unittest.TestCase):
         self.assertEqual(m.join("en", ["a", "b", "c", "d"]), "a, b, c and d")
 
     def test_list_patterns_follow_the_locale(self):
-        m = Messages(packs_with(qaa={"list_two": "{first} & {second}", "list_end": "{first} + {second}",
-                                     "list_start": "{first}; {second}", "list_middle": "{first}; {second}"}))
+        m = Messages(
+            packs_with(
+                qaa={
+                    "list_two": "{first} & {second}",
+                    "list_end": "{first} + {second}",
+                    "list_start": "{first}; {second}",
+                    "list_middle": "{first}; {second}",
+                }
+            )
+        )
         self.assertEqual(m.join("qaa", ["a", "b", "c", "d"]), "a; b; c + d")
 
     def check(self, **ui):
@@ -345,8 +368,9 @@ class LocalisedInterfaceTests(Scratch):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        pseudo_ui = {k: ({c: fixture.pseudo(t) for c, t in v.items()} if isinstance(v, dict) else fixture.pseudo(v))
-                     for k, v in EN.items()}
+        pseudo_ui = {
+            k: ({c: fixture.pseudo(t) for c, t in v.items()} if isinstance(v, dict) else fixture.pseudo(v)) for k, v in EN.items()
+        }
         cls.proj = cls.project(ui_extra={code: pseudo_ui for code in fixture.LANGS})
         cls.raw = content.read(cls.proj)
         cls.ed = content.pick_edition(cls.raw)[1]
@@ -407,7 +431,9 @@ class CommentaryLanguageTests(Scratch):
         fixture.edit(proj / "packs" / "qac" / "pack.json", lambda d: d.update(commentary_lang="qab"))
         site = phrasebook.Site(content.read(proj), content.pick_edition(content.read(proj))[1], pair=("qaa", "qac"))
         page = site.render_all()["p1.html"]
-        self.assertIn('<small class="note"><span lang="qab">A note on <span lang="qac" dir="rtl">qac two</span></span></small>', page)
+        self.assertIn(
+            '<small class="note"><span lang="qab">A note on <span lang="qac" dir="rtl">qac two</span></span></small>', page
+        )
 
     def test_commentary_defaults_to_the_interface_language(self):
         proj = self.project()
@@ -484,13 +510,14 @@ class StorageNameTests(Scratch):
         for code in fixture.LANGS:
             fixture.edit(proj / "packs" / code / "pack.json", lambda d: d.pop("varieties", None))
         for code in fixture.LANGS:
-            fixture.edit(proj / "packs" / code / "pages" / "p1.json",
-                         lambda d: d["sections"]["s2"]["concepts"].update(c2={"text": "plain"}))
+            fixture.edit(
+                proj / "packs" / code / "pages" / "p1.json",
+                lambda d: d["sections"]["s2"]["concepts"].update(c2={"text": "plain"}),
+            )
         page = self.built(proj)["p1.html"]
         self.assertIn('data-storage="demo-book"', page)
         self.assertIn('<script src="app.js"></script>', page)
         self.assertNotIn("data-variety-lang", page)
-
 
 
 class StylesheetTests(Scratch):
@@ -627,8 +654,7 @@ class InstallTests(Scratch):
         quiet_build(out, project_dir=proj)
         sw = (out / "sw.js").read_text(encoding="utf-8")
         files = json.loads(re.search(r"const FILES = (\[.*\]);", sw).group(1))
-        on_disk = {str(p.relative_to(out)).replace("\\", "/") for p in out.rglob("*")
-                  if p.is_file() and p.name != "sw.js"}
+        on_disk = {str(p.relative_to(out)).replace("\\", "/") for p in out.rglob("*") if p.is_file() and p.name != "sw.js"}
         self.assertEqual(set(files), on_disk)
         self.assertNotIn("sw.js", files)
 
@@ -636,11 +662,11 @@ class InstallTests(Scratch):
         proj = self.project()
         out1 = self.tmp / "v1"
         quiet_build(out1, project_dir=proj)
-        version1 = re.search(r'phrasebook-([0-9a-f]+)', (out1 / "sw.js").read_text(encoding="utf-8")).group(1)
+        version1 = re.search(r"phrasebook-([0-9a-f]+)", (out1 / "sw.js").read_text(encoding="utf-8")).group(1)
         fixture.edit(proj / "packs" / "qaa" / "pages" / "p1.json", lambda d: d.update(lede="A different lede."))
         out2 = self.tmp / "v2"
         quiet_build(out2, project_dir=proj)
-        version2 = re.search(r'phrasebook-([0-9a-f]+)', (out2 / "sw.js").read_text(encoding="utf-8")).group(1)
+        version2 = re.search(r"phrasebook-([0-9a-f]+)", (out2 / "sw.js").read_text(encoding="utf-8")).group(1)
         self.assertNotEqual(version1, version2)
 
 
@@ -695,11 +721,22 @@ class PaletteSiteTests(Scratch):
         self.assertLess(page.index('<script src="app.js">'), page.index("<body>"))
 
     def test_the_labels_come_from_the_catalogue_so_they_can_be_translated(self):
-        pseudo_ui = {k: ({c: fixture.pseudo(x) for c, x in v.items()} if isinstance(v, dict) else fixture.pseudo(v))
-                     for k, v in EN.items()}
+        pseudo_ui = {
+            k: ({c: fixture.pseudo(x) for c, x in v.items()} if isinstance(v, dict) else fixture.pseudo(v)) for k, v in EN.items()
+        }
         page = self.built(self.project(ui_extra={code: pseudo_ui for code in fixture.LANGS}))["settings.html"]
-        for key in ("appearance", "appearance_system", "appearance_light", "appearance_dark", "colours",
-                    "palette_default", "palette_high_contrast", "palette_red_green", "palette_red_green_safe", "palette_blue_yellow_safe"):
+        for key in (
+            "appearance",
+            "appearance_system",
+            "appearance_light",
+            "appearance_dark",
+            "colours",
+            "palette_default",
+            "palette_high_contrast",
+            "palette_red_green",
+            "palette_red_green_safe",
+            "palette_blue_yellow_safe",
+        ):
             self.assertIn(fixture.pseudo(EN[key]), page, key)
 
     def test_an_edition_can_offer_a_subset(self):
@@ -792,6 +829,7 @@ def default_palette():
 
 def default_palette_hex(variant, role):
     from phrasebook import colour, palettes
+
     return colour.rgb_to_hex(palettes.resolve(default_palette())[variant][role])
 
 

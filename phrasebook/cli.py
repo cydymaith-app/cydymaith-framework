@@ -1,13 +1,14 @@
 """Builds a project into a static site.
 
-    python3 build.py [OUTDIR]                    write the site to OUTDIR (default: dist)
-    python3 build.py [OUTDIR] --project DIR      choose the project (default: the only folder in ./content/)
-    python3 build.py [OUTDIR] --edition NAME     choose an edition when the project holds several
-    python3 build.py [OUTDIR] --strict           also fail while any included source is still an unreviewed draft
-    python3 build.py [OUTDIR] --channel NAME     release (default) leaves out held-back sections; development keeps them
-    python3 build.py [OUTDIR] --screenshots [DIR]  also screenshot every theme (palette, light and dark) on one example
-                                                 page into DIR (default docs/screenshots); needs Chrome, Chromium or Edge
+python3 build.py [OUTDIR]                    write the site to OUTDIR (default: dist)
+python3 build.py [OUTDIR] --project DIR      choose the project (default: the only folder in ./content/)
+python3 build.py [OUTDIR] --edition NAME     choose an edition when the project holds several
+python3 build.py [OUTDIR] --strict           also fail while any included source is still an unreviewed draft
+python3 build.py [OUTDIR] --channel NAME     release (default) leaves out held-back sections; development keeps them
+python3 build.py [OUTDIR] --screenshots [DIR]  also screenshot every theme (palette, light and dark) on one example
+                                             page into DIR (default docs/screenshots); needs Chrome, Chromium or Edge
 """
+
 import hashlib
 import json
 import pathlib
@@ -61,8 +62,7 @@ self.addEventListener("fetch", (event) => {{
 
 def _precache_list(out):
     """Every file the build wrote, as paths relative to out, for the service worker to cache up front."""
-    return sorted(p.relative_to(out).as_posix() for p in pathlib.Path(out).rglob("*")
-                  if p.is_file() and p.name != "sw.js")
+    return sorted(p.relative_to(out).as_posix() for p in pathlib.Path(out).rglob("*") if p.is_file() and p.name != "sw.js")
 
 
 def _cache_version(out, files):
@@ -119,13 +119,14 @@ def build(out_dir, project_dir=None, strict=False, edition=None, channel=RELEASE
         if not (out / icon["src"]).is_file():
             raise ContentError(f"the edition lists the icon {icon['src']!r} but the project has no static/{icon['src']}")
     (out / "manifest.json").write_text(json.dumps(site.manifest(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (out / "tree.json").write_text(json.dumps(tree_document(site), ensure_ascii=False, indent=2) + "\n",
-                                     encoding="utf-8")
-    (out / "dictionary.json").write_text(json.dumps(dictionary_index(view, ed), ensure_ascii=False, indent=2) + "\n",
-                                         encoding="utf-8")
+    (out / "tree.json").write_text(json.dumps(tree_document(site), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (out / "dictionary.json").write_text(
+        json.dumps(dictionary_index(view, ed), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     files = _precache_list(out)
-    (out / "sw.js").write_text(SERVICE_WORKER.format(version=_cache_version(out, files), files=json.dumps(files)),
-                               encoding="utf-8")
+    (out / "sw.js").write_text(
+        SERVICE_WORKER.format(version=_cache_version(out, files), files=json.dumps(files)), encoding="utf-8"
+    )
     return len(rendered)
 
 
@@ -149,13 +150,13 @@ def main(argv=None, projects_dir=None):
         i = argv.index("--screenshots")
         nxt = argv[i + 1] if i + 1 < len(argv) and not argv[i + 1].startswith("--") else None
         shots = nxt or "docs/screenshots"
-        del argv[i:i + (2 if nxt else 1)]
+        del argv[i : i + (2 if nxt else 1)]
 
     def option(name):
         if name in argv:
             i = argv.index(name)
             value = argv[i + 1] if i + 1 < len(argv) else None
-            del argv[i:i + 2]
+            del argv[i : i + 2]
             return value
         return None
 

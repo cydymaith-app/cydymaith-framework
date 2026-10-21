@@ -8,6 +8,7 @@ References: Björn Ottosson, "A perceptual color space for image processing" (OK
 luminance and contrast ratio; Machado, Oliveira and Fernandes, "A Physiologically-based Model for Simulation
 of Color Vision Deficiency" (2009), severity 1.0.
 """
+
 import math
 import re
 
@@ -29,18 +30,22 @@ def linear_to_oklab(r, g, b):
     m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
     s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
     l, m, s = math.cbrt(l), math.cbrt(m), math.cbrt(s)
-    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+    return (
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    )
 
 
 def oklab_to_linear(lightness, a, b):
     l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
     m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
     s = (lightness - 0.0894841775 * a - 1.2914855480 * b) ** 3
-    return (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+    return (
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    )
 
 
 def oklch_to_oklab(lightness, chroma, hue):
@@ -56,7 +61,7 @@ def oklab_to_oklch(lightness, a, b):
 def hex_to_rgb(text):
     """'#rrggbb' -> (r, g, b), each 0..1 and sRGB-encoded."""
     value = HEX.match(text).group(1)
-    return tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return tuple(int(value[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
 
 def rgb_to_hex(rgb):

@@ -3,6 +3,7 @@
 A page skeleton may name a figure ("figure": "compass-rose"). The figure needs certain concept ids on that page;
 the build checks they are there. Any project can use a figure; a new kind of figure is new code here.
 """
+
 import html
 import math
 
@@ -56,14 +57,22 @@ def rose_svg(site, slug):
         return [label(x, y, head + sep, "w2", anchor), label(x, y + 18, tail, "w2", anchor)]
 
     labels = [
-        label(200, 58, t["north"], "w2", "middle"), label(200, 75, f["north"], "w1", "middle"),
-        label(200, 338, t["south"], "w2", "middle"), label(200, 355, f["south"], "w1", "middle"),
-        label(326, 205, t["east"], "w2", "start"), label(326, 222, f["east"], "w1", "start"),
-        label(74, 205, t["west"], "w2", "end"), label(74, 222, f["west"], "w1", "end"),
-        *stacked(288, 100, t["north-east"], "start"), label(288, 135, f["north-east"], "w1", "start"),
-        *stacked(112, 100, t["north-west"], "end"), label(112, 135, f["north-west"], "w1", "end"),
-        *stacked(288, 276, t["south-east"], "start"), label(288, 311, f["south-east"], "w1", "start"),
-        *stacked(112, 276, t["south-west"], "end"), label(112, 311, f["south-west"], "w1", "end"),
+        label(200, 58, t["north"], "w2", "middle"),
+        label(200, 75, f["north"], "w1", "middle"),
+        label(200, 338, t["south"], "w2", "middle"),
+        label(200, 355, f["south"], "w1", "middle"),
+        label(326, 205, t["east"], "w2", "start"),
+        label(326, 222, f["east"], "w1", "start"),
+        label(74, 205, t["west"], "w2", "end"),
+        label(74, 222, f["west"], "w1", "end"),
+        *stacked(288, 100, t["north-east"], "start"),
+        label(288, 135, f["north-east"], "w1", "start"),
+        *stacked(112, 100, t["north-west"], "end"),
+        label(112, 135, f["north-west"], "w1", "end"),
+        *stacked(288, 276, t["south-east"], "start"),
+        label(288, 311, f["south-east"], "w1", "start"),
+        *stacked(112, 276, t["south-west"], "end"),
+        label(112, 311, f["south-west"], "w1", "end"),
     ]
     items = [site.plain("rose_item", first=f[i], second=t[i]) for i in ids]
     desc = site.plain("rose_desc", list=site.messages.join(site.interface, items))

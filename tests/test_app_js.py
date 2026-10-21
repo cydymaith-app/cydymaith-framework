@@ -2,6 +2,7 @@
 
 Without Node the tests are skipped on a developer machine. CI sets REQUIRE_NODE=1, so a missing Node there is a failure.
 """
+
 import os
 import pathlib
 import shutil

@@ -3,6 +3,7 @@
 Building sites with palettes is tested in test_framework.py (PaletteSiteTests). Run from the repo root:
 python3 -m unittest discover -s tests -v
 """
+
 import copy
 import json
 import pathlib
@@ -19,10 +20,26 @@ from phrasebook.errors import ContentError  # noqa: E402
 ENGINE_PALETTES = ROOT / "phrasebook" / "palettes"
 
 # The colours the site had before palettes were data, written out so a refactor cannot change the default look.
-ORIGINAL_LIGHT = {"bg": "#f1f4f5", "surface": "#ffffff", "ink": "#16252d", "muted": "#566972", "rule": "#d3dbdf",
-                  "rule-strong": "#9db0b9", "accent": "#b01e2e", "star": "#e2e9ec"}
-ORIGINAL_DARK = {"bg": "#11191e", "surface": "#172228", "ink": "#e4ebee", "muted": "#93a4ad", "rule": "#2a3941",
-                 "rule-strong": "#4d626d", "accent": "#ff7a87", "star": "#24343c"}
+ORIGINAL_LIGHT = {
+    "bg": "#f1f4f5",
+    "surface": "#ffffff",
+    "ink": "#16252d",
+    "muted": "#566972",
+    "rule": "#d3dbdf",
+    "rule-strong": "#9db0b9",
+    "accent": "#b01e2e",
+    "star": "#e2e9ec",
+}
+ORIGINAL_DARK = {
+    "bg": "#11191e",
+    "surface": "#172228",
+    "ink": "#e4ebee",
+    "muted": "#93a4ad",
+    "rule": "#2a3941",
+    "rule-strong": "#4d626d",
+    "accent": "#ff7a87",
+    "star": "#24343c",
+}
 
 
 def hexes(colours):
@@ -60,8 +77,21 @@ class ColourTests(unittest.TestCase):
         self.assertEqual(colour.parse(" oklch(0.5  0.1 200) "), colour.parse("oklch(0.5 0.1 200)"))
 
     def test_text_that_is_not_a_colour_is_rejected(self):
-        for bad in ("red", "#fff", "#12345g", "oklch(2 0 0)", "oklch(0.5 0.9 10)", "oklch(0.5 -0.1 10)", "oklch(0.5 0.1)",
-                    "oklab(0.5 0.9 0)", "rgb(1 2 3)", "", 7, None, ["#ffffff"]):
+        for bad in (
+            "red",
+            "#fff",
+            "#12345g",
+            "oklch(2 0 0)",
+            "oklch(0.5 0.9 10)",
+            "oklch(0.5 -0.1 10)",
+            "oklch(0.5 0.1)",
+            "oklab(0.5 0.9 0)",
+            "rgb(1 2 3)",
+            "",
+            7,
+            None,
+            ["#ffffff"],
+        ):
             self.assertIsNone(colour.parse(bad), bad)
 
     def test_greys_look_the_same_to_everyone(self):
@@ -174,7 +204,9 @@ class PaletteRejectionTests(unittest.TestCase):
 
     def test_an_icon_that_cannot_be_seen_on_its_tile(self):
         self.rejects(lambda p: p["light"].update(**{"on-tile": "oklch(0.8 0.03 225)"}), "on-tile on tile")
-        self.rejects(lambda p: p["dark"].update(tile="oklch(0.33 0.03 230)", **{"on-tile": "oklch(0.45 0.03 230)"}), "on-tile on tile")
+        self.rejects(
+            lambda p: p["dark"].update(tile="oklch(0.33 0.03 230)", **{"on-tile": "oklch(0.45 0.03 230)"}), "on-tile on tile"
+        )
 
     def test_the_tile_roles_are_required(self):
         self.rejects(lambda p: p["light"].pop("tile"), "needs exactly the colours")
@@ -244,6 +276,7 @@ class PaletteCssTests(unittest.TestCase):
 class LoadingTests(unittest.TestCase):
     def test_a_project_palette_is_added_after_the_framework_ones(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp:
             (pathlib.Path(tmp) / "sepia.json").write_text(json.dumps(palettes.load()["default"]), encoding="utf-8")
             loaded = palettes.load(tmp)
@@ -252,6 +285,7 @@ class LoadingTests(unittest.TestCase):
 
     def test_a_project_palette_with_a_framework_id_replaces_it(self):
         import tempfile
+
         mine = copy.deepcopy(palettes.load()["default"])
         mine["light"]["accent"] = "oklch(0.45 0.15 150)"
         with tempfile.TemporaryDirectory() as tmp:

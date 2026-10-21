@@ -12,6 +12,7 @@ A project is a folder:
 
 Nothing in here knows which languages a project uses. Language codes are BCP 47 tags in lower case.
 """
+
 import json
 import pathlib
 import re
@@ -36,8 +37,7 @@ LICENCES = {
     "public-domain": (None, None),
     "CC0-1.0": ("CC0 1.0", "https://creativecommons.org/publicdomain/zero/1.0/"),
     "CC-BY-4.0": ("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/"),
-    "OGL-3.0": ("Open Government Licence v3.0",
-                "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"),
+    "OGL-3.0": ("Open Government Licence v3.0", "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"),
     "own": (None, None),
     "draft": (None, None),
 }
@@ -61,9 +61,12 @@ def read_json(path):
 def read(project_dir):
     """Read every data file of a project into one dict: structure, pages, packs and editions."""
     d = pathlib.Path(project_dir)
-    raw = {"structure": read_json(d / "structure.json"),
-           "pages": {p.stem: read_json(p) for p in sorted((d / "pages").glob("*.json"))},
-           "packs": {}, "editions": {}}
+    raw = {
+        "structure": read_json(d / "structure.json"),
+        "pages": {p.stem: read_json(p) for p in sorted((d / "pages").glob("*.json"))},
+        "packs": {},
+        "editions": {},
+    }
     for pdir in sorted((d / "packs").iterdir()):
         if pdir.is_dir():
             pages_dir = pdir / "pages"
@@ -102,7 +105,9 @@ def validate(raw):
         raise ContentError("structure.json: every group needs a unique id")
     for gid in group_ids:
         if not isinstance(gid, str) or not GROUP_ID.match(gid):
-            raise ContentError(f"structure.json: group id {gid!r} must be lower case letters, digits and hyphens, starting with a letter")
+            raise ContentError(
+                f"structure.json: group id {gid!r} must be lower case letters, digits and hyphens, starting with a letter"
+            )
     listed = [slug for g in structure["groups"] for slug in g.get("pages", [])]
     for slug in listed:
         if slug not in pages:
@@ -136,8 +141,11 @@ def check_icon(where, name, available):
     if name is None:
         return
     if not isinstance(name, str) or name not in available:
-        raise ContentError(f"{where}: icon {name!r} has no file icons/{name}.svg" if isinstance(name, str)
-                           else f"{where}: 'icon' must be the name of a file in icons/")
+        raise ContentError(
+            f"{where}: icon {name!r} has no file icons/{name}.svg"
+            if isinstance(name, str)
+            else f"{where}: 'icon' must be the name of a file in icons/"
+        )
 
 
 def validate_text(where, value):
@@ -196,8 +204,7 @@ def validate_sources(owner, sources):
         if not s.get("title"):
             raise ContentError(f"{owner}: source '{sid}' needs a title")
         if s.get("licence") not in LICENCES:
-            raise ContentError(f"{owner}: source '{sid}' has licence {s.get('licence')!r}; "
-                               f"accepted: {', '.join(LICENCES)}")
+            raise ContentError(f"{owner}: source '{sid}' has licence {s.get('licence')!r}; " f"accepted: {', '.join(LICENCES)}")
         if s.get("url") and not s["url"].startswith("https://"):
             raise ContentError(f"{owner}: source '{sid}' url must start with https://")
     return ids
@@ -258,7 +265,9 @@ def validate_varieties(where, varieties):
         if not (vid and v.get("name") and v.get("short")):
             raise ContentError(f"{where}/pack.json: each variety needs 'id', 'name' and 'short'")
         if not VARIETY_ID.match(vid) or vid == "all":
-            raise ContentError(f"{where}/pack.json: variety id {vid!r} must be lower case letters, digits or hyphens, and not 'all'")
+            raise ContentError(
+                f"{where}/pack.json: variety id {vid!r} must be lower case letters, digits or hyphens, and not 'all'"
+            )
         if vid in ids:
             raise ContentError(f"{where}/pack.json: variety id repeated: {vid!r}")
         ids.append(vid)
@@ -314,7 +323,9 @@ def validate_edition(name, ed, packs, available_palettes):
             raise ContentError(f"{where}: 'palettes' must include {palettes.DEFAULT!r}, the baseline every page starts from")
         unknown = [pid for pid in offered if pid not in available_palettes]
         if unknown:
-            raise ContentError(f"{where}: unknown palettes: {', '.join(map(str, unknown))}; available: {', '.join(available_palettes)}")
+            raise ContentError(
+                f"{where}: unknown palettes: {', '.join(map(str, unknown))}; available: {', '.join(available_palettes)}"
+            )
     if ed.get("short_name") is not None and not isinstance(ed["short_name"], str):
         raise ContentError(f"{where}: 'short_name' must be a string")
     for key in ("fonts", "stylesheets"):
@@ -332,7 +343,9 @@ def validate_edition(name, ed, packs, available_palettes):
         if itype not in ("image/png", "image/svg+xml"):
             raise ContentError(f"{where}: icon {src!r} needs 'type' image/png or image/svg+xml")
         if "purpose" in icon and icon["purpose"] not in ICON_PURPOSES:
-            raise ContentError(f"{where}: icon {src!r} has unknown purpose {icon['purpose']!r}; accepted: {', '.join(ICON_PURPOSES)}")
+            raise ContentError(
+                f"{where}: icon {src!r} has unknown purpose {icon['purpose']!r}; accepted: {', '.join(ICON_PURPOSES)}"
+            )
     validate_text(where, ed)
 
 
@@ -341,8 +354,9 @@ def validate_edition(name, ed, packs, available_palettes):
 
 def draft_sources(raw, edition):
     """(language, source id) for every unreviewed draft source in the edition's packs."""
-    return [(code, s["id"]) for code in edition["languages"]
-            for s in raw["packs"][code]["meta"]["sources"] if s["licence"] == DRAFT]
+    return [
+        (code, s["id"]) for code in edition["languages"] for s in raw["packs"][code]["meta"]["sources"] if s["licence"] == DRAFT
+    ]
 
 
 def coverage(raw, edition):
@@ -350,8 +364,9 @@ def coverage(raw, edition):
     total = sum(len(s["concepts"]) for p in raw["pages"].values() for s in p["sections"])
     result = {}
     for code in edition["languages"]:
-        have = sum(len(sec.get("concepts", {})) for pp in raw["packs"][code]["pages"].values()
-                   for sec in pp.get("sections", {}).values())
+        have = sum(
+            len(sec.get("concepts", {})) for pp in raw["packs"][code]["pages"].values() for sec in pp.get("sections", {}).values()
+        )
         result[code] = (have, total)
     return result
 

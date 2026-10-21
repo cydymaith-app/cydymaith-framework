@@ -6,7 +6,7 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
 
 - [x] **Test that fails on third-party requests**, for both the neutral fixture and the real project.
 - [ ] **Decide a framework name.** The package is still called `phrasebook`, a working name, and the repository is `cydymaith-framework`. Decide a name for the framework, and check it for collisions before the first public deploy. A rename touches every import, the docs and the tests, so do it as one change.
-- [ ] Format all the Python with black.
+- [x] Format all the Python with black. Settings are in `pyproject.toml` (line length 130); CI runs `black --check .`. Run `black .` before committing.
 
 ## 1. Languages and theming
 

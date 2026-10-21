@@ -8,6 +8,7 @@ for compact decimals and exact millions (French, Spanish, Italian, Portuguese); 
 reach them. To support another language, add a row to RULES.
 Codes qaa to qtz are reserved for private use. They get the English rule so tests can use made-up languages.
 """
+
 import re
 
 PRIVATE_USE = re.compile(r"^q[a-t][a-z]$")
