@@ -210,18 +210,24 @@ class Site:
         return (f'<label><input type="radio" name="{name}" value="{value}" {attrs}'
                 f'{" checked" if checked else ""}> {label}</label>')
 
+    @staticmethod
+    def pref_group(title, radios):
+        """One choice as an accordion panel: opens and closes with no script, and one panel is open at a time."""
+        return (f'<details class="pref" name="prefs"><summary>{title}</summary>'
+                f'<fieldset><legend class="sr-only">{title}</legend>{radios}</fieldset></details>')
+
     def theme_controls(self):
         """Light or dark, and a colour palette. The palette choice appears only when the edition offers more than one."""
         appearance = "".join(
             self.radio("appearance", v, self.h("appearance_" + v), 'data-pref="appearance"', v == "system")
             for v in self.APPEARANCES)
-        fields = [f'<fieldset class="pref"><legend>{self.h("appearance")}</legend>{appearance}</fieldset>']
+        fields = [self.pref_group(self.h("appearance"), appearance)]
         if len(self.palette_ids) > 1:
             choices = "".join(
                 self.radio("palette", pid, self.inline(*self.palette_label(pid)[::-1]), 'data-pref="palette"',
                            pid == palettes.DEFAULT)
                 for pid in self.palette_ids)
-            fields.append(f'<fieldset class="pref"><legend>{self.h("colours")}</legend>{choices}</fieldset>')
+            fields.append(self.pref_group(self.h("colours"), choices))
         return "".join(fields)
 
     def variety_fields(self):
@@ -236,7 +242,7 @@ class Site:
                 f'<label><input type="radio" name="variety-{e(code)}" value="{vid}" data-variety-lang="{e(code)}"'
                 f'{" checked" if vid == "all" else ""}> {label}</label>' for vid, label in options)
             legend = self.h("regional_forms", language=e(self.language_name(code)))
-            fields.append(f'<fieldset class="pref"><legend>{legend}</legend>{radios}</fieldset>')
+            fields.append(self.pref_group(legend, radios))
         return "".join(fields)
 
     def prefs_controls(self):
@@ -357,7 +363,7 @@ class Site:
                 f'{self.ui_icons["arrow--left"]}</a>')
         items = []
         for href, (first, second) in steps:
-            inner = f"{first}{second}"
+            inner = f"{first}{second}" if href else first  # the page's own heading already gives both languages
             items.append(f'<li><a href="{href}">{inner}</a></li>' if href else f'<li><span aria-current="page">{inner}</span></li>')
         return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>'
 
@@ -408,9 +414,9 @@ class Site:
             heading = (f'<h2>{self.inline(frm, self.pack_section(frm, slug, sid)["title"])}'
                        f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>')
         return (f'<section id="{sid}">{heading}{intro}'
-                f'<table class="terms"><thead><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
+                f'<div class="card"><table class="terms pair"><thead class="sr-only"><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
                 f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
-                f'<tbody>{"".join(rows)}</tbody></table>{box}</section>')
+                f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>')
 
     def search_card(self):
         """The dictionary lookup card, shut and hidden. search.js reveals the layer and the rail button, and fills the results

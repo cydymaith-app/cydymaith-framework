@@ -521,7 +521,7 @@ class MobileFirstTests(unittest.TestCase):
         self.assertIn(".search-card[data-open]{visibility:visible;transform:none", self.CSS)
 
     def test_a_word_found_by_search_is_marked_when_the_page_opens_at_it(self):
-        self.assertIn(".terms tr:target{background:var(--surface)}", self.CSS)
+        self.assertIn(".terms tr:target{background:var(--bg)}", self.CSS)
         self.assertIn(".terms tr{scroll-margin-top:", self.CSS)
 
     def test_the_slide_comes_from_the_other_side_in_right_to_left(self):
