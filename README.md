@@ -6,11 +6,12 @@ The first project is [Cydymaith am iaith](https://github.com/cydymaith-app/cydym
 
 ## Using it
 
-Requires Python 3.12 or later. There are no dependencies. Node 20 or later is optional and only runs the tests for the small browser scripts.
+Requires Python 3.12 or later. There are no run-time dependencies; formatting the code needs [black](https://black.readthedocs.io/) (`pip install -r requirements-dev.txt`). Node 20 or later is optional and only runs the tests for the small browser scripts.
 
 ```sh
 python3 build.py dist --project path/to/project   # write a project's site to dist/
 python3 -m unittest discover -s tests -v          # run every test, on a made-up neutral project
+python3 -m black .                                 # format the Python (CI runs `black --check .`)
 ```
 
 A project is a `content/<project>/` folder (`structure.json`, `pages/`, `packs/<code>/`, `editions/`, and optional `palettes/`, `icons/` and `static/`). Its own repository adds this one as a submodule (`git submodule add https://github.com/cydymaith-app/cydymaith-framework.git framework`) and has a short `build.py` that puts `framework/` on the path and calls `phrasebook.cli.main(projects_dir=<its content/ folder>)`.
