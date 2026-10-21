@@ -5,7 +5,7 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
 ## 0. Principles
 
 - [x] **Test that fails on third-party requests**, for both the neutral fixture and the real project.
-- [ ] **Decide a framework name.** The package is still called `phrasebook`, a working name, and the repository is `cydymaith-framework`. Decide a name for the framework, and check it for collisions before the first public deploy. A rename touches every import, the docs and the tests, so do it as one change.
+- [x] **Decide a framework name.** The package is still called `phrasebook`, a working name, and the repository is `cydymaith-framework`. Decide a name for the framework, and check it for collisions before the first public deploy. A rename touches every import, the docs and the tests, so do it as one change.
 - [x] Format all the Python with black. Settings are in `pyproject.toml` (line length 130); CI runs `black --check .`. Run `black .` before committing.
 
 ## 1. Languages and theming
@@ -70,6 +70,14 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
   - Also done: the ENGLISH and CYMRAEG column headers are visually hidden (kept for screen readers); each table sits on its own card in the surface shade; the title-bar trail gives the second language only as far as the parent; the settings are an accordion (`details`, one open at a time); the Welsh app's default palette is now red and green.
   - Also done: a section whose words are all on the page's figure (the compass) is no longer a table as well; the compass labels carry the word anchors, so search links still land.
   - [ ] Look at the cards, the accordion and the red and green default in a browser, in light and dark.
+- [ ] About page to describe the philosophy: Free to use, available offline, zero tracking, zero AI, free to extend. Links back to github project site.
+
+## More sections
+
+- [ ] News section. Law, crime & policing, Politics, Economics, Business, Finance.
+- [ ] Sport section. Football, Rugby, Cricket, Athletics - (can keep expanding).
+- [ ] Travel/transport section incliding roads/traffic news and How place names are constructed in Welsh. Eg. Rhos, llys, maes, pentre, pen, dref, caer, llan, ffordd, lon, etc
+
 
 ## Done
 
