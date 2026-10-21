@@ -68,6 +68,7 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
 - [x] **Entries should not repeat the title.** Done: a section heading that matches the page title in both languages (case and normal form ignored) is left out (`repeats_title` in `phrasebook/site.py`); the section keeps its `id`, so links still land. Column headers stay, as they name the languages and appear once per table.
   - [ ] Add a test that a section titled like its page has no `<h2>`, and look at the topic pages in a browser.
   - Also done: the ENGLISH and CYMRAEG column headers are visually hidden (kept for screen readers); each table sits on its own card in the surface shade; the title-bar trail gives the second language only as far as the parent; the settings are an accordion (`details`, one open at a time); the Welsh app's default palette is now red and green.
+  - Also done: a section whose words are all on the page's figure (the compass) is no longer a table as well; the compass labels carry the word anchors, so search links still land.
   - [ ] Look at the cards, the accordion and the red and green default in a browser, in light and dark.
 
 ## Done

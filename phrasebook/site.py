@@ -15,7 +15,7 @@ import re
 import unicodedata
 
 from . import colour, icons, palettes
-from .figures import FIGURES
+from .figures import FIGURE_CONCEPTS, FIGURES
 from .content import LICENCES, STORAGE_NAME
 from .messages import Messages
 
@@ -421,6 +421,11 @@ class Site:
 
         return same(self.frm) and same(self.to)
 
+    def shown_sections(self, slug, figure):
+        """The sections drawn as tables: not one whose every word the page's figure, if it was drawn, already shows."""
+        covered = set(FIGURE_CONCEPTS.get(self.skel[slug].get("figure"), ())) if figure else set()
+        return [s for s in self.sections(slug) if not set(s["concepts"]) <= covered]
+
     def render_section(self, slug, section):
         frm, to, sid = self.frm, self.to, section["id"]
         rows = []
@@ -518,7 +523,12 @@ class Site:
 
     def content_page(self, slug):
         frm, to = self.frm, self.to
-        sections = self.sections(slug)
+        fig = self.skel[slug].get("figure")
+        figure = FIGURES[fig](self, slug) if fig else ""
+        sections = self.shown_sections(slug, figure)
+        for hidden in self.sections(slug):
+            if hidden not in sections:  # a section the figure stands in for keeps its address
+                figure = f'<section id="{hidden["id"]}" class="figure">{figure}</section>'
         jump = ""
         if len(sections) >= 3:
             jump = (
@@ -529,8 +539,6 @@ class Site:
                 )
                 + "</ul>"
             )
-        fig = self.skel[slug].get("figure")
-        figure = FIGURES[fig](self, slug) if fig else ""
         lcode, lede = self.prose(lambda c: self.pack_page(c, slug).get("lede"))
         lede_html = f'<p class="lede"{self.la(lcode)}>{e(lede)}</p>' if lede else ""
         head = (

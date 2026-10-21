@@ -56,23 +56,21 @@ def rose_svg(site, slug):
             return [label(x, y + 9, text, "w2", anchor)]
         return [label(x, y, head + sep, "w2", anchor), label(x, y + 18, tail, "w2", anchor)]
 
+    home = {cid: sec["id"] for sec in site.skel[slug]["sections"] for cid in sec["concepts"]}
+
+    def anchored(cid, *parts):
+        """The labels of one point, grouped under the id a link to the word lands on (section id, a dot, the concept)."""
+        return f'<g id="{home[cid]}.{cid}">' + "".join(parts) + "</g>"
+
     labels = [
-        label(200, 58, t["north"], "w2", "middle"),
-        label(200, 75, f["north"], "w1", "middle"),
-        label(200, 338, t["south"], "w2", "middle"),
-        label(200, 355, f["south"], "w1", "middle"),
-        label(326, 205, t["east"], "w2", "start"),
-        label(326, 222, f["east"], "w1", "start"),
-        label(74, 205, t["west"], "w2", "end"),
-        label(74, 222, f["west"], "w1", "end"),
-        *stacked(288, 100, t["north-east"], "start"),
-        label(288, 135, f["north-east"], "w1", "start"),
-        *stacked(112, 100, t["north-west"], "end"),
-        label(112, 135, f["north-west"], "w1", "end"),
-        *stacked(288, 276, t["south-east"], "start"),
-        label(288, 311, f["south-east"], "w1", "start"),
-        *stacked(112, 276, t["south-west"], "end"),
-        label(112, 311, f["south-west"], "w1", "end"),
+        anchored("north", label(200, 58, t["north"], "w2", "middle"), label(200, 75, f["north"], "w1", "middle")),
+        anchored("south", label(200, 338, t["south"], "w2", "middle"), label(200, 355, f["south"], "w1", "middle")),
+        anchored("east", label(326, 205, t["east"], "w2", "start"), label(326, 222, f["east"], "w1", "start")),
+        anchored("west", label(74, 205, t["west"], "w2", "end"), label(74, 222, f["west"], "w1", "end")),
+        anchored("north-east", *stacked(288, 100, t["north-east"], "start"), label(288, 135, f["north-east"], "w1", "start")),
+        anchored("north-west", *stacked(112, 100, t["north-west"], "end"), label(112, 135, f["north-west"], "w1", "end")),
+        anchored("south-east", *stacked(288, 276, t["south-east"], "start"), label(288, 311, f["south-east"], "w1", "start")),
+        anchored("south-west", *stacked(112, 276, t["south-west"], "end"), label(112, 311, f["south-west"], "w1", "end")),
     ]
     items = [site.plain("rose_item", first=f[i], second=t[i]) for i in ids]
     desc = site.plain("rose_desc", list=site.messages.join(site.interface, items))
