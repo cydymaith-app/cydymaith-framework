@@ -493,7 +493,17 @@ class Site:
             f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>'
         )
 
-    def search_card(self):
+    def search_scope(self, current):
+        """The page files the person is browsing: a topic is its own page, a group is its pages, anywhere else is nothing.
+        Search lists the words found there first."""
+        if current in self.slugs:
+            return [f"{current}.html"]
+        for group in self.groups:
+            if current == f"group-{group['id']}":
+                return [f"{slug}.html" for slug in group["pages"] + group["links"]]
+        return []
+
+    def search_card(self, current=None):
         """The dictionary lookup card, shut and hidden. search.js reveals the layer and the rail button, and fills the results
         from dictionary.json as the person types, so without scripts there is no control that does nothing."""
         pair = json.dumps([[self.frm, self.dir_of(self.frm)], [self.to, self.dir_of(self.to)]])
@@ -503,7 +513,8 @@ class Site:
             '<div class="search-layer" hidden>'
             f'<div class="search-card" id="search-card" role="search" aria-label="{name}" inert '
             f'data-dictionary="dictionary.json" data-pair="{e(pair)}" data-hint="{e(hint)}" '
-            f'data-none="{e(self.plain("search_none"))}" data-error="{e(self.plain("search_error"))}">'
+            f'data-none="{e(self.plain("search_none"))}" data-error="{e(self.plain("search_error"))}" '
+            f'data-other="{e(self.plain("search_other"))}" data-scope="{e(json.dumps(self.search_scope(current)))}">'
             '<div class="search-head"><label class="search-field">'
             f'<span class="sr-only">{name}</span>'
             f'<input id="search-input" type="search" placeholder="{e(self.plain("search_placeholder"))}" autocomplete="off" '
@@ -537,7 +548,7 @@ class Site:
             f"<small>{self.brand_small()}</small></a>{trail}</div></header>"
             f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>{settings}</nav>'
             f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
-            f"{self.search_card()}"
+            f"{self.search_card(current)}"
             "</div>"
         )
 

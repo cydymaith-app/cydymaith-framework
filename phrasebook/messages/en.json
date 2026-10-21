@@ -78,5 +78,6 @@
   "search_hint": "Type a word or phrase in {first} or {second}.",
   "search_none": "Nothing found.",
   "search_error": "The word list could not be loaded.",
-  "search_topics": "Topics"
+  "search_topics": "Topics",
+  "search_other": "Other results"
 }

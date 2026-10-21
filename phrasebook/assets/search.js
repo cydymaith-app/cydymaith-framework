@@ -120,8 +120,26 @@
     return String(href).split("#")[0];
   }
 
+  // Split ranked words into those found on the pages being browsed (`scope`, a list of page file names) and the rest, each
+  // keeping its order. A word found there lists that page first, so its link lands on the row in front of the person.
+  function partition(items, scope) {
+    var here = [];
+    var other = [];
+    items.forEach(function (item) {
+      var pages = item.entry.pages;
+      var near = pages.filter(function (p) { return scope.indexOf(pageOf(p.href)) !== -1; });
+      if (!near.length) {
+        other.push(item);
+        return;
+      }
+      var rest = pages.filter(function (p) { return near.indexOf(p) === -1; });
+      here.push({ order: item.order, keys: item.keys, entry: Object.assign({}, item.entry, { pages: near.concat(rest) }) });
+    });
+    return { here: here, other: other };
+  }
+
   var api = { fold: fold, base: base, score: score, prepareWords: prepareWords, prepareTopics: prepareTopics,
-              rank: rank, pageOf: pageOf, MAX_WORDS: MAX_WORDS, MAX_TOPICS: MAX_TOPICS };
+              rank: rank, pageOf: pageOf, partition: partition, MAX_WORDS: MAX_WORDS, MAX_TOPICS: MAX_TOPICS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -148,6 +166,14 @@
   var langs = pair.map(function (p) { return p[0]; });
   var dirs = {};
   pair.forEach(function (p) { dirs[p[0]] = p[1]; });
+
+  var scope = [];
+  try {
+    scope = JSON.parse(card.getAttribute("data-scope") || "[]");
+  } catch (err) {
+    scope = [];
+  }
+  if (!Array.isArray(scope)) scope = [];
 
   var words = null;    // prepared when the dictionary arrives
   var topics = null;
@@ -228,14 +254,19 @@
       status.textContent = text("hint");
       return;
     }
-    var found = rank(words, query, langs).slice(0, MAX_WORDS);
+    var split = partition(rank(words, query, langs), scope);
+    split.here = split.here.slice(0, MAX_WORDS);
+    split.other = split.other.slice(0, MAX_WORDS - split.here.length);
+    var found = split.here.concat(split.other);
     var foundTopics = rank(topics, query, langs).slice(0, MAX_TOPICS);
     if (!found.length && !foundTopics.length) {
       status.textContent = text("none");
       return;
     }
     status.textContent = "";
-    found.forEach(function (item) { results.appendChild(renderWord(item)); });
+    split.here.forEach(function (item) { results.appendChild(renderWord(item)); });
+    if (split.here.length && split.other.length) results.appendChild(make("li", "search-divider", text("other")));
+    split.other.forEach(function (item) { results.appendChild(renderWord(item)); });
     foundTopics.forEach(function (item) { topicList.appendChild(renderTopic(item)); });
     heading.hidden = foundTopics.length === 0;
   }

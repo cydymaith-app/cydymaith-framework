@@ -4,6 +4,7 @@ Framework behaviour runs on the neutral fixture; the project's own icons and tre
 The panel script's moves are tested in nav.test.js. Run from the repo root: python3 -m unittest discover -s tests -v
 """
 
+import html
 import json
 import pathlib
 import re
@@ -430,7 +431,18 @@ class FrameTests(Scratch):
             self.assertIn('data-hint="Type a word or phrase in Alphish or Betish."', card, name)
             self.assertIn('<input id="search-input" type="search" placeholder="Search words and phrases"', card, name)
             self.assertIn('id="search-results"', card, name)
+            self.assertIn('data-other="Other results"', card, name)
             self.assertIn('id="search-pages"', card, name)
+
+    def test_the_card_names_the_pages_being_browsed_so_search_can_list_them_first(self):
+        def scope(name):
+            card = self.pages[name][self.pages[name].index('<div class="search-card"') :]
+            return json.loads(html.unescape(re.search(r'data-scope="([^"]*)"', card).group(1)))
+
+        self.assertEqual(scope("p1.html"), ["p1.html"])
+        self.assertEqual(scope("group-g1.html"), ["p1.html", "points.html"])
+        for name in ("index.html", "settings.html", "sources.html"):
+            self.assertEqual(scope(name), [], name)
 
     def test_the_card_comes_after_the_page_and_search_js_loads_after_the_page_is_parsed(self):
         page = self.pages["p1.html"]

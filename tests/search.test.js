@@ -12,7 +12,7 @@ const SOURCE = fs.readFileSync(path.join(__dirname, "..", "phrasebook", "assets"
 // Run in this realm, not a sandbox, so objects it returns compare equal to the ones written here.
 const exported = { exports: {} };
 vm.runInThisContext(`(function (module) {${SOURCE}\n})`)(exported);
-const { fold, base, score, prepareWords, prepareTopics, rank, pageOf } = exported.exports;
+const { fold, base, score, prepareWords, prepareTopics, rank, pageOf, partition } = exported.exports;
 
 // Two made-up languages, "aa" and "bb", with one concept that has two regional forms and a word with a mark on it.
 const DICTIONARY = {
@@ -121,4 +121,28 @@ test("rank: a form a word is also heard as finds the word, which is shown by its
   const words = prepareWords(DICTIONARY, LANGS);
   assert.deepEqual(concepts(rank(words, "lifogydd", LANGS)), ["six"]);
   assert.deepEqual(concepts(rank(words, "llifogydd", LANGS)), ["six"]);
+});
+
+test("partition: words found on the pages being browsed come first, each keeping its order, and list that page first", () => {
+  const words = prepareWords(DICTIONARY, LANGS);
+  const found = rank(words, "rain", LANGS);
+  assert.deepEqual(concepts(found), ["one", "three", "two"]);
+  const split = partition(found, ["talk.html"]);
+  assert.deepEqual(concepts(split.here), ["two"]);
+  assert.deepEqual(concepts(split.other), ["one", "three"]);
+  assert.deepEqual(split.here[0].entry.pages.map((p) => p.slug), ["talk", "weather"]);
+});
+
+test("partition: with nothing being browsed every word is an other result and none is changed", () => {
+  const words = prepareWords(DICTIONARY, LANGS);
+  const split = partition(rank(words, "rain", LANGS), []);
+  assert.deepEqual(split.here, []);
+  assert.deepEqual(concepts(split.other), ["one", "three", "two"]);
+});
+
+test("partition: a group's pages count as being browsed together", () => {
+  const words = prepareWords(DICTIONARY, LANGS);
+  const split = partition(rank(words, "rain", LANGS), ["weather.html", "talk.html"]);
+  assert.deepEqual(concepts(split.here), ["one", "three", "two"]);
+  assert.deepEqual(split.other, []);
 });
