@@ -1,0 +1,31 @@
+{
+  "level": "AAA",
+  "light": {
+    "bg": "oklch(1 0 0)",
+    "surface": "oklch(0.965 0.004 230)",
+    "ink": "oklch(0.15 0.01 232)",
+    "muted": "oklch(0.38 0.02 230)",
+    "rule": "oklch(0.7 0.015 230)",
+    "rule-strong": "oklch(0.42 0.02 230)",
+    "accent": "oklch(0.40 0.19 25)",
+    "star": "oklch(0.88 0.01 230)",
+    "tile": "oklch(0.92 0.01 230)",
+    "on-tile": "oklch(0.15 0.01 232)",
+    "header": "oklch(1 0 0)",
+    "on-header": "oklch(0.15 0.01 232)"
+  },
+  "dark": {
+    "bg": "oklch(0.1 0.005 232)",
+    "surface": "oklch(0.18 0.01 232)",
+    "ink": "oklch(0.98 0.003 225)",
+    "muted": "oklch(0.83 0.015 230)",
+    "rule": "oklch(0.5 0.02 232)",
+    "rule-strong": "oklch(0.75 0.02 230)",
+    "accent": "oklch(0.85 0.15 20)",
+    "star": "oklch(0.28 0.015 230)",
+    "tile": "oklch(0.25 0.01 232)",
+    "on-tile": "oklch(0.98 0.003 225)",
+    "header": "oklch(0.1 0.005 232)",
+    "on-header": "oklch(0.98 0.003 225)"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "notes": "Recoloured from the hellocolor.de palette used by the content project's default (docs/ASSETS.md, Colour palettes in use): the neutrals, the Accent blue #009EDB (hue 235) and the Warning amber #EFA800 (hue 78). Blue and amber stay apart under protanopia and deuteranopia, so the red and green tokens (Primary, Secondary, Success, Danger) are not used. The light accent is the Accent's hue and chroma at L 0.36, darker than the source so that it reads as text on white. The dark accent is L 0.80, lighter than the source, because the source lightness is the same as the dark muted text and fails the colour-vision check. Tiles are pale and deep tints of the blue; the star is a pale and deep tint of the amber. Checked by the build's colour-vision test, which is a safeguard and not a substitute for asking people who see colour differently.",
+  "level": "AA",
+  "colour_vision": [
+    "protan",
+    "deutan"
+  ],
+  "light": {
+    "bg": "oklch(0.989 0.006 31.05)",
+    "surface": "oklch(0.965 0.006 31.05)",
+    "ink": "oklch(0.200 0.007 34.31)",
+    "muted": "oklch(0.515 0.008 28.87)",
+    "rule": "oklch(0.914 0.007 28.84)",
+    "rule-strong": "oklch(0.74 0.008 29)",
+    "accent": "oklch(0.36 0.141 235)",
+    "star": "oklch(0.940 0.035 78)",
+    "tile": "oklch(0.90 0.040 235)",
+    "on-tile": "oklch(0.200 0.007 34.31)",
+    "header": "oklch(0.989 0.006 31.05)",
+    "on-header": "oklch(0.200 0.007 34.31)"
+  },
+  "dark": {
+    "bg": "oklch(0.119 0.005 17.88)",
+    "surface": "oklch(0.158 0.005 17.71)",
+    "ink": "oklch(0.969 0.008 27.23)",
+    "muted": "oklch(0.655 0.007 28.85)",
+    "rule": "oklch(0.27 0.01 18)",
+    "rule-strong": "oklch(0.45 0.008 29)",
+    "accent": "oklch(0.80 0.141 235)",
+    "star": "oklch(0.30 0.040 78)",
+    "tile": "oklch(0.32 0.060 235)",
+    "on-tile": "oklch(0.969 0.008 27.23)",
+    "header": "oklch(0.119 0.005 17.88)",
+    "on-header": "oklch(0.969 0.008 27.23)"
+  }
+}

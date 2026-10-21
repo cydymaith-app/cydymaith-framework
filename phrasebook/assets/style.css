@@ -1,0 +1,230 @@
+/* Phrasebook framework stylesheet, mobile first: the base rules are for a phone held in one hand, and min-width queries
+   widen them. Layout (docs/mockups/navigation-mockup.png): a narrow rail with settings, a top bar with the title, Back and
+   the trail, and the page, which is a grid of tiles for a group and a reading column for a topic.
+   Colours are not set here: palettes.css, generated from the palettes, defines --bg, --surface, --ink, --muted, --rule,
+   --rule-strong, --accent, --star, --tile, --on-tile, --header and --on-header for each theme. The accent marks the compass needle, the current
+   page and focus. */
+:root{
+  --font-l2:Georgia,"Times New Roman",serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --safe-start:max(16px,env(safe-area-inset-left,0px)); --safe-end:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[dir="rtl"]{--safe-start:max(16px,env(safe-area-inset-right,0px)); --safe-end:max(16px,env(safe-area-inset-left,0px))}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.55 var(--font-ui)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.skip{position:absolute;inset-inline-start:-999px;top:0;background:var(--surface);color:var(--ink);padding:.5rem .75rem;z-index:20}
+.skip:focus{inset-inline-start:var(--safe-start);top:calc(env(safe-area-inset-top,0px) + 8px)}
+
+/* frame: a title bar across the full width, then a rail beside the page */
+:root{--bar:3.75rem;--rail:3.5rem}
+.app{display:grid;grid-template-columns:3.5rem minmax(0,1fr);grid-template-rows:auto 1fr;min-height:100vh;min-height:100dvh;overflow-x:clip}
+.topbar{
+  grid-column:1/-1;grid-row:1;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;
+  display:flex;align-items:center;min-height:var(--bar);padding-block:.5rem;
+  padding-inline:var(--safe-start) var(--safe-end);background:var(--header);color:var(--on-header);border-bottom:1px solid var(--rule-strong);
+}
+.rail{
+  grid-column:1;grid-row:2;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--bar));align-self:start;
+  height:calc(100vh - env(safe-area-inset-top,0px) - var(--bar));height:calc(100dvh - env(safe-area-inset-top,0px) - var(--bar));
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding-block:.75rem;padding-inline-start:calc(var(--safe-start) - 16px);
+  border-inline-end:1px solid var(--rule-strong);
+}
+.rail-group{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.rail-link{display:grid;place-items:center;width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);text-decoration:none;font:inherit}
+a.rail-link:hover{background:var(--surface);color:var(--ink)}
+.rail-link[aria-current="page"]{color:var(--accent)}
+.rail-link:disabled{opacity:.45;cursor:default}
+.rail-link[hidden]{display:none}
+.icon{flex:none;width:1.25rem;height:1.25rem}
+.rail-link .icon{width:1.5rem;height:1.5rem}
+:root[dir="rtl"] .rail-link.back .icon{transform:scaleX(-1)}
+.titles{min-width:0;display:flex;flex-direction:column;gap:.1rem}
+.brand{text-decoration:none;display:flex;flex-direction:column;gap:.1rem}
+.brand .word{font:600 1.15rem/1.1 var(--font-l2)}
+.brand small{font:600 .62rem/1.2 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.trail{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.1rem .4rem;font:500 .78rem/1.3 var(--font-ui);color:var(--muted)}
+.trail li+li::before{content:"\203a";margin-inline-end:.4rem}
+.trail a{text-decoration:none}
+.trail a:hover{color:var(--accent)}
+.trail .l2{display:none}
+.topbar .trail,.topbar .kicker{color:var(--on-header)}
+.has-trail .brand small{display:none}
+main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inline:.75rem var(--safe-end);touch-action:pan-y pinch-zoom}
+/* a page reached from its parent slides in from the side (decided in the head, see Site.document); nav.js drags it back out */
+@keyframes slide-in{from{transform:translateX(100%)}to{transform:none}}
+@keyframes slide-in-rtl{from{transform:translateX(-100%)}to{transform:none}}
+.slide-in main{animation:slide-in .24s cubic-bezier(.2,.8,.2,1) backwards}
+:root[dir="rtl"].slide-in main{animation-name:slide-in-rtl}
+/* Where the browser can animate a move between two pages of this site (a head script sets data-slide on <html>), the pages
+   slide as if they sat side by side: going in, the old page leaves toward the start and the new one arrives from the end;
+   going back, the reverse. Only the page moves: the title bar and the rail are named so they stay where they are. The
+   slide-in above is the fallback for browsers without that, and the head script leaves it off where this works. */
+@view-transition{navigation:auto}
+:root{--slide:100%}
+:root[dir="rtl"]{--slide:-100%}
+.app main{view-transition-name:page}
+.topbar{view-transition-name:topbar}
+.rail{view-transition-name:rail}
+@keyframes page-out-start{to{transform:translateX(calc(var(--slide) * -1))}}
+@keyframes page-out-end{to{transform:translateX(var(--slide))}}
+@keyframes page-in-from-end{from{transform:translateX(var(--slide))}}
+@keyframes page-in-from-start{from{transform:translateX(calc(var(--slide) * -1))}}
+::view-transition-group(root),::view-transition-group(topbar),::view-transition-group(rail),::view-transition-group(page){animation:none}
+::view-transition-group(page){overflow:clip}
+::view-transition-old(root),::view-transition-new(root),::view-transition-old(topbar),::view-transition-new(topbar),
+::view-transition-old(rail),::view-transition-new(rail),::view-transition-old(page),::view-transition-new(page){animation:none;mix-blend-mode:normal}
+:root[data-slide="forward"]::view-transition-old(page){animation:page-out-start .28s cubic-bezier(.2,.8,.2,1) both}
+:root[data-slide="forward"]::view-transition-new(page){animation:page-in-from-end .28s cubic-bezier(.2,.8,.2,1) both}
+:root[data-slide="back"]::view-transition-old(page){animation:page-out-end .28s cubic-bezier(.2,.8,.2,1) both}
+:root[data-slide="back"]::view-transition-new(page){animation:page-in-from-start .28s cubic-bezier(.2,.8,.2,1) both}
+/* search: a card that slides out from the rail over the page, as an overlay that can be dismissed. The layer clips it, so it
+   comes out from behind the rail and goes back in. It is hidden until search.js runs. */
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.search-layer{position:fixed;z-index:4;inset-block:calc(env(safe-area-inset-top,0px) + var(--bar)) 0;inset-inline-start:var(--rail);
+  width:min(30rem,calc(100vw - var(--rail)));overflow:hidden;pointer-events:none}
+.search-layer[hidden]{display:none}
+.search-card{box-sizing:border-box;height:100%;display:flex;flex-direction:column;gap:.5rem;padding:1rem .85rem 0;
+  background:var(--surface);border-inline-end:1px solid var(--rule-strong);pointer-events:auto;
+  visibility:hidden;transform:translateX(calc(var(--slide) * -1));transition:transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s .24s}
+.search-card[data-open]{visibility:visible;transform:none;transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+.search-card[data-instant]{transition:none}
+.search-head{display:flex;gap:.5rem;align-items:center}
+.search-field{flex:1;min-width:0}
+.search-field input{box-sizing:border-box;width:100%;min-height:2.75rem;padding:.5rem .75rem;border:1px solid var(--rule-strong);border-radius:8px;
+  background:var(--bg);color:var(--ink);font:400 1rem/1.3 var(--font-ui)}
+.search-close{min-height:2.75rem;padding:0 .75rem;border:0;border-radius:8px;background:transparent;color:var(--muted);font:600 .9rem/1 var(--font-ui);cursor:pointer}
+.search-close:hover{background:var(--bg);color:var(--ink)}
+.search-status{margin:.25rem 0;color:var(--muted);font-size:.92rem}
+.search-status:empty{display:none}
+.search-results,.search-pages{list-style:none;margin:0;padding:0}
+.search-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:1rem}
+.search-result{padding:.55rem 0;border-top:1px solid var(--rule)}
+.search-term{display:flex;flex-direction:column;gap:.1rem;min-height:2.75rem;justify-content:center;text-decoration:none}
+.search-term .l1{font-weight:600}
+.search-term .l2,.search-sub .l2{font:500 .95rem/1.3 var(--font-l2);color:var(--muted)}
+.search-term:hover .l1,.search-sub a:hover{color:var(--accent)}
+.search-sub{list-style:none;margin:.15rem 0 0;padding:0;font-size:.85rem}
+.search-sub a{display:inline-block;padding:.15rem 0;text-decoration:none}
+.search-topics{margin:.75rem 0 0;font:600 .68rem/1.2 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.search-topics[hidden]{display:none}
+.terms tr{scroll-margin-top:calc(var(--bar) + 1rem)}
+.terms tr:target{background:var(--surface)}
+.page{max-width:44rem}
+.page.wide{max-width:64rem}
+
+/* page head */
+.kicker{margin:0;font:600 .72rem/1.2 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.kicker a{text-decoration:none}
+.kicker a:hover{color:var(--accent)}
+h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;margin:.6rem 0 .35rem;text-wrap:balance}
+.title-l2{margin:0;font:500 clamp(1.15rem,4.4vw,1.5rem)/1.25 var(--font-l2);color:var(--muted)}
+.lede{max-width:38rem;margin:1rem 0 0}
+
+/* tiles: a grid of large touch targets, each an icon with its name in both languages beneath it */
+.tiles{list-style:none;margin:1.5rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1rem}
+.tile-link{display:flex;flex-direction:column;gap:.6rem;color:inherit;text-decoration:none;text-align:center}
+.tile{display:grid;place-items:center;aspect-ratio:1.4;border:1px solid var(--rule-strong);border-radius:1rem;background:var(--tile);color:var(--on-tile)}
+.tile .icon{width:min(42%,3.75rem);height:auto;aspect-ratio:1}
+.tile-text{padding:.5rem;font:600 1rem/1.2 var(--font-ui);overflow-wrap:anywhere}
+.tile-link:hover .tile{border-color:var(--accent)}
+.tile-link:focus-visible{outline-offset:4px;border-radius:1rem}
+.tile-name{display:flex;flex-direction:column;align-items:center;gap:.15rem;min-width:0}
+.tile-name .l1{font:600 1rem/1.25 var(--font-ui);overflow-wrap:anywhere}
+.tile-name .l2{font:500 .92rem/1.25 var(--font-l2);color:var(--muted);overflow-wrap:anywhere}
+
+.jump{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:1.5rem 0 0;padding:0}
+.jump a{display:block;padding:.3rem .75rem;border:1px solid var(--rule-strong);border-radius:999px;font-size:.85rem;text-decoration:none}
+.jump a:hover{background:var(--surface)}
+
+/* sections and term tables */
+section{margin-top:2.25rem}
+h2{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.1rem/1.3 var(--font-ui)}
+h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
+.intro{max-width:38rem;margin:.5rem 0 0;color:var(--muted);font-size:.95rem}
+.terms{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:.75rem;border-top:1px solid var(--rule-strong)}
+.terms thead th{padding:.65rem 0 .4rem;text-align:start;font:600 .68rem/1 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.terms thead th:first-child,.terms th.l1{width:42%}
+.terms tbody tr{border-top:1px solid var(--rule)}
+.terms th.l1{padding-block:.7rem;padding-inline:0 1rem;text-align:start;font-weight:400;vertical-align:baseline;overflow-wrap:anywhere}
+.terms td{padding:.55rem 0;vertical-align:baseline;overflow-wrap:anywhere}
+.terms .l2{font:500 1.1rem/1.3 var(--font-l2)}
+.note{display:block;margin-top:.2rem;font:400 .82rem/1.4 var(--font-ui);color:var(--muted)}
+.note [lang]{font-family:var(--font-l2)}
+
+.box{margin-top:1.25rem;padding:1rem 1.15rem;background:var(--surface);border:1px solid var(--rule);border-radius:6px}
+.box h3{margin:0 0 .35rem;font:600 .95rem/1.3 var(--font-ui)}
+.box p{margin:0;font-size:.95rem}
+.box [lang],.intro [lang]{font-family:var(--font-l2);font-weight:500}
+
+/* compass rose */
+.rose{display:block;width:100%;max-width:28rem;height:auto;margin:1.75rem 0 0}
+.rose .ring{fill:none;stroke:var(--rule-strong);stroke-width:1.5}
+.rose .tick{stroke:var(--rule-strong);stroke-width:1.5}
+.rose .star{fill:var(--star);stroke:var(--rule-strong);stroke-width:1.2;stroke-linejoin:round}
+.rose .needle{fill:var(--accent)}
+.rose .w2{font:500 17px var(--font-l2);fill:var(--ink)}
+.rose .w1{font:400 13px var(--font-ui);fill:var(--muted)}
+
+.about{max-width:38rem;margin:2.5rem 0 0;font-size:.92rem;color:var(--muted)}
+.links{list-style:none;margin:.75rem 0 0;padding:0;border-top:1px solid var(--rule-strong)}
+.links a{display:flex;flex-direction:column;min-height:2.75rem;justify-content:center;padding:.7rem 0;border-bottom:1px solid var(--rule);text-decoration:none}
+.links a:hover .l1{color:var(--accent)}
+.links .l1{font-weight:600}
+.links .l2{font:500 .92rem/1.3 var(--font-l2);color:var(--muted)}
+
+/* previous and next */
+.pager{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:3rem}
+.pager a{display:block;padding:.85rem 1rem;border:1px solid var(--rule-strong);border-radius:6px;text-decoration:none}
+.pager a:hover{background:var(--surface)}
+.pager small{display:block;font:600 .68rem/1.2 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.pager .t{display:block;margin-top:.2rem;font-weight:600}
+.pager .c{display:block;font:500 .9rem/1.3 var(--font-l2);color:var(--muted)}
+
+/* regional forms: each form is labelled, and the control on the settings page (shown only when app.js runs) emphasises one variety */
+.forms,.forms .form{display:block}
+.forms .form+.form{margin-top:.2rem}
+.vtag{margin-inline-start:.5rem;padding:.05rem .35rem;border:1px solid var(--rule-strong);border-radius:3px;font:600 .68rem/1.2 var(--font-ui);letter-spacing:.04em;color:var(--muted);text-decoration:none;cursor:help;vertical-align:.15em}
+.prefs{margin:0 0 1.25rem}
+.pref{margin:0 0 .75rem;padding:0;border:0;min-width:0}
+.pref legend{padding:0;margin-bottom:.3rem;font:600 .68rem/1.2 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.pref label{display:block;padding:.45rem 0;font-size:.95rem;cursor:pointer}
+.pref input{margin-inline-end:.55rem}
+.notes{max-width:38rem;margin:.75rem 0 0;padding-inline-start:1.25rem;font-size:.95rem}
+.notes li+li{margin-top:.4rem}
+
+/* wider screens */
+@media (min-width:520px){
+  .pager{grid-template-columns:1fr 1fr}
+  .pager .next{grid-column:2;text-align:end}
+}
+@media (min-width:600px){
+  .app{grid-template-columns:4rem minmax(0,1fr)}
+  :root{--bar:4rem;--rail:4rem}
+  main{padding-block:2.25rem 4rem;padding-inline:1.75rem var(--safe-end)}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:2rem 1.25rem}
+  .trail .l2{display:inline;margin-inline-start:.3rem;font-family:var(--font-l2)}
+  .has-trail .brand small{display:block}
+  .terms .l2{font-size:1.2rem}
+  section{margin-top:2.75rem}
+}
+@media (min-width:960px){
+  .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){::view-transition-old(page),::view-transition-new(page){animation:none!important}}
+/* forced colours (Windows high contrast): custom colours are replaced, so keep the markers that carry meaning visible */
+@media (forced-colors:active){
+  .rail-link[aria-current="page"]{outline:2px solid Highlight}
+  .tile{border-color:CanvasText}
+  .rose .needle{fill:Highlight}
+  .rose .star,.rose .ring,.rose .tick{stroke:CanvasText}
+}
