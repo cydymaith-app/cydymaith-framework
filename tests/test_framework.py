@@ -6,6 +6,7 @@ English and Welsh project in it. Run from the repo root:  python3 -m unittest di
 
 import atexit
 import contextlib
+import datetime
 import io
 import json
 import os
@@ -386,7 +387,8 @@ class LocalisedInterfaceTests(Scratch):
         cls.raw = content.read(cls.proj)
         cls.ed = content.pick_edition(cls.raw)[1]
         cls.messages = Messages(cls.raw["packs"])
-        cls.pages = phrasebook.Site(cls.raw, cls.ed, messages=cls.messages).render_all()
+        built = datetime.datetime(2026, 1, 2, 3, 4, tzinfo=datetime.timezone.utc)
+        cls.pages = phrasebook.Site(cls.raw, cls.ed, messages=cls.messages, built=built).render_all()
 
     def test_the_pseudo_translation_is_valid(self):
         content.validate(self.raw)
@@ -583,6 +585,20 @@ class AboutPageTests(Scratch):
             page,
         )
         self.assertEqual(page.count('<p class="about-more"><a href="sources.html">'), 2)
+
+    def test_each_language_ends_with_when_the_site_was_built_written_the_same_way_in_utc(self):
+        page = self.pages["about.html"]
+        stamp = re.findall(r'<time datetime="(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)">(\d{4}-\d\d-\d\d \d\d:\d\d) UTC</time></p></article>', page)
+        self.assertEqual(len(stamp), 2, "one in each language's article, at its foot")
+        self.assertEqual(stamp[0], stamp[1])
+        self.assertEqual(stamp[0][0][:16].replace("T", " "), stamp[0][1])
+        self.assertIn('<p class="about-built">', page)
+
+    def test_a_site_built_with_no_time_shows_none(self):
+        raw = channels.select(content.read(self.proj))
+        _, ed = content.pick_edition(raw, None)
+        site = phrasebook.Site(raw, ed, messages=Messages(raw["packs"]))
+        self.assertNotIn("about-built", site.render_all()["about.html"])
 
     def test_the_page_is_not_in_the_pager_and_its_trail_leads_home(self):
         page = self.pages["about.html"]

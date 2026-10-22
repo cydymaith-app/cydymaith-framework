@@ -8,6 +8,7 @@ Language and direction: text in a language other than the one around it carries 
 writing direction differs, dir="...". The document itself carries the interface language and direction.
 """
 
+import datetime
 import html
 import json
 import pathlib
@@ -28,8 +29,9 @@ MARK = re.compile(r"\{\{(.+?)\}\}")
 class Site:
     """Renders one edition for one pair of languages: `frm` is shown first, `to` second."""
 
-    def __init__(self, raw, edition, pair=None, messages=None):
+    def __init__(self, raw, edition, pair=None, messages=None, built=None):
         self.raw = raw
+        self.built = built  # when the site was built (an aware datetime), shown at the foot of the About page; None shows nothing
         self.edition = edition
         self.name = edition["name"]
         self.langs = edition["languages"]
@@ -908,6 +910,13 @@ class Site:
                 body = "".join(self.about_block(code, block) for block in section["body"])
                 parts.append(f'<section><h2>{e(section["title"])}</h2>{body}</section>')
             parts.append(f'<p class="about-more"><a href="sources.html">{self.ui_html(code, "sources")}</a></p>')
+            if self.built:
+                # The label is in the article's language; the time is written the same in all of them, in UTC, so no month names.
+                utc = self.built.astimezone(datetime.timezone.utc)
+                parts.append(
+                    f'<p class="about-built">{self.ui_html(code, "built")} '
+                    f'<time datetime="{utc.strftime("%Y-%m-%dT%H:%M:%SZ")}">{utc.strftime("%Y-%m-%d %H:%M")} UTC</time></p>'
+                )
             articles.append(f'<article class="about-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>')
         return f'<div class="about">{radios}{toggle}{"".join(articles)}</div>'
 
