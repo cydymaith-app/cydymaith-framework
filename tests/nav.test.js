@@ -1,5 +1,5 @@
 // Tests for phrasebook/assets/nav.js: keys, and the drag that takes a page away. The moves need no page, so they run here.
-// The page glue (focus, the Back link, touch events, the slide) is checked in a real browser; see docs/TODO.md.
+// The page glue (focus, the Back link, touch events, the slide) is checked in a real browser; see section 3 of the app's docs/TODO.md (the cydymaith repository).
 // Run from the repo root: node --test tests/
 "use strict";
 const test = require("node:test");

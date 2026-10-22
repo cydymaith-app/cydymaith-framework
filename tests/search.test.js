@@ -1,5 +1,5 @@
 // Tests for phrasebook/assets/search.js: the matching behind the search card. It needs no page, so it runs here.
-// The page glue (the card sliding out, focus, the links) is checked in a real browser; see docs/TODO.md.
+// The page glue (the card sliding out, focus, the links) is checked in a real browser; see section 3 of the app's docs/TODO.md (the cydymaith repository).
 // Run from the repo root: node --test tests/
 "use strict";
 const test = require("node:test");

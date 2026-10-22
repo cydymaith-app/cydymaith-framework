@@ -16,7 +16,7 @@ python3 -m black .                                 # format the Python (CI runs 
 
 A project is a `content/<project>/` folder (`structure.json`, `pages/`, `packs/<code>/`, `editions/`, and optional `palettes/`, `icons/` and `static/`). Its own repository adds this one as a submodule (`git submodule add https://github.com/cydymaith-app/cydymaith-framework.git framework`) and has a short `build.py` that puts `framework/` on the path and calls `phrasebook.cli.main(projects_dir=<its content/ folder>)`.
 
-The file formats, the conventions (BCP 47 tags, `lang` and `dir`, logical CSS, keyed messages with CLDR plurals and fallback, Unicode normal form C), what is not done yet, and how to start another translator are in [docs/FRAMEWORK.md](docs/FRAMEWORK.md). Licences for the assets are in [docs/ASSETS.md](docs/ASSETS.md), and the to-do list is [docs/TODO.md](docs/TODO.md).
+The file formats, the conventions (BCP 47 tags, `lang` and `dir`, logical CSS, keyed messages with CLDR plurals and fallback, Unicode normal form C), what is not done yet, and how to start another translator are in [docs/FRAMEWORK.md](docs/FRAMEWORK.md). Licences for the assets are in [docs/ASSETS.md](docs/ASSETS.md). This repository has no to-do list of its own: the framework's features and the general features it enables are section 3 of the `docs/TODO.md` in the [cydymaith](https://github.com/cydymaith-app/cydymaith) repository that uses it.
 
 ## The promises
 

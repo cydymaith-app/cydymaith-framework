@@ -760,7 +760,7 @@ class StylesheetTests(Scratch):
 
 
 class InstallTests(Scratch):
-    """The manifest and service worker that make a build installable (docs/TODO.md: Installable offline app)."""
+    """The manifest and service worker that make a build installable (section 3.2 of the app's docs/TODO.md: Installable offline app)."""
 
     def edit_edition(self, proj, **fields):
         fixture.edit(proj / "editions" / "demo.json", lambda d: d.update(fields))
