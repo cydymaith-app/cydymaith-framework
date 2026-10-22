@@ -1087,7 +1087,7 @@ class PaletteSiteTests(Scratch):
         self.add_palette(proj, "sepia", names={"qaa": "Sepia paper"}, light=light)
         out = self.build_out(proj, "added")
         page = (out / "settings.html").read_text(encoding="utf-8")
-        self.assertIn('name="palette" value="sepia" data-pref="palette">', page)
+        self.assertIn('name="palette" value="sepia" data-pref="palette" data-tier="standard">', page)
         self.assertIn('<span class="t" data-n="1">Sepia paper</span>', page)
         self.assertIn(':root[data-palette="sepia"]{--bg:#', (out / "palettes.css").read_text(encoding="utf-8"))
 
