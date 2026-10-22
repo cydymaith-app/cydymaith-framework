@@ -301,7 +301,8 @@ class Site:
         """Each offered colour scheme as a small picture of itself, drawn from its own colours (see palettes.css)."""
         cards = "".join(
             f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
-            f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == palettes.DEFAULT else ""}>'
+            f'<input type="radio" name="palette" value="{pid}" data-pref="palette" data-tier="{palettes.access_level(self.palettes[pid])}"'
+            f'{" checked" if pid == palettes.DEFAULT else ""}>'
             f'<span class="preview" data-palette="{pid}" aria-hidden="true"><i class="pv-bar"></i><i class="pv-tile"><b></b></i>'
             f'<i class="pv-card"><b></b><b></b></i><i class="pv-dot"></i></span>'
             f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
@@ -718,7 +719,11 @@ class Site:
             f'<p class="title-l2"{self.la(to)}>{e(home["headline"][to])}</p>'
             f'<p class="lede">{self.inline(lcode, lede) if lede else ""}</p></header>'
             + self.tiles(groups, "index")
-            + f'<p class="about">{self.h("home_about", about=self.inline(acode, about) if about else "", link=link)}</p>'
+            + (
+                f'<p class="about">{self.h("home_about", about=self.inline(acode, about), link=link)}</p>'
+                if about
+                else f'<p class="about">{link}</p>'
+            )
         )
 
     def group_page(self, group):
