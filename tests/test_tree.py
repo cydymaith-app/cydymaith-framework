@@ -511,16 +511,18 @@ class FrameTests(Scratch):
 
     def test_the_slide_in_is_decided_in_the_head_before_the_stylesheet_and_before_the_page(self):
         page = self.pages["p1.html"]
-        script = 'd.documentElement.classList.add("slide-in")'
+        script = 'd.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in")'
         self.assertIn(script, page)
         self.assertLess(page.index(script), page.index('<link rel="stylesheet" href="palettes.css">'))
         self.assertLess(page.index(script), page.index("<body>"))
-        self.assertNotIn("slide-in", self.pages["index.html"], "the home page has no parent to slide in from")
+        self.assertIn(script, self.pages["index.html"], "Back arrives on the home page, which slides in from the start")
+        self.assertNotIn('class="slide-in', self.pages["index.html"])
 
-    def test_the_head_script_compares_the_referrer_with_the_parent_and_only_on_this_site(self):
+    def test_the_head_script_reads_the_way_the_page_goes_from_the_address_and_never_the_referrer(self):
         page = self.pages["p1.html"]
-        self.assertIn("r.indexOf(location.origin)!==0", page)
-        self.assertIn('||"index.html")===p', page)
+        self.assertIn('/^#slide=(forward|back)$/.exec(w.location.hash)', page)
+        self.assertIn('w.history.replaceState(null,"",w.location.pathname+w.location.search)', page)
+        self.assertNotIn("referrer", page.split("<body>")[0])
 
     def test_every_page_says_which_way_it_moves_so_the_browser_can_slide_pages_side_by_side(self):
         for name, page in self.pages.items():
@@ -531,7 +533,7 @@ class FrameTests(Scratch):
             self.assertLess(head.index("pagereveal"), head.index('<link rel="stylesheet" href="palettes.css">'), name)
 
     def test_the_fallback_slide_in_is_left_off_where_the_browser_slides_pages_itself(self):
-        self.assertIn("window.PageRevealEvent)return", self.pages["p1.html"])
+        self.assertIn("w.PageRevealEvent)return", self.pages["p1.html"])
 
     def test_the_pager_still_links_topics_in_order(self):
         self.assertIn('href="points.html"', self.pages["p1.html"][self.pages["p1.html"].index('class="pager"') :])

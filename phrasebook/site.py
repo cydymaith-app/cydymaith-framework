@@ -966,17 +966,18 @@ class Site:
         extra += "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("stylesheets", []))
         direction = ' dir="rtl"' if self.dir_of(self.interface) == "rtl" else ""
         storage = f' data-storage="{e(self.storage_name())}"'
-        # A page reached from its parent slides in from the side. Decided in the head, before the first paint, so the card
-        # never flashes into place first. Arriving any other way (a sibling, a reload from elsewhere, Back) plays nothing.
-        slide = ""
         if parent:
             storage += f' data-parent="{e(parent)}"'
-            slide = (
-                '<script>(function(d){var p=d.documentElement.getAttribute("data-parent"),r=d.referrer;'
-                "if(!p||r.indexOf(location.origin)!==0||window.PageRevealEvent)return;"
-                'if((r.split("#")[0].split("?")[0].split("/").pop()||"index.html")===p)'
-                'd.documentElement.classList.add("slide-in")})(document)</script>\n'
-            )
+        # Where the browser cannot move pages itself, nav.js leaves the page it is on and carries the way it went (a tile goes
+        # forward, Back goes back) in the address as #slide=forward or #slide=back. This head script reads that mark before the
+        # first paint, slides this page in from the same side, and takes the mark out of the address again. A page reached any
+        # other way plays nothing. It does not depend on the referrer, and it stores nothing.
+        slide = (
+            '<script>(function(d,w){var m=/^#slide=(forward|back)$/.exec(w.location.hash);'
+            "if(!m||w.PageRevealEvent)return;"
+            'd.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in");'
+            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){}})(document,window)</script>\n'
+        )
         # Where the browser animates moves between pages itself (cross-document view transitions), say which way the page
         # moves: in from the end when this page's parent is the page we came from, in from the start when we came from
         # one of this page's own tiles. Any other move (a sibling, another site, a reload) plays nothing.

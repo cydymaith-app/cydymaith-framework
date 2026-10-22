@@ -77,13 +77,35 @@
 
   function backLink() { return document.querySelector("[data-back]"); }
 
+  // The way the page goes, carried in the address for the next page: its head slides it in from the same side (see
+  // Site.document) and then takes the mark out again. Only where the browser does not move the pages itself; otherwise
+  // its own move does it, and the address is left alone.
+  function toward(href, direction) {
+    if ("PageRevealEvent" in window) return href;
+    return href + "#slide=" + direction;
+  }
+
   function goBack() {
     var back = backLink();
-    if (back && back.getAttribute("href")) window.location.href = back.getAttribute("href");
+    if (back && back.getAttribute("href")) window.location.href = toward(back.getAttribute("href"), "back");
   }
 
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  // Carry the page to `x` pixels from where it is, then call `then`. The timer is in case the transition never reports.
+  function move(x, then) {
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      then();
+    }
+    main.style.transition = "transform " + DISMISS_MS + "ms ease-out";
+    main.style.transform = "translateX(" + x + "px)";
+    main.addEventListener("transitionend", finish, { once: true });
+    window.setTimeout(finish, DISMISS_MS + 120);
   }
 
   // Take the page out of view in the reading direction, then go back. With no Back link (the home page) nothing happens.
@@ -95,16 +117,27 @@
       goBack();
       return;
     }
-    var finished = false;
-    function finish() {
-      if (finished) return;
-      finished = true;
-      goBack();
-    }
-    main.style.transition = "transform " + DISMISS_MS + "ms ease-out";
-    main.style.transform = "translateX(" + sign(rtl()) * window.innerWidth + "px)";
-    main.addEventListener("transitionend", finish, { once: true });
-    window.setTimeout(finish, DISMISS_MS + 120);  // in case the transition never reports
+    move(sign(rtl()) * window.innerWidth, goBack);
+  }
+
+  // Where the browser does not animate the move between pages, a tap on a tile takes the page out toward the start, the
+  // way it goes when the reading direction runs forward, and the topic arrives from the end (see Site.document).
+  function onTile() {
+    if (!main || "PageRevealEvent" in window) return;
+    document.addEventListener("click", function (event) {
+      var link = event.target && event.target.closest ? event.target.closest("[data-tiles] a") : null;
+      if (!link || leaving || event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) a tap is its own
+      event.preventDefault();
+      leaving = true;
+      var href = toward(link.getAttribute("href"), "forward");
+      if (reducedMotion()) {
+        window.location.href = href;
+        return;
+      }
+      move(-sign(rtl()) * window.innerWidth, function () { window.location.href = href; });
+    });
   }
 
   function springBack() {
@@ -191,6 +224,7 @@
     });
   }
   if (main) onDrag();
+  onTile();
   // Coming back to this page from the browser's own cache must not leave it slid away.
   window.addEventListener("pageshow", function () {
     leaving = false;
