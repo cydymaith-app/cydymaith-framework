@@ -81,5 +81,19 @@
   "search_none": "Nothing found.",
   "search_error": "The word list could not be loaded.",
   "search_topics": "Topics",
-  "search_other": "Other results"
+  "search_other": "Other results",
+  "arrange_toggle": "Edit order",
+  "arrange_hint": "Drag a tile to move it, or tap one and tap where it goes. Save order keeps the new order.",
+  "arrange_done": "Save order",
+  "arrange_reset": "Reset",
+  "arrange_picked": "{name} picked up, place {n} of {total}. Use the arrow keys, or tap where it goes.",
+  "arrange_moved": "{name} is now place {n} of {total}.",
+  "arrange_cancelled": "{name} back in place {n} of {total}.",
+  "arrange_saved": "Order saved.",
+  "arrange_reset_done": "Order reset to the default.",
+  "arrange_failed": "The order could not be saved on this device.",
+  "reset_orders_title": "Tile layouts",
+  "reset_orders_lede": "Put every tile on every page back in its default order. Your appearance and colour choices are kept.",
+  "reset_orders": "Reset tile layouts",
+  "reset_orders_done": "Every tile is back in its default order."
 }

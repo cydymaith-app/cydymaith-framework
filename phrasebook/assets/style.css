@@ -142,6 +142,30 @@ h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;m
 .tile-name .l1{font:600 1rem/1.25 var(--font-ui);overflow-wrap:anywhere}
 .tile-name .l2{font:500 .92rem/1.25 var(--font-l2);color:var(--muted);overflow-wrap:anywhere}
 
+/* edit order: the spanner in the rail, a bar with the hint, Done and Reset, icon-only tiles, and the screen in the surface shade
+   while it is on. The head hides the tiles only while a saved order waits to be applied (arrange.js removes the attribute). */
+html[data-arrange-pending] [data-tiles]{visibility:hidden}
+.arrange-toggle[aria-pressed="true"]{background:var(--surface);color:var(--accent)}
+.arrange-bar{display:none;flex-direction:column;gap:.6rem;margin-top:1.5rem}
+[data-arranging] .arrange-bar{display:flex}
+[data-arranging] main{background:var(--surface)}
+.arrange-hint{margin:0;font:500 .95rem/1.4 var(--font-ui);color:var(--muted)}
+.arrange-actions{display:flex;gap:.5rem}
+.arrange-actions button,.reset-orders button{min-height:44px;min-width:44px;padding:.4rem 1rem;border:1px solid var(--rule-strong);border-radius:8px;background:var(--bg);color:var(--ink);font:600 .95rem var(--font-ui)}
+.arrange-actions [data-arrange-done]{border-color:var(--accent)}
+.arrange-status{margin:0}
+[data-arranging] .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem .5rem}
+[data-arranging] .tile{aspect-ratio:1}
+[data-arranging] .tile .icon{width:min(56%,2.5rem)}
+[data-arranging] .tile-name{display:none}
+[data-arranging] .tile-text{font-size:.8rem;padding:.25rem}
+[data-arranging] .tile-link{touch-action:none;cursor:grab}
+li.is-picked .tile{outline:3px solid var(--accent);outline-offset:3px}
+li.is-dragging{position:relative;z-index:1}
+li.is-dragging .tile{transform:scale(1.06)}
+.reset-orders{margin-top:2rem}
+.reset-orders h2{margin-bottom:.4rem}
+
 .jump{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:1.5rem 0 0;padding:0}
 .jump a{display:block;padding:.3rem .75rem;border:1px solid var(--rule-strong);border-radius:999px;font-size:.85rem;text-decoration:none}
 .jump a:hover{background:var(--surface)}
