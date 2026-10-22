@@ -301,8 +301,8 @@ class Site:
         """Each offered colour scheme as a small picture of itself, drawn from its own colours (see palettes.css)."""
         cards = "".join(
             f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
-            f'<input type="radio" name="palette" value="{pid}" data-pref="palette" data-tier="{palettes.access_level(self.palettes[pid])}"'
-            f'{" checked" if pid == palettes.DEFAULT else ""}>'
+            f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == palettes.DEFAULT else ""}'
+            f' data-tier="{palettes.access_level(self.palettes[pid])}">'
             f'<span class="preview" data-palette="{pid}" aria-hidden="true"><i class="pv-bar"></i><i class="pv-tile"><b></b></i>'
             f'<i class="pv-card"><b></b><b></b></i><i class="pv-dot"></i></span>'
             f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
