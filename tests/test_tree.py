@@ -520,7 +520,7 @@ class FrameTests(Scratch):
 
     def test_the_head_script_reads_the_way_the_page_goes_from_the_address_and_never_the_referrer(self):
         page = self.pages["p1.html"]
-        self.assertIn("/^#slide=(forward|back)$/.exec(w.location.hash)", page)
+        self.assertIn("/^#slide=(forward|back|none)$/.exec(w.location.hash)", page)
         self.assertIn('w.history.replaceState(null,"",w.location.pathname+w.location.search)', page)
         self.assertNotIn("referrer", page.split("<body>")[0])
 
@@ -533,7 +533,13 @@ class FrameTests(Scratch):
             self.assertLess(head.index("pagereveal"), head.index('<link rel="stylesheet" href="palettes.css">'), name)
 
     def test_the_fallback_slide_in_is_left_off_where_the_browser_slides_pages_itself(self):
-        self.assertIn("w.PageRevealEvent)return", self.pages["p1.html"])
+        self.assertIn("else if(!w.PageRevealEvent)d.documentElement", self.pages["p1.html"])
+
+    def test_a_page_that_arrives_where_the_move_ended_tells_the_browsers_own_move_to_stand_down(self):
+        for name, page in self.pages.items():
+            head = page.split("<body>")[0]
+            self.assertIn('d.documentElement.setAttribute("data-slide","none")', head, name)
+            self.assertIn('r.getAttribute("data-slide")==="none"||!u||', head, name)
 
     def test_the_pager_still_links_topics_in_order(self):
         self.assertIn('href="points.html"', self.pages["p1.html"][self.pages["p1.html"].index('class="pager"') :])

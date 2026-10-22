@@ -1,10 +1,12 @@
-/* Phrasebook framework: keys, and a drag to go back.
+/* Phrasebook framework: keys, and moving between pages sideways.
    The pages are the navigation: a group is a page of tiles, a topic is a page, and the Back button in the rail goes up one
    level. This script only adds to those links: arrow keys between tiles, Right to open the focused tile, Left or Backspace to
-   go back, and a drag of the page with the reading direction, which takes the page out of view and goes back (the Back
-   button, the keys and the drag all end the same way). A page that is reached from its parent slides in: that is decided in
-   the head by a few lines of Site.document, so it needs no script here. It makes no network request, sets no cookies and
-   stores nothing. Without it every link still works. */
+   go back, and a drag of the page with the reading direction. Opening a topic and going back are one move: the page and the
+   one it goes to sit edge to edge and slide together, following the finger in a drag, and the real page takes its place when
+   they have landed (the tap, the keys, the Back button and the drag all end the same way). To show the other page it reads that
+   page of this site once, from the service worker's cache when there is one; that is its only request, it goes to no other
+   site, and it sets no cookies and stores nothing. Where it cannot, the page that is reached from its parent still slides in:
+   that is decided in the head by a few lines of Site.document. Without this script every link still works. */
 (function () {
   "use strict";
 
@@ -14,7 +16,11 @@
   var DISMISS_SHARE = 0.35; // letting go past this share of the width takes the page away
   var FLICK_SPEED = 0.5;    // pixels per millisecond that make a short drag a flick
   var FLICK_MIN = 40;       // the least a flick must have travelled
-  var DISMISS_MS = 200;     // how long the page takes to leave
+  var SLIDE_MS = 260;       // how long the two pages take to slide together, from the start (less from partway)
+  var MIN_MS = 120;         // the least a slide that has begun takes to finish
+  var SPRING_MS = 180;      // how long a drag that is let go too soon takes to spring back
+  var WAIT_MS = 300;        // how long a tap waits for the other page before going there the plain way
+  var EASE = "cubic-bezier(.2,.8,.2,1)";
 
   // ---- the moves, with no page in sight so they can be tested on their own
 
@@ -64,7 +70,15 @@
     return travelled >= width * DISMISS_SHARE || (speed >= FLICK_SPEED && travelled >= FLICK_MIN);
   }
 
-  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss };
+  // Where the two pages are when they have gone x pixels along their move: the one leaving, and the one arriving, which waits
+  // one width away and comes in beside it, so the two always sit edge to edge. Opening a topic (forward) the pages go toward
+  // the start; going back they go toward the end; a right-to-left page mirrors both.
+  function places(x, width, forward, rtl) {
+    var out = (forward ? -1 : 1) * sign(rtl);
+    return { leaving: out * x, arriving: out * (x - width) };
+  }
+
+  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -74,77 +88,189 @@
   var main = document.getElementById("main");
   var rtl = function () { return root.getAttribute("dir") === "rtl"; };
   var leaving = false;
+  var stage = null;  // the other page, set beside this one while the two move together; null when nothing is moving
+  var along = 0;     // how far along their move the two pages are, in pixels
 
   function backLink() { return document.querySelector("[data-back]"); }
-
-  // The way the page goes, carried in the address for the next page: its head slides it in from the same side (see
-  // Site.document) and then takes the mark out again. Only where the browser does not move the pages itself; otherwise
-  // its own move does it, and the address is left alone.
-  function toward(href, direction) {
-    if ("PageRevealEvent" in window) return href;
-    return href + "#slide=" + direction;
-  }
-
-  function goBack() {
-    var back = backLink();
-    if (back && back.getAttribute("href")) window.location.href = toward(back.getAttribute("href"), "back");
-  }
 
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
-  // Carry the page to `x` pixels from where it is, then call `then`. The timer is in case the transition never reports.
-  function move(x, then) {
+  // The way the page goes, carried in the address for the next page, for when the other page could not be set beside this
+  // one: its head slides it in from the same side (see Site.document) and takes the mark out again. Only where the browser
+  // does not move the pages itself; otherwise its own move does it, and the address is left alone.
+  function toward(href, direction) {
+    if ("PageRevealEvent" in window) return href;
+    return href + "#slide=" + direction;
+  }
+
+  // ---- the other page
+
+  var pages = {};  // address -> the promise of that page's main element, asked for once
+
+  function sameSite(href) {
+    try {
+      return new URL(href, window.location.href).origin === window.location.origin;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // The main element of a page of this site, to be set beside this one, or null if it cannot be had. This is the only
+  // request the script makes, and only for a page of this site (the service worker has them cached, so it works offline).
+  function neighbour(href) {
+    if (!pages[href]) {
+      if (!window.fetch || !window.DOMParser || !sameSite(href)) {
+        pages[href] = Promise.resolve(null);
+      } else {
+        pages[href] = window.fetch(href)
+          .then(function (response) { return response.ok ? response.text() : null; })
+          .then(function (text) {
+            var found = text ? new DOMParser().parseFromString(text, "text/html").getElementById("main") : null;
+            return found ? document.importNode(found, true) : null;
+          })
+          .catch(function () { return null; });
+      }
+    }
+    return pages[href];
+  }
+
+  // The same, but not worth waiting long for: null if it is not at hand in a moment.
+  function ready(href) {
+    var late = new Promise(function (resolve) { window.setTimeout(function () { resolve(null); }, WAIT_MS); });
+    return Promise.race([neighbour(href), late]);
+  }
+
+  // ---- the two pages moving together
+
+  // Put a copy of the other page's main in a layer that covers the page area and clips it, waiting where it will come in from.
+  // The copy is only for the eye: it has no ids or radio names to clash with this page's, and it is inert and hidden from
+  // screen readers.
+  function stageBeside(other, forward) {
+    var copy = other.cloneNode(true);
+    var each = function (selector, name) {
+      Array.prototype.forEach.call(copy.querySelectorAll(selector), function (node) { node.removeAttribute(name); });
+    };
+    copy.removeAttribute("id");
+    each("[id]", "id");
+    each("[name]", "name");
+    copy.setAttribute("aria-hidden", "true");
+    copy.setAttribute("inert", "");
+    copy.className = (copy.className + " peek-page").trim();
+    var layer = document.createElement("div");
+    layer.className = "peek";
+    layer.appendChild(copy);
+    document.body.appendChild(layer);
+    root.classList.add("is-sliding");
+    stage = { layer: layer, page: copy, forward: forward, width: layer.getBoundingClientRect().width };
+    place(along);
+    void layer.offsetWidth;  // settle the first place, so that the next one is animated from it
+  }
+
+  function place(x) {
+    along = x;
+    if (!stage) {
+      main.style.transform = "translateX(" + sign(rtl()) * x + "px)";
+      return;
+    }
+    var at = places(x, stage.width, stage.forward, rtl());
+    main.style.transform = "translateX(" + at.leaving + "px)";
+    stage.page.style.transform = "translateX(" + at.arriving + "px)";
+  }
+
+  function clearStage() {
+    if (stage) {
+      stage.layer.parentNode.removeChild(stage.layer);
+      stage = null;
+    }
+    root.classList.remove("is-sliding");
+    along = 0;
+    if (main) {
+      main.style.transition = "";
+      main.style.transform = "";
+    }
+  }
+
+  // Carry the two pages to x pixels along, then call `then`. The timer is in case the transition never reports.
+  function glide(x, ms, then) {
     var finished = false;
-    function finish() {
-      if (finished) return;
+    function finish(event) {
+      if (finished || (event && event.target !== main)) return;  // a transition inside the page is not this one
       finished = true;
+      main.removeEventListener("transitionend", finish);
       then();
     }
-    main.style.transition = "transform " + DISMISS_MS + "ms ease-out";
-    main.style.transform = "translateX(" + x + "px)";
-    main.addEventListener("transitionend", finish, { once: true });
-    window.setTimeout(finish, DISMISS_MS + 120);
+    var transition = "transform " + ms + "ms " + EASE;
+    main.style.transition = transition;
+    if (stage) stage.page.style.transition = transition;
+    place(x);
+    main.addEventListener("transitionend", finish);
+    window.setTimeout(finish, ms + 120);
+  }
+
+  // Go to `href` by moving there: the other page comes in beside this one as they slide together, then the real page takes
+  // its place with no move of its own (its head is told so by #slide=none). If the other page is not at hand in a moment, or
+  // the browser cannot show it, go the plain way, which slides the new page in after this one has left, or lets the browser do it.
+  function travel(href, forward) {
+    leaving = true;
+    if (!main || reducedMotion()) {
+      window.location.href = href;
+      return;
+    }
+    ready(href).then(function (other) {
+      if (!other && !stage) {
+        window.location.href = toward(href, forward ? "forward" : "back");
+        return;
+      }
+      if (!stage) stageBeside(other, forward);
+      var width = stage.width;
+      glide(width, Math.max(MIN_MS, Math.round(SLIDE_MS * (1 - along / width))), function () {
+        window.location.href = href + "#slide=none";
+      });
+    });
+  }
+
+  function open(href) {
+    if (!leaving) travel(href, true);
   }
 
   // Take the page out of view in the reading direction, then go back. With no Back link (the home page) nothing happens.
   function dismiss() {
-    if (!backLink() || leaving) return;
-    leaving = true;
-    // Where the browser animates the move between pages, it carries the page away, from wherever the finger left it.
-    if (!main || reducedMotion() || "PageRevealEvent" in window) {
-      goBack();
-      return;
-    }
-    move(sign(rtl()) * window.innerWidth, goBack);
-  }
-
-  // Where the browser does not animate the move between pages, a tap on a tile takes the page out toward the start, the
-  // way it goes when the reading direction runs forward, and the topic arrives from the end (see Site.document).
-  function onTile() {
-    if (!main || "PageRevealEvent" in window) return;
-    document.addEventListener("click", function (event) {
-      var link = event.target && event.target.closest ? event.target.closest("[data-tiles] a") : null;
-      if (!link || leaving || event.defaultPrevented || event.button !== 0) return;
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) a tap is its own
-      event.preventDefault();
-      leaving = true;
-      var href = toward(link.getAttribute("href"), "forward");
-      if (reducedMotion()) {
-        window.location.href = href;
-        return;
-      }
-      move(-sign(rtl()) * window.innerWidth, function () { window.location.href = href; });
-    });
+    var back = backLink();
+    if (!back || leaving || !back.getAttribute("href")) return;
+    travel(back.getAttribute("href"), false);
   }
 
   function springBack() {
     if (!main) return;
-    main.style.transition = "transform 180ms ease-out";
-    main.style.transform = "";
-    window.setTimeout(function () { main.style.transition = ""; }, 200);
+    if (stage) {
+      glide(0, SPRING_MS, clearStage);
+      return;
+    }
+    main.style.transition = "transform " + SPRING_MS + "ms ease-out";
+    place(0);
+    window.setTimeout(clearStage, SPRING_MS + 20);
+  }
+
+  // A tap on a tile opens its topic as a card that slides in beside this page. Modified clicks stay ordinary links.
+  function onTile() {
+    var tile = function (event) {
+      return event.target && event.target.closest ? event.target.closest("[data-tiles] a") : null;
+    };
+    // Ask for the topic as soon as a finger or pointer goes down, so it is at hand by the time the tap lands.
+    document.addEventListener("pointerdown", function (event) {
+      var link = tile(event);
+      if (link && !root.hasAttribute("data-arranging")) neighbour(link.getAttribute("href"));
+    }, { passive: true });
+    document.addEventListener("click", function (event) {
+      var link = tile(event);
+      if (!link || leaving || event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) a tap is its own
+      event.preventDefault();
+      open(link.getAttribute("href"));
+    });
   }
 
   function onKey(event) {
@@ -164,13 +290,15 @@
     } else if (list && at !== -1) {
       event.preventDefault();
       if (move === "open") {
-        window.location.href = links[at].getAttribute("href");
+        open(links[at].getAttribute("href"));
       } else {
         links[step(at, links.length, move)].focus();
       }
     }
   }
 
+  // A drag with the reading direction takes this page along with the finger and brings the page above it in beside it, the
+  // two moving as one. Letting go far enough, or flicking, carries them the rest of the way; otherwise they spring back.
   function onDrag() {
     var start = null;
     main.addEventListener("touchstart", function (event) {
@@ -178,7 +306,8 @@
       if (!backLink() || leaving || event.touches.length !== 1 || root.hasAttribute("data-arranging")) return;
       var t = event.touches[0];
       if (t.clientX < EDGE || t.clientX > window.innerWidth - EDGE) return;
-      start = { x: t.clientX, y: t.clientY, time: Date.now(), mode: null, travelled: 0 };
+      start = { x: t.clientX, y: t.clientY, time: Date.now(), mode: null, travelled: 0, over: false };
+      neighbour(backLink().getAttribute("href"));
     }, { passive: true });
     main.addEventListener("touchmove", function (event) {
       if (!start) return;
@@ -188,6 +317,12 @@
       if (start.mode === null) {
         start.mode = lock(dx, dy, rtl());
         if (start.mode === null) return;
+        if (start.mode === "drag") {
+          var drag = start;
+          neighbour(backLink().getAttribute("href")).then(function (other) {
+            if (other && !drag.over && !stage && !leaving) stageBeside(other, false);
+          });
+        }
       }
       if (start.mode !== "drag") {  // a scroll, or the wrong way: leave it to the browser
         start = null;
@@ -195,13 +330,15 @@
       }
       start.travelled = offset(dx, rtl());
       main.style.transition = "none";
-      main.style.transform = "translateX(" + sign(rtl()) * start.travelled + "px)";
+      if (stage) stage.page.style.transition = "none";
+      place(start.travelled);
       if (event.cancelable) event.preventDefault();
     }, { passive: false });
     function release(cancelled) {
       var drag = start;
       start = null;
       if (!drag || drag.mode !== "drag") return;
+      drag.over = true;
       var elapsed = Math.max(1, Date.now() - drag.time);
       if (!cancelled && shouldDismiss(drag.travelled, window.innerWidth, drag.travelled / elapsed)) {
         dismiss();
@@ -222,15 +359,14 @@
       event.preventDefault();
       dismiss();
     });
+    // The page above is the one a drag or a tap on Back will want, so have it ready once the page has settled.
+    window.setTimeout(function () { neighbour(back.getAttribute("href")); }, 400);
   }
   if (main) onDrag();
   onTile();
   // Coming back to this page from the browser's own cache must not leave it slid away.
   window.addEventListener("pageshow", function () {
     leaving = false;
-    if (main) {
-      main.style.transition = "";
-      main.style.transform = "";
-    }
+    clearStage();
   });
 })();

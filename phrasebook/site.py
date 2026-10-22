@@ -977,15 +977,18 @@ class Site:
         storage = f' data-storage="{e(self.storage_name())}"'
         if parent:
             storage += f' data-parent="{e(parent)}"'
-        # Where the browser cannot move pages itself, nav.js leaves the page it is on and carries the way it went (a tile goes
-        # forward, Back goes back) in the address as #slide=forward or #slide=back. This head script reads that mark before the
-        # first paint, slides this page in from the same side, and takes the mark out of the address again. A page reached any
-        # other way plays nothing. It does not depend on the referrer, and it stores nothing.
+        # nav.js moves between pages by sliding the two together, and carries the way it went in the address: #slide=none when
+        # the page that arrives is already where the move ended, #slide=forward or #slide=back when it could not set the other
+        # page beside this one and the new page has to slide in itself. This head script reads that mark before the first paint,
+        # takes it out of the address, and either tells the browser's own move to stand down (none) or, where the browser cannot
+        # move pages itself, slides this page in from the matching side. A page reached any other way plays nothing. It does
+        # not depend on the referrer, and it stores nothing.
         slide = (
-            "<script>(function(d,w){var m=/^#slide=(forward|back)$/.exec(w.location.hash);"
-            "if(!m||w.PageRevealEvent)return;"
-            'd.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in");'
-            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){};})(document,window)</script>\n'
+            "<script>(function(d,w){var m=/^#slide=(forward|back|none)$/.exec(w.location.hash);"
+            "if(!m)return;"
+            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){};'
+            'if(m[1]==="none")d.documentElement.setAttribute("data-slide","none");'
+            'else if(!w.PageRevealEvent)d.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in")})(document,window)</script>\n'
         )
         # Where the browser animates moves between pages itself (cross-document view transitions), say which way the page
         # moves: in from the end when this page's parent is the page we came from, in from the start when we came from
@@ -995,7 +998,7 @@ class Site:
             'w.addEventListener("pagereveal",function(e){var t=e.viewTransition;if(!t)return;'
             '["ready","finished","updateCallbackDone"].forEach(function(k){if(t[k])t[k].catch(function(){})});'
             "var a=w.navigation&&w.navigation.activation,u=a&&a.from&&a.from.url,r=d.documentElement;"
-            "if(!u||u.indexOf(location.origin)!==0)return t.skipTransition();"
+            'if(r.getAttribute("data-slide")==="none"||!u||u.indexOf(location.origin)!==0)return t.skipTransition();'
             'var f=u.split("#")[0].split("?")[0].split("/").pop()||"index.html",p=r.getAttribute("data-parent"),'
             'g=[].some.call(d.querySelectorAll("[data-tiles] a"),function(x){return x.getAttribute("href")===f});'
             'if(p&&f===p)r.setAttribute("data-slide","forward");'

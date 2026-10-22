@@ -69,6 +69,11 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
 @keyframes slide-back-rtl{from{transform:translateX(100%)}to{transform:none}}
 .slide-back main{animation:slide-back .24s cubic-bezier(.2,.8,.2,1) backwards}
 :root[dir="rtl"].slide-back main{animation-name:slide-back-rtl}
+/* nav.js slides two pages together: this one, and a copy of the other set in this layer, which covers the page area and clips
+   the copy. The rail is given a background so that pages go under it, and the title bar (z-index 5) already has one. */
+.peek{position:fixed;z-index:3;inset-block:calc(env(safe-area-inset-top,0px) + var(--bar)) 0;inset-inline:var(--rail) 0;overflow:hidden;pointer-events:none}
+.peek-page{position:absolute;inset-block-start:0;inset-inline-start:0;inline-size:100%;min-block-size:100%;box-sizing:border-box;background:var(--bg);will-change:transform}
+.is-sliding .rail{z-index:4;background:var(--bg)}
 /* Where the browser can animate a move between two pages of this site (a head script sets data-slide on <html>), the pages
    slide as if they sat side by side: going in, the old page leaves toward the start and the new one arrives from the end;
    going back, the reverse. Only the page moves: the title bar and the rail are named so they stay where they are. The

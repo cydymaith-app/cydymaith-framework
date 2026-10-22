@@ -12,7 +12,7 @@ const SOURCE = fs.readFileSync(path.join(__dirname, "..", "phrasebook", "assets"
 // Run in this realm, not a sandbox, so objects it returns compare equal to the ones written here.
 const exported = { exports: {} };
 vm.runInThisContext(`(function (module) {${SOURCE}\n})`)(exported);
-const { keyMove, step, lock, offset, shouldDismiss } = exported.exports;
+const { keyMove, step, lock, offset, shouldDismiss, places } = exported.exports;
 
 test("keys: Right opens the focused tile and Left goes back, mirrored in right-to-left", () => {
   assert.equal(keyMove("ArrowRight", false), "open");
@@ -100,10 +100,41 @@ test("a quick flick takes the page away even when short", () => {
   assert.equal(shouldDismiss(80, 400, 0.49), false, "a slow short drag springs back");
 });
 
-test("the script makes no network request, sets no cookies and stores nothing", () => {
-  for (const banned of ["fetch(", "XMLHttpRequest", "sendBeacon", "WebSocket", "document.cookie", "localStorage",
+test("the script asks only for pages of this site, sets no cookies and stores nothing", () => {
+  for (const banned of ["XMLHttpRequest", "sendBeacon", "WebSocket", "document.cookie", "localStorage",
                         "sessionStorage", "http:", "https:", "import(", "eval(", "document.write", "new Function", "innerHTML"]) {
     assert.ok(!SOURCE.includes(banned), `nav.js must not use ${banned}`);
+  }
+  // Its one request is for the page it is about to slide in, and only after the address has been checked to be this site's.
+  assert.equal(SOURCE.split("fetch(").length - 1, 1, "one request, in one place");
+  assert.ok(SOURCE.includes("origin === window.location.origin"), "the address is checked to be this site's");
+  assert.ok(SOURCE.indexOf("!sameSite(href)") !== -1 && SOURCE.indexOf("!sameSite(href)") < SOURCE.indexOf("fetch("),
+    "the check comes before the request");
+});
+
+test("two pages moving together always sit exactly one width apart", () => {
+  for (const forward of [true, false]) {
+    for (const rtl of [false, true]) {
+      for (const x of [0, 1, 120, 399, 400]) {
+        const at = places(x, 400, forward, rtl);
+        assert.equal(Math.abs(at.arriving - at.leaving), 400, `forward=${forward} rtl=${rtl} x=${x}`);
+      }
+    }
+  }
+});
+
+test("opening a topic carries the pages toward the start, going back toward the end, and right-to-left mirrors both", () => {
+  assert.deepEqual(places(100, 400, true, false), { leaving: -100, arriving: 300 });
+  assert.deepEqual(places(100, 400, false, false), { leaving: 100, arriving: -300 });
+  assert.deepEqual(places(100, 400, true, true), { leaving: 100, arriving: -300 });
+  assert.deepEqual(places(100, 400, false, true), { leaving: -100, arriving: 300 });
+});
+
+test("the other page arrives exactly in place when the move is done, and waits a width away at the start", () => {
+  for (const forward of [true, false]) {
+    assert.equal(Math.abs(places(400, 400, forward, false).arriving), 0);
+    assert.equal(Math.abs(places(0, 400, forward, false).arriving), 400);
+    assert.equal(Math.abs(places(0, 400, forward, false).leaving), 0);
   }
 });
 
