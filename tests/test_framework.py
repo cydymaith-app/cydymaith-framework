@@ -571,6 +571,12 @@ class AboutPageTests(Scratch):
         self.assertIn('<input type="radio" class="about-radio" name="about-lang" id="about-lang-qaa" value="qaa" checked>', page)
         self.assertNotIn('id="about-lang-qab" value="qab" checked', page)
 
+    def test_the_wrapper_does_not_share_the_class_of_the_home_pages_closing_line(self):
+        """The class `about` is the home page's closing line, with a gap above it; on this wrapper it opened a gap under the title bar."""
+        page = self.pages["about.html"]
+        self.assertIn('<div class="about-page">', page)
+        self.assertNotIn('class="about"', page)
+
     def test_the_toggle_names_each_language_in_that_language_and_needs_no_script(self):
         page = self.pages["about.html"]
         bar = page[page.index('<div class="about-bar"') : page.index("</div>", page.index('<div class="about-bar"'))]

@@ -932,7 +932,7 @@ class Site:
                     f'<time datetime="{utc.strftime("%Y-%m-%dT%H:%M:%SZ")}">{utc.strftime("%Y-%m-%d %H:%M")} UTC</time></p>'
                 )
             articles.append(f'<article class="about-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>')
-        return f'<div class="about">{radios}{toggle}{"".join(articles)}</div>'
+        return f'<div class="about-page">{radios}{toggle}{"".join(articles)}</div>'
 
     def how_to_page(self):
         """How to move through the tree: keys, touch and buttons. Words only from the interface messages."""

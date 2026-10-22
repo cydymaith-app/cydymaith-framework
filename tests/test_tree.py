@@ -553,6 +553,18 @@ class MobileFirstTests(unittest.TestCase):
 
     CSS = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
 
+    def test_the_top_and_bottom_insets_apply_only_to_the_installed_app(self):
+        """A browser tab keeps its own bars clear of the page; some browsers still report the status bar as an inset on top of that."""
+        self.assertEqual(
+            self.CSS.count("env(safe-area-inset-top"), 1, "one use of the top inset, and it is the one that is gated"
+        )
+        self.assertEqual(self.CSS.count("env(safe-area-inset-bottom"), 1)
+        gate = next(line for line in self.CSS.splitlines() if "display-mode:standalone" in line)
+        self.assertIn("(display-mode:fullscreen)", gate)
+        self.assertIn("--inset-top:env(safe-area-inset-top,0px)", gate)
+        self.assertIn("--inset-bottom:env(safe-area-inset-bottom,0px)", gate)
+        self.assertIn("--inset-top:0px", self.CSS, "with no gate matched there is no inset")
+
     def test_the_stylesheet_widens_with_min_width_and_never_narrows_with_max_width(self):
         self.assertIn("@media (min-width:600px)", self.CSS)
         self.assertIn("@media (min-width:960px)", self.CSS)

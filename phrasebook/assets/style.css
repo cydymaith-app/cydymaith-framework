@@ -8,32 +8,37 @@
   --font-l2:Georgia,"Times New Roman",serif;
   --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --safe-start:max(16px,env(safe-area-inset-left,0px)); --safe-end:max(16px,env(safe-area-inset-right,0px));
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
+  --inset-top:0px; --inset-bottom:0px;
+  padding-top:var(--inset-top);
+  padding-bottom:var(--inset-bottom);
 }
+/* The top and bottom insets belong to the installed app, which draws under the status bar and the gesture bar. A browser tab
+   keeps its own bars clear of the page, and some browsers still report the status bar as an inset on top of that, which
+   showed as an empty band above the title bar. */
+@media (display-mode:standalone),(display-mode:fullscreen){:root{--inset-top:env(safe-area-inset-top,0px);--inset-bottom:env(safe-area-inset-bottom,0px)}}
 :root[dir="rtl"]{--safe-start:max(16px,env(safe-area-inset-right,0px)); --safe-end:max(16px,env(safe-area-inset-left,0px))}
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.55 var(--font-ui)}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:var(--inset-top);z-index:10;background:var(--bg)}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .skip{position:absolute;inset-inline-start:-999px;top:0;background:var(--surface);color:var(--ink);padding:.5rem .75rem;z-index:20}
-.skip:focus{inset-inline-start:var(--safe-start);top:calc(env(safe-area-inset-top,0px) + 8px)}
+.skip:focus{inset-inline-start:var(--safe-start);top:calc(var(--inset-top) + 8px)}
 
 /* frame: a title bar across the full width, then a rail beside the page */
 :root{--bar:3.75rem;--rail:3.5rem}
 .app{display:grid;grid-template-columns:3.5rem minmax(0,1fr);grid-template-rows:auto 1fr;min-height:100vh;min-height:100dvh;overflow-x:clip}
 .topbar{
-  grid-column:1/-1;grid-row:1;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;
+  grid-column:1/-1;grid-row:1;position:sticky;top:var(--inset-top);z-index:5;
   display:flex;align-items:center;min-height:var(--bar);padding-block:.5rem;
   padding-inline:var(--safe-start) var(--safe-end);background:var(--header);color:var(--on-header);border-bottom:1px solid var(--rule-strong);
 }
 .rail{
-  grid-column:1;grid-row:2;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--bar));align-self:start;
-  height:calc(100vh - env(safe-area-inset-top,0px) - var(--bar));height:calc(100dvh - env(safe-area-inset-top,0px) - var(--bar));
+  grid-column:1;grid-row:2;position:sticky;top:calc(var(--inset-top) + var(--bar));align-self:start;
+  height:calc(100vh - var(--inset-top) - var(--bar));height:calc(100dvh - var(--inset-top) - var(--bar));
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;
   padding-block:.75rem;padding-inline-start:calc(var(--safe-start) - 16px);
   border-inline-end:1px solid var(--rule-strong);
@@ -71,7 +76,7 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
 :root[dir="rtl"].slide-back main{animation-name:slide-back-rtl}
 /* nav.js slides two pages together: this one, and a copy of the other set in this layer, which covers the page area and clips
    the copy. The rail is given a background so that pages go under it, and the title bar (z-index 5) already has one. */
-.peek{position:fixed;z-index:3;inset-block:calc(env(safe-area-inset-top,0px) + var(--bar)) 0;inset-inline:var(--rail) 0;overflow:hidden;pointer-events:none}
+.peek{position:fixed;z-index:3;inset-block:calc(var(--inset-top) + var(--bar)) 0;inset-inline:var(--rail) 0;overflow:hidden;pointer-events:none}
 .peek-page{position:absolute;inset-block-start:0;inset-inline-start:0;inline-size:100%;min-block-size:100%;box-sizing:border-box;background:var(--bg);will-change:transform}
 .is-sliding .rail{z-index:4;background:var(--bg)}
 /* Where the browser can animate a move between two pages of this site (a head script sets data-slide on <html>), the pages
@@ -99,7 +104,7 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
 /* search: a card that slides out from the rail over the page, as an overlay that can be dismissed. The layer clips it, so it
    comes out from behind the rail and goes back in. It is hidden until search.js runs. */
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.search-layer{position:fixed;z-index:4;inset-block:calc(env(safe-area-inset-top,0px) + var(--bar)) 0;inset-inline-start:var(--rail);
+.search-layer{position:fixed;z-index:4;inset-block:calc(var(--inset-top) + var(--bar)) 0;inset-inline-start:var(--rail);
   width:min(30rem,calc(100vw - var(--rail)));overflow:hidden;pointer-events:none}
 .search-layer[hidden]{display:none}
 .search-card{box-sizing:border-box;height:100%;display:flex;flex-direction:column;gap:.5rem;padding:1rem .85rem 0;
@@ -260,6 +265,7 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .rose .w1{font:400 13px var(--font-ui);fill:var(--muted)}
 
 .about{max-width:38rem;margin:2.5rem 0 0;font-size:.92rem;color:var(--muted)}
+.about-page{max-width:38rem;font-size:.92rem;color:var(--muted)}
 .links{list-style:none;margin:.75rem 0 0;padding:0;border-top:1px solid var(--rule-strong)}
 .links a{display:flex;flex-direction:column;min-height:2.75rem;justify-content:center;padding:.7rem 0;border-bottom:1px solid var(--rule);text-decoration:none}
 .links a:hover .l1{color:var(--accent)}
