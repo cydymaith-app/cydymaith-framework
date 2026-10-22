@@ -563,7 +563,8 @@ class Site:
             )
             if also:
                 rows.append(
-                    f'<tr class="also-row"><td colspan="2"><span class="also-label">{self.h("also_heard")}</span> {also}</td></tr>'
+                    f'<tr class="also-row"><td colspan="2"><span class="also-label" title="{e(self.plain("also_heard"))}">'
+                    f"{self.ui_icons['headphones']}<span class=\"sr-only\">{self.h('also_heard')}</span></span> {also}</td></tr>"
                 )
         order = "".join(
             f'<p class="order">{self.h("section_order", order=self.markup(code, sec["order"]))}</p>'

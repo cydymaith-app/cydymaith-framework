@@ -473,7 +473,10 @@ class ListenFirstTests(Scratch):
             proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].update(also=["qab uno"])
         )
         page = self.site(proj)[0].render_all()["p1.html"]
-        self.assertRegex(page, r'<tr class="also-row"><td colspan="2"><span class="also-label">.*?Also heard as.*?</span> ')
+        self.assertRegex(
+            page,
+            r'<tr class="also-row"><td colspan="2"><span class="also-label" title="Also heard as"><svg[^>]*aria-hidden="true".*?<span class="sr-only"><span lang="en">Also heard as</span></span></span> ',
+        )
         self.assertIn('<span class="also-form" lang="qab">qab uno</span>', page)
 
     def test_only_a_row_that_has_other_forms_gets_an_extra_row(self):
@@ -1087,7 +1090,7 @@ class PaletteSiteTests(Scratch):
         self.add_palette(proj, "sepia", names={"qaa": "Sepia paper"}, light=light)
         out = self.build_out(proj, "added")
         page = (out / "settings.html").read_text(encoding="utf-8")
-        self.assertIn('name="palette" value="sepia" data-pref="palette">', page)
+        self.assertIn('name="palette" value="sepia" data-pref="palette" data-tier="standard">', page)
         self.assertIn('<span class="t" data-n="1">Sepia paper</span>', page)
         self.assertIn(':root[data-palette="sepia"]{--bg:#', (out / "palettes.css").read_text(encoding="utf-8"))
 

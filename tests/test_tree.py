@@ -104,13 +104,14 @@ class IconParsingTests(unittest.TestCase):
                 icons.validate({name: GOOD})
         icons.validate({"cloud-rain": GOOD})
 
-    def test_the_framework_ships_only_its_seven_interface_icons_with_their_licence(self):
+    def test_the_framework_ships_only_its_interface_icons_with_their_licence(self):
         found = sorted(p for p in ENGINE.rglob("*.svg"))
         self.assertEqual(
             [f.relative_to(ENGINE).as_posix() for f in found],
             [
                 "ui-icons/arrow--left.svg",
                 "ui-icons/asleep.svg",
+                "ui-icons/headphones.svg",
                 "ui-icons/information.svg",
                 "ui-icons/light.svg",
                 "ui-icons/screen.svg",

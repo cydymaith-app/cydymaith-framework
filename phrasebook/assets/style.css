@@ -192,7 +192,8 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .terms.pair td .l2{font:400 1rem/1.3 var(--font-ui)}
 .terms.pair .also-row{border-top:0}
 .terms.pair .also-row td{padding:0 0 .6rem;text-align:start;font-size:.92rem;color:var(--ink)}
-.also-label{color:var(--accent);font-weight:600;margin-inline-end:.35rem}
+.also-label{display:inline-flex;align-items:center;margin-inline-end:.4rem;color:var(--accent)}
+.also-label .icon{width:1.15rem;height:1.15rem}
 .also-form{display:inline-block;margin-block:.1rem;margin-inline-end:.3rem;padding:.05rem .45rem;border-radius:6px;background:var(--bg);font-family:var(--font-l2);font-weight:500}
 .order{max-width:38rem;margin:.25rem 0 0;color:var(--muted);font-size:.85rem}
 /* About: a group of radios shows one language at a time; the first radio, article and label go together, and so on (up to six) */
