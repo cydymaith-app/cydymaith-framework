@@ -116,6 +116,7 @@ class IconParsingTests(unittest.TestCase):
                 "ui-icons/screen.svg",
                 "ui-icons/search.svg",
                 "ui-icons/settings.svg",
+                "ui-icons/tools.svg",
             ],
         )
         self.assertIn("Apache", (ENGINE / "ui-icons" / "LICENSE").read_text(encoding="utf-8"))
@@ -157,9 +158,9 @@ class IconSiteTests(Scratch):
         for name, page in pages.items():
             limit = (
                 8 if name == "settings.html" else 5
-            )  # search, back, about, the gear and the figure; the settings page adds three modes
+            )  # search, back, edit order, about and the gear, and the figure; the settings page adds three modes
             self.assertLessEqual(page.count("<svg"), limit, name)
-        self.assertEqual(pages["index.html"].count("<svg"), 3, "search, about and the gear in the rail")
+        self.assertEqual(pages["index.html"].count("<svg"), 4, "search, edit order, about and the gear in the rail")
 
     def test_a_named_icon_must_have_a_file(self):
         proj = self.project()
@@ -375,9 +376,9 @@ class FrameTests(Scratch):
         self.assertNotIn("data-back", home)
         self.assertNotIn('class="trail"', home)
         self.assertNotIn('class="pager"', home)
-        self.assertIn('<ul class="tiles" data-tiles aria-label=', home)
+        self.assertIn('<ul class="tiles" data-tiles data-order="index" aria-label=', home)
         self.assertEqual(home.count('class="tile-link"'), 1)
-        self.assertIn('href="group-g1.html"', home)
+        self.assertIn('<li data-tile="g1"><a class="tile-link" href="group-g1.html">', home)
 
     def test_a_group_page_has_back_to_home_and_tiles_for_its_topics_without_counts(self):
         page = self.pages["group-g1.html"]
@@ -758,6 +759,61 @@ class NoVisibleNumberingTests(unittest.TestCase):
                 text = page.read_text(encoding="utf-8")
                 self.assertIsNone(re.search(r">\s*\d+\.\d+(\.\d+)*\s*<", text), page.name)
         self.assertEqual(doc["nodes"][0]["id"], "1")
+
+
+
+class ArrangeTests(Scratch):
+    """Edit order: the tiles carry their ids and the screen's name, the controls are hidden until the script runs, and a saved
+    order is applied before the first paint."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.proj = cls.project()
+        add_icon(cls.proj, "weather")
+        name_icons(cls.proj, group="weather")
+        cls.out = cls.tmp / "arrange-out"
+        quiet_build(cls.out, project_dir=cls.proj)
+        cls.pages = {f.name: f.read_text(encoding="utf-8") for f in cls.out.glob("*.html")}
+
+    def test_the_home_and_group_pages_are_arrangeable_and_the_others_are_not(self):
+        for name, page in self.pages.items():
+            tiles = 'data-tiles data-order="' in page
+            self.assertEqual(tiles, name == "index.html" or name.startswith("group-"), name)
+            self.assertEqual('id="arrange-button"' in page, tiles, name)
+
+    def test_each_tile_carries_its_id_and_each_screen_its_name_for_the_saved_order(self):
+        home = self.pages["index.html"]
+        self.assertIn('data-order="index"', home)
+        self.assertIn('<li data-tile="g1"><a class="tile-link" href="group-g1.html">', home)
+        group = self.pages["group-g1.html"]
+        self.assertIn('data-order="group-g1"', group)
+        self.assertIn('<li data-tile="p1"><a class="tile-link" href="p1.html">', group)
+
+    def test_the_spanner_is_hidden_until_the_script_shows_it(self):
+        home = self.pages["index.html"]
+        self.assertIn('class="rail-link arrange-toggle" id="arrange-button" hidden aria-pressed="false"', home)
+
+    def test_the_bar_is_in_both_languages_and_its_messages_keep_their_placeholders_for_the_script(self):
+        home = self.pages["index.html"]
+        self.assertIn('data-arrange-bar data-picked="{name} picked up, place {n} of {total}.', home)
+        self.assertIn('data-moved="{name} is now place {n} of {total}."', home)
+        self.assertIn('data-reset="Order reset to the default."', home)
+        self.assertIn('data-arrange-done><span lang="en">Save order</span></button>', home)
+        self.assertIn('data-arrange-reset><span lang="en">Reset</span></button>', home)
+        self.assertIn('<p class="sr-only" role="status" data-arrange-status></p>', home)
+
+    def test_the_settings_page_has_a_reset_of_every_screen_hidden_until_the_script_runs(self):
+        settings = self.pages["settings.html"]
+        self.assertIn('<div class="reset-orders" data-reset-orders hidden>', settings)
+        self.assertIn('data-done="Every tile is back in its default order."', settings)
+        self.assertIn('data-failed="The order could not be saved on this device."', settings)
+
+    def test_every_page_loads_the_arranging_script_after_the_page_and_the_pending_check_is_in_the_head(self):
+        for name, page in self.pages.items():
+            self.assertIn('<script src="arrange.js" defer></script>', page, name)
+            self.assertIn('setAttribute("data-arrange-pending","")', page, name)
+        self.assertTrue((self.out / "arrange.js").is_file())
 
 
 if __name__ == "__main__":

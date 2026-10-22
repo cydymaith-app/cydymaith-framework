@@ -477,17 +477,37 @@ class Site:
             )
         return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>'
 
-    def tile(self, href, first, second, icon):
-        """A large touch target: the icon on a tile, with the name in both languages beneath. No icon, the name goes in the tile."""
+    def tile(self, href, first, second, icon, ident):
+        """A large touch target: the icon on a tile, with the name in both languages beneath. No icon, the name goes in the tile.
+        `ident` names the tile for a saved order (data-tile), so the order is kept whatever the tile's label says."""
         l1, l2 = self.pair_spans(first, second)
         inner = self.icon_html(icon) or f'<span class="tile-text" aria-hidden="true">{e(first)}</span>'
         return (
-            f'<li><a class="tile-link" href="{href}"><span class="tile">{inner}</span>'
+            f'<li data-tile="{e(ident)}"><a class="tile-link" href="{href}"><span class="tile">{inner}</span>'
             f'<span class="tile-name">{l1}{l2}</span></a></li>'
         )
 
-    def tiles(self, items):
-        return f'<ul class="tiles" data-tiles aria-label="{e(self.plain("topics_label"))}">{"".join(items)}</ul>'
+    def tiles(self, items, order):
+        """A grid of tiles. `order` names the screen whose tile order is saved (data-order), so the script can find it.
+        Edit order adds a bar above the grid: a hint, and Done and Reset. Its messages go in data attributes for the script."""
+        keys = {"picked": "picked", "moved": "moved", "cancelled": "cancelled", "saved": "saved", "reset": "reset_done", "failed": "failed"}
+        # The script fills {name}, {n} and {total} in; here they pass through as they are.
+        messages = "".join(
+            f' data-{attr}="{e(self.plain("arrange_" + key, n="{n}", name="{name}", total="{total}"))}"' for attr, key in keys.items()
+        )
+        bar = (
+            f'<div class="arrange-bar" data-arrange-bar{messages}>'
+            f'<p class="arrange-hint">{self.h("arrange_hint")}</p>'
+            '<div class="arrange-actions">'
+            f'<button type="button" data-arrange-done>{self.h("arrange_done")}</button>'
+            f'<button type="button" data-arrange-reset>{self.h("arrange_reset")}</button></div></div>'
+        )
+        # Read aloud, not seen: the script says each change here for a screen reader, so the region stays in the page.
+        live = '<p class="sr-only" role="status" data-arrange-status></p>'
+        return (
+            f'{bar}{live}<ul class="tiles" data-tiles data-order="{e(order)}" aria-label="{e(self.plain("topics_label"))}">'
+            f'{"".join(items)}</ul>'
+        )
 
     # -- pages
 
@@ -623,12 +643,21 @@ class Site:
                 f'<a class="rail-link" href="about.html" aria-label="{about_name}" title="{about_name}"{about_mark}>'
                 f'{self.ui_icons["information"]}</a>'
             )
+        # Edit order is for the screens that are tiles: the home page and a group page. Hidden until arrange.js runs.
+        arrange = ""
+        if current == "index" or current.startswith("group-"):
+            arrange_name = e(self.plain("arrange_toggle"))
+            arrange = (
+                f'<button type="button" class="rail-link arrange-toggle" id="arrange-button" hidden aria-pressed="false" '
+                f'aria-label="{arrange_name}" title="{arrange_name}">{self.ui_icons["tools"]}</button>'
+            )
         return (
             f'<a class="skip" href="#main">{self.h("skip_to_content")}</a>'
             '<div class="app">'
             f'<header class="topbar"><div class="titles{" has-trail" if trail else ""}"><a class="brand" href="index.html"><span class="word">{e(self.name)}</span>'
             f"<small>{self.brand_small()}</small></a>{trail}</div></header>"
-            f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div><div class="rail-group">{about}{settings}</div></nav>'
+            f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>'
+            f'<div class="rail-group">{arrange}{about}{settings}</div></nav>'
             f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
             f"{self.search_card(current)}"
             "</div>"
@@ -665,7 +694,7 @@ class Site:
         frm, to = self.frm, self.to
         home = self.edition.get("home", {})
         groups = [
-            self.tile(f"group-{g['id']}.html", self.group_title(frm, g["id"]), self.group_title(to, g["id"]), g.get("icon"))
+            self.tile(f"group-{g['id']}.html", self.group_title(frm, g["id"]), self.group_title(to, g["id"]), g.get("icon"), g["id"])
             for g in self.groups
         ]
         lcode, lede = self.prose(lambda c: home.get("lede", {}).get(c))
@@ -676,7 +705,7 @@ class Site:
             f'<h1>{self.inline(frm, home["headline"][frm])}</h1>'
             f'<p class="title-l2"{self.la(to)}>{e(home["headline"][to])}</p>'
             f'<p class="lede">{self.inline(lcode, lede) if lede else ""}</p></header>'
-            + self.tiles(groups)
+            + self.tiles(groups, "index")
             + f'<p class="about">{self.h("home_about", about=self.inline(acode, about) if about else "", link=link)}</p>'
         )
 
@@ -688,10 +717,10 @@ class Site:
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
         pages = [
-            self.tile(f"{slug}.html", self.title(frm, slug), self.title(to, slug), self.skel[slug].get("icon"))
+            self.tile(f"{slug}.html", self.title(frm, slug), self.title(to, slug), self.skel[slug].get("icon"), slug)
             for slug in group["pages"] + group["links"]
         ]
-        return head + self.tiles(pages)
+        return head + self.tiles(pages, f"group-{gid}")
 
     def licence_html(self, key):
         """A licence by its proper name (linked when it has a page), or in words from the interface messages."""
@@ -797,9 +826,17 @@ class Site:
             )
         )
         about = f'<section class="card" id="about"><h2>{self.both("about_app")}</h2><ul class="links">{links}</ul></section>'
+        # Every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices.
+        reset_orders = (
+            f'<div class="reset-orders" data-reset-orders hidden><h2>{self.h("reset_orders_title")}</h2>'
+            f'<p class="intro">{self.h("reset_orders_lede")}</p>'
+            f'<p><button type="button">{self.h("reset_orders")}</button></p>'
+            f'<p class="arrange-status" role="status" data-reset-status '
+            f'data-done="{e(self.plain("reset_orders_done"))}" data-failed="{e(self.plain("arrange_failed"))}"></p></div>'
+        )
         body = (
             head
-            + f'<section id="settings">{self.prefs_controls()}'
+            + f'<section id="settings">{self.prefs_controls()}{reset_orders}'
             + f'<noscript><p class="intro">{self.h("settings_no_script")}</p></noscript></section>'
             + about
         )
@@ -884,7 +921,16 @@ class Site:
 
     def document(self, title, body, parent=None):
         # The script is blocking on purpose: it sets the saved preferences before the first paint.
-        script = '<script src="app.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
+        script = (
+            '<script src="app.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
+            '<script src="arrange.js" defer></script>\n'
+        )
+        # A tile order saved on this device is applied by arrange.js, so the tiles are hidden until then (see style.css). Set here,
+        # before the first paint, only when there is one; with no script nothing is hidden.
+        pending = (
+            '<script>try{var r=document.documentElement;if(window.localStorage.getItem((r.getAttribute("data-storage")||"phrasebook")+":order"))'
+            'r.setAttribute("data-arrange-pending","")}catch(err){}</script>\n'
+        )
         fonts = "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("fonts", []))
         extra = '<link rel="stylesheet" href="varieties.css">\n' if self.has_varieties() else ""
         extra += "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("stylesheets", []))
@@ -929,7 +975,7 @@ class Site:
             f"{slide}<title>{e(title)}</title>\n"
             f'<link rel="manifest" href="manifest.json">\n'
             f'<meta name="theme-color" content="{self.theme_color()}">\n{touch_icon}'
-            f"{script}{fonts}"
+            f"{pending}{script}{fonts}"
             f'<link rel="stylesheet" href="palettes.css">\n<link rel="stylesheet" href="style.css">\n{extra}'
             f"</head>\n<body>\n{body}\n{register}</body>\n</html>\n"
         )

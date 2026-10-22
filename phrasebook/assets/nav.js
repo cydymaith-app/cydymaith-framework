@@ -116,6 +116,7 @@
 
   function onKey(event) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) the keys are its own
     var target = event.target;
     if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;  // arrows belong to the control
     if (target && target.closest && target.closest("#search-card")) return;  // and so do the keys inside the search card
@@ -141,7 +142,7 @@
     var start = null;
     main.addEventListener("touchstart", function (event) {
       start = null;
-      if (!backLink() || leaving || event.touches.length !== 1) return;
+      if (!backLink() || leaving || event.touches.length !== 1 || root.hasAttribute("data-arranging")) return;
       var t = event.touches[0];
       if (t.clientX < EDGE || t.clientX > window.innerWidth - EDGE) return;
       start = { x: t.clientX, y: t.clientY, time: Date.now(), mode: null, travelled: 0 };
