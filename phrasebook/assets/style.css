@@ -153,8 +153,7 @@ h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;m
 .tile-name .l2{font:500 .92rem/1.25 var(--font-l2);color:var(--muted);overflow-wrap:anywhere}
 
 /* edit order: the spanner in the rail, a bar with the hint, Done and Reset, icon-only tiles, and the screen in the surface shade
-   while it is on. The head hides the tiles only while a saved order waits to be applied (arrange.js removes the attribute). */
-html[data-arrange-pending] [data-tiles]{visibility:hidden}
+   while it is on. */
 .arrange-toggle[aria-pressed="true"]{background:var(--surface);color:var(--accent)}
 .arrange-bar{display:none;flex-direction:column;gap:.6rem;margin-top:1.5rem}
 [data-arranging] .arrange-bar{display:flex}

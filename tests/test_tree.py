@@ -6,8 +6,11 @@ The panel script's moves are tested in nav.test.js. Run from the repo root: pyth
 
 import html
 import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 import unittest
 from html.parser import HTMLParser
@@ -817,11 +820,81 @@ class ArrangeTests(Scratch):
         self.assertIn('data-done="Every tile is back in its default order."', settings)
         self.assertIn('data-failed="The order could not be saved on this device."', settings)
 
-    def test_every_page_loads_the_arranging_script_after_the_page_and_the_pending_check_is_in_the_head(self):
+    def test_every_page_loads_the_arranging_script_after_the_page_and_hides_nothing_while_it_waits(self):
         for name, page in self.pages.items():
             self.assertIn('<script src="arrange.js" defer></script>', page, name)
-            self.assertIn('setAttribute("data-arrange-pending","")', page, name)
+            self.assertNotIn("data-arrange-pending", page, name)
+        self.assertNotIn("data-arrange-pending", (ENGINE / "assets" / "style.css").read_text(encoding="utf-8"))
         self.assertTrue((self.out / "arrange.js").is_file())
+
+    def test_the_saved_order_is_applied_by_a_script_right_after_each_tile_list_before_anything_is_painted(self):
+        after_the_list = re.compile(r"</ul><script>\(function\(d\)\{try\{var u=d\.currentScript\.previousElementSibling")
+        for name, page in self.pages.items():
+            if 'data-tiles data-order="' not in page:
+                self.assertNotIn("previousElementSibling", page, name)
+                continue
+            self.assertEqual(len(after_the_list.findall(page)), 1, name)
+            self.assertLess(page.index("previousElementSibling"), page.index("</main>"), name)
+
+    def run_order_script(self, saved, storage_throws=False):
+        """The home page's order script under Node, against a list of four tiles a, b, c, d: the ids it leaves in order."""
+        node = shutil.which("node")
+        if node is None:
+            if os.environ.get("REQUIRE_NODE"):
+                self.fail("Node is required (REQUIRE_NODE is set) but was not found")
+            self.skipTest("Node is not installed")
+        script = re.search(r"</ul><script>(.*?)</script>", self.pages["index.html"]).group(1)
+        harness = """
+const [script, saved, throws] = process.argv.slice(1);
+const li = (id) => ({ id, getAttribute: (n) => (n === 'data-tile' ? id : null) });
+const ul = {
+  children: ['a', 'b', 'c', 'd'].map(li),
+  getAttribute: (n) => (n === 'data-order' ? 'index' : null),
+  appendChild(x) { this.children = this.children.filter((c) => c !== x); this.children.push(x); return x; },
+};
+const document = {
+  currentScript: { previousElementSibling: ul },
+  documentElement: { getAttribute: (n) => (n === 'data-storage' ? 'demo' : null) },
+};
+const window = {
+  localStorage: {
+    getItem: (k) => {
+      if (throws === '1') throw new Error('blocked');
+      return k === 'demo:order' && saved !== '' ? saved : null;
+    },
+  },
+};
+new Function('document', 'window', script)(document, window);
+console.log(ul.children.map((c) => c.id).join(','));
+"""
+        result = subprocess.run(
+            [node, "-e", harness, script, saved, "1" if storage_throws else "0"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip()
+
+    @staticmethod
+    def saved(ids):
+        return json.dumps({"v": 1, "screens": {"index": ids}})
+
+    def test_the_order_script_puts_the_saved_tiles_first_and_the_rest_after_in_their_default_places(self):
+        self.assertEqual(self.run_order_script(self.saved(["c", "a"])), "c,a,b,d")
+        self.assertEqual(self.run_order_script(self.saved(["d", "c", "b", "a"])), "d,c,b,a")
+
+    def test_the_order_script_ignores_names_the_screen_no_longer_has_and_repeats(self):
+        self.assertEqual(self.run_order_script(self.saved(["zzz", "b", "b", "a"])), "b,a,c,d")
+        self.assertEqual(self.run_order_script(self.saved(["__proto__", "constructor", "c"])), "c,a,b,d")
+
+    def test_the_order_script_leaves_the_default_order_when_nothing_usable_is_saved(self):
+        self.assertEqual(self.run_order_script(""), "a,b,c,d")
+        self.assertEqual(self.run_order_script("not json"), "a,b,c,d")
+        self.assertEqual(self.run_order_script(json.dumps({"v": 2, "screens": {"index": ["c"]}})), "a,b,c,d")
+        self.assertEqual(self.run_order_script(self.saved("c")), "a,b,c,d", "an order that is not a list")
+        self.assertEqual(self.run_order_script(json.dumps({"v": 1, "screens": {"group-x": ["c"]}})), "a,b,c,d")
+        self.assertEqual(self.run_order_script(self.saved(["c"]), storage_throws=True), "a,b,c,d", "blocked storage")
 
 
 if __name__ == "__main__":

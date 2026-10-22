@@ -155,9 +155,12 @@
     copy.removeAttribute("id");
     each("[id]", "id");
     each("[name]", "name");
+    Array.prototype.forEach.call(copy.querySelectorAll("script"), function (node) { node.parentNode.removeChild(node); });
     copy.setAttribute("aria-hidden", "true");
     copy.setAttribute("inert", "");
     copy.className = (copy.className + " peek-page").trim();
+    // Let the other scripts finish the copy before it is seen (arrange.js puts its tiles in the saved order).
+    document.dispatchEvent(new CustomEvent("phrasebook:peek", { detail: { page: copy } }));
     var layer = document.createElement("div");
     layer.className = "peek";
     layer.appendChild(copy);

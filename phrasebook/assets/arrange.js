@@ -2,8 +2,10 @@
    The spanner in the rail turns edit order on. Then a tile can be dragged to a new place, or tapped and then tapped where it
    should go, and the arrow keys move a picked tile (Escape puts it back). Save order, or the spanner again, saves the order on this
    device. Leaving the page without saving discards the changes. Reset puts one screen back in its default order, and Settings
-   resets them all. The order has its own key in localStorage, separate from the preferences, and is sent nowhere. Without this
-   script the tiles keep their default order and no control is shown. */
+   resets them all. The order has its own key in localStorage, separate from the preferences, and is sent nowhere. A saved order is
+   applied to the page by a few lines right after the tile list (Site.tiles), before anything is painted, and to the copy of
+   another page that nav.js slides in (below), so tiles are never seen moving into place. Without this script the tiles keep their
+   default order and no control is shown. */
 (function () {
   "use strict";
 
@@ -367,10 +369,18 @@
     });
   }
 
-  try {
-    init();
-  } finally {
-    // The head hid the tiles while a saved order was waiting to be applied. They show now, in that order.
-    root.removeAttribute("data-arrange-pending");
-  }
+  // nav.js slides a copy of another page in beside this one. Put its tiles in the order saved for that screen first, so they
+  // arrive where they will stay and do not move when the real page takes their place. The order is read fresh from storage.
+  document.addEventListener("phrasebook:peek", function (event) {
+    var copy = event.detail && event.detail.page;
+    var other = copy && copy.querySelector ? copy.querySelector("[data-tiles][data-order]") : null;
+    var saved = other ? load().screens[other.getAttribute("data-order")] : null;
+    if (!saved) return;
+    var items = Array.prototype.slice.call(other.querySelectorAll(":scope > li[data-tile]"));
+    var byId = {};
+    items.forEach(function (li) { byId[idOf(li)] = li; });
+    merge(items.map(idOf), saved).forEach(function (id) { other.appendChild(byId[id]); });
+  });
+
+  init();
 })();

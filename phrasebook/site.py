@@ -515,9 +515,23 @@ class Site:
         )
         # Read aloud, not seen: the script says each change here for a screen reader, so the region stays in the page.
         live = '<p class="sr-only" role="status" data-arrange-status></p>'
+        # The order saved on this device for this screen is applied by the script right after the list, as soon as the list exists and
+        # before anything is painted, so the tiles are never seen in their default order and nothing has to be hidden. It does what
+        # arrange.js does (the saved ids first, then any the order does not name, in their default places) and needs no other script.
+        # arrange.js applies the same order to the copy of a page that nav.js slides in, so that arrives in order too.
+        arranged = (
+            "<script>(function(d){try{var u=d.currentScript.previousElementSibling,"
+            's=JSON.parse(window.localStorage.getItem((d.documentElement.getAttribute("data-storage")||"phrasebook")+":order"));'
+            's=s&&s.v===1&&s.screens&&s.screens[u.getAttribute("data-order")];if(!Array.isArray(s))return;'
+            "var a=[].slice.call(u.children),m=Object.create(null);"
+            'a.forEach(function(li){m[li.getAttribute("data-tile")]=li});'
+            "s.forEach(function(k){if(m[k])u.appendChild(m[k]),m[k]=null});"
+            'a.forEach(function(li){if(m[li.getAttribute("data-tile")])u.appendChild(li)})'
+            "}catch(err){};})(document)</script>"
+        )
         return (
             f'{bar}{live}<ul class="tiles" data-tiles data-order="{e(order)}" aria-label="{e(self.plain("topics_label"))}">'
-            f'{"".join(items)}</ul>'
+            f'{"".join(items)}</ul>{arranged}'
         )
 
     # -- pages
@@ -964,12 +978,6 @@ class Site:
             '<script src="app.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
             '<script src="arrange.js" defer></script>\n'
         )
-        # A tile order saved on this device is applied by arrange.js, so the tiles are hidden until then (see style.css). Set here,
-        # before the first paint, only when there is one; with no script nothing is hidden.
-        pending = (
-            '<script>try{var r=document.documentElement;if(window.localStorage.getItem((r.getAttribute("data-storage")||"phrasebook")+":order"))'
-            'r.setAttribute("data-arrange-pending","")}catch(err){}</script>\n'
-        )
         fonts = "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("fonts", []))
         extra = '<link rel="stylesheet" href="varieties.css">\n' if self.has_varieties() else ""
         extra += "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("stylesheets", []))
@@ -1018,7 +1026,7 @@ class Site:
             f"{slide}<title>{e(title)}</title>\n"
             f'<link rel="manifest" href="manifest.json">\n'
             f'<meta name="theme-color" content="{self.theme_color()}">\n{touch_icon}'
-            f"{pending}{script}{fonts}"
+            f"{script}{fonts}"
             f'<link rel="stylesheet" href="palettes.css">\n<link rel="stylesheet" href="style.css">\n{extra}'
             f"</head>\n<body>\n{body}\n{register}</body>\n</html>\n"
         )
