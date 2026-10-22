@@ -11,14 +11,16 @@ const SOURCE = fs.readFileSync(path.join(__dirname, "..", "phrasebook", "assets"
 const KEY = "phrasebook:prefs";  // the default, used when the page names no storage
 
 // A regional-form radio: makeRadio("cy", "north"). A theme radio: makeRadio(null, "dark", "appearance").
-function makeRadio(lang, value, pref) {
+// A palette swatch also names its accessibility level: makeRadio(null, "red-green-safe", "palette", "safe").
+function makeRadio(lang, value, pref, tier) {
   const listeners = {};
   return {
     value,
     lang,
     pref,
+    tier,
     checked: false,
-    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : null),
+    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : name === "data-tier" ? tier || null : null),
     addEventListener: (type, fn) => { listeners[type] = fn; },
     fire(type) { listeners[type](); },
   };
@@ -54,8 +56,8 @@ function run({ stored, storage, radios, withPanel = true, readyState = "loading"
   };
 }
 
-const saved = (varieties, extra = {}) => JSON.stringify({ v: 2, varieties, ...extra });
-const state = (varieties = {}, extra = {}) => ({ v: 2, appearance: "system", palette: "default", varieties, ...extra });
+const saved = (varieties, extra = {}) => JSON.stringify({ v: 3, varieties, ...extra });
+const state = (varieties = {}, extra = {}) => ({ v: 3, appearance: "system", palette: "default", picks: {}, varieties, ...extra });
 
 test("applies a saved variety to the page before it is painted", () => {
   const page = run({ stored: saved({ cy: "north" }) });
@@ -72,8 +74,8 @@ test("nothing is applied when nothing is stored", () => {
 });
 
 test("corrupt, foreign or wrong-version data is ignored", () => {
-  for (const stored of ["{not json", "null", "42", '"north"', JSON.stringify({ v: 3, varieties: { cy: "north" } }),
-                        JSON.stringify({ v: 2 }), JSON.stringify({ v: 2, varieties: "north" })]) {
+  for (const stored of ["{not json", "null", "42", '"north"', JSON.stringify({ v: 4, varieties: { cy: "north" } }),
+                        JSON.stringify({ v: 3 }), JSON.stringify({ v: 3, varieties: "north" })]) {
     assert.deepEqual(run({ stored }).attrs, {}, stored);
   }
 });
@@ -217,6 +219,11 @@ test("version 1 data, which held only regional forms, is still read", () => {
   assert.deepEqual(page.attrs, { "data-v-cy": "north" });
 });
 
+test("version 2 data, which had no remembered palette picks, is still read", () => {
+  const page = run({ stored: JSON.stringify({ v: 2, appearance: "dark", palette: "high-contrast", varieties: { cy: "south" } }) });
+  assert.deepEqual(page.attrs, { "data-theme": "dark", "data-palette": "high-contrast", "data-v-cy": "south" });
+});
+
 test("the theme controls show the saved choice", () => {
   const radios = [makeRadio(null, "system", "appearance"), makeRadio(null, "light", "appearance"), makeRadio(null, "dark", "appearance"),
                   makeRadio(null, "default", "palette"), makeRadio(null, "high-contrast", "palette")];
@@ -279,4 +286,92 @@ test("choosing a theme still works when saving fails", () => {
   radios[1].checked = true;
   assert.doesNotThrow(() => radios[1].fire("change"));
   assert.equal(page.attrs["data-theme"], "dark");
+});
+
+// ---- accessibility levels: standard, safe colours, high contrast
+
+const levelPage = (stored) => {
+  const radios = {
+    levels: [makeRadio(null, "standard", "access"), makeRadio(null, "safe", "access"), makeRadio(null, "high", "access")],
+    palettes: [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "yellow-green", "palette", "standard"),
+               makeRadio(null, "red-green-safe", "palette", "safe"), makeRadio(null, "blue-yellow-safe", "palette", "safe"),
+               makeRadio(null, "high-contrast", "palette", "high")],
+  };
+  const page = run({ stored, radios: [...radios.levels, ...radios.palettes] });
+  page.domReady();
+  return { page, ...radios };
+};
+const ticked = (list) => list.filter((r) => r.checked).map((r) => r.value);
+
+test("the level shown is the level of the saved palette", () => {
+  const { levels, palettes } = levelPage(saved({}, { palette: "red-green-safe" }));
+  assert.deepEqual(ticked(levels), ["safe"]);
+  assert.deepEqual(ticked(palettes), ["red-green-safe"]);
+});
+
+test("with nothing saved the level is standard and the palette is the default", () => {
+  const { levels, palettes } = levelPage();
+  assert.deepEqual(ticked(levels), ["standard"]);
+  assert.deepEqual(ticked(palettes), ["default"]);
+});
+
+test("choosing a level selects the first scheme in it, and changes no attribute but the palette", () => {
+  const { page, levels, palettes } = levelPage();
+  levels[2].checked = true;
+  levels[2].fire("change");
+  assert.equal(page.attrs["data-palette"], "high-contrast");
+  assert.deepEqual(ticked(palettes), ["high-contrast"]);
+  assert.deepEqual(JSON.parse(page.data[KEY]).palette, "high-contrast");
+  levels[0].checked = true;
+  levels[0].fire("change");
+  assert.deepEqual(page.attrs, {});
+  assert.deepEqual(ticked(palettes), ["default"]);
+});
+
+test("each level remembers the scheme last picked in it", () => {
+  const { page, levels, palettes } = levelPage();
+  palettes[3].checked = true;  // blue-yellow-safe is not offered until the level is safe, but the pick is recorded by its tier
+  palettes[3].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]).picks, { safe: "blue-yellow-safe" });
+  levels[0].checked = true;
+  levels[0].fire("change");
+  assert.equal(page.attrs["data-palette"], undefined);
+  levels[1].checked = true;
+  levels[1].fire("change");
+  assert.equal(page.attrs["data-palette"], "blue-yellow-safe");
+  assert.deepEqual(ticked(palettes), ["blue-yellow-safe"]);
+});
+
+test("a remembered pick that the page no longer offers in that level is ignored", () => {
+  const { page, levels } = levelPage(saved({}, { picks: { safe: "retired-palette", high: "red-green-safe" } }));
+  levels[1].checked = true;
+  levels[1].fire("change");
+  assert.equal(page.attrs["data-palette"], "red-green-safe");  // the first scheme of the safe level
+  levels[2].checked = true;
+  levels[2].fire("change");
+  assert.equal(page.attrs["data-palette"], "high-contrast");  // a pick from the wrong level does not count
+});
+
+test("remembered picks that are not plain identifiers are never kept", () => {
+  const { page, levels } = levelPage(saved({}, { picks: { safe: '"><script>', high: 7, standard: ["a"], other: "x" } }));
+  levels[1].checked = true;
+  levels[1].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]).picks, {});
+});
+
+test("a level with one scheme shows the note, and a level with several hides it", () => {
+  const note = { hidden: true };
+  const radios = [makeRadio(null, "standard", "access"), makeRadio(null, "high", "access"),
+                  makeRadio(null, "default", "palette", "standard"), makeRadio(null, "yellow-green", "palette", "standard"),
+                  makeRadio(null, "high-contrast", "palette", "high")];
+  const page = run({ radios });
+  page.panel.querySelector = (selector) => (selector === ".colours-only" ? note : null);
+  page.domReady();
+  assert.equal(note.hidden, true);
+  radios[1].checked = true;
+  radios[1].fire("change");
+  assert.equal(note.hidden, false);
+  radios[0].checked = true;
+  radios[0].fire("change");
+  assert.equal(note.hidden, true);
 });

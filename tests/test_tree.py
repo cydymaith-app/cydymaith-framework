@@ -104,11 +104,19 @@ class IconParsingTests(unittest.TestCase):
                 icons.validate({name: GOOD})
         icons.validate({"cloud-rain": GOOD})
 
-    def test_the_framework_ships_only_its_four_interface_icons_with_their_licence(self):
+    def test_the_framework_ships_only_its_seven_interface_icons_with_their_licence(self):
         found = sorted(p for p in ENGINE.rglob("*.svg"))
         self.assertEqual(
             [f.relative_to(ENGINE).as_posix() for f in found],
-            ["ui-icons/arrow--left.svg", "ui-icons/information.svg", "ui-icons/search.svg", "ui-icons/settings.svg"],
+            [
+                "ui-icons/arrow--left.svg",
+                "ui-icons/asleep.svg",
+                "ui-icons/information.svg",
+                "ui-icons/light.svg",
+                "ui-icons/screen.svg",
+                "ui-icons/search.svg",
+                "ui-icons/settings.svg",
+            ],
         )
         self.assertIn("Apache", (ENGINE / "ui-icons" / "LICENSE").read_text(encoding="utf-8"))
         assets = (ROOT / "docs" / "ASSETS.md").read_text(encoding="utf-8")
@@ -147,7 +155,10 @@ class IconSiteTests(Scratch):
     def test_the_only_icons_without_a_project_icon_are_the_frames_own(self):
         pages = self.built(self.project())
         for name, page in pages.items():
-            self.assertLessEqual(page.count("<svg"), 5, name)  # search, back, about, the gear and the figure at most
+            limit = (
+                8 if name == "settings.html" else 5
+            )  # search, back, about, the gear and the figure; the settings page adds three modes
+            self.assertLessEqual(page.count("<svg"), limit, name)
         self.assertEqual(pages["index.html"].count("<svg"), 3, "search, about and the gear in the rail")
 
     def test_a_named_icon_must_have_a_file(self):
@@ -473,7 +484,7 @@ class FrameTests(Scratch):
 
     def test_the_settings_page_lists_how_to_and_sources_under_about(self):
         page = self.pages["settings.html"]
-        self.assertIn('<section id="about">', page)
+        self.assertIn('id="about"', page)
         self.assertIn('<a href="how-to.html">', page)
         self.assertIn('<a href="sources.html">', page)
 

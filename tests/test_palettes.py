@@ -260,10 +260,30 @@ class PaletteCssTests(unittest.TestCase):
 
     def test_light_rules_say_light_and_dark_rules_say_dark(self):
         for line in self.css.splitlines():
-            if line.startswith(":root") and "[data-theme" not in line:
+            if ".preview" in line:
+                self.assertNotRegex(line, r"(?<!prefers-)color-scheme:")  # a preview paints a picture, not the page
+            elif line.startswith(":root") and "[data-theme" not in line:
                 self.assertTrue(line.endswith("color-scheme:light}"), line)
             elif "[data-theme=" in line:
                 self.assertTrue(line.rstrip("}").endswith("color-scheme:dark"), line)
+
+    def test_every_palette_gets_a_preview_in_light_and_both_dark_cases(self):
+        for pid in self.all:
+            pick = f'.preview[data-palette="{pid}"]'
+            lines = [line for line in self.css.splitlines() if pick in line]
+            self.assertEqual(len(lines), 3, pid)
+            self.assertTrue(all("--pv-bg:" in line for line in lines), pid)
+            self.assertIn(':not([data-theme="light"])', lines[1])
+            self.assertIn('[data-theme="dark"]', lines[2])
+
+    def test_the_preview_colours_are_the_palettes_own_not_the_pages(self):
+        resolved = palettes.resolve(self.all["high-contrast"])
+        line = next(
+            l
+            for l in self.css.splitlines()
+            if '.preview[data-palette="high-contrast"]' in l and "@media" not in l and "data-theme" not in l
+        )
+        self.assertIn("--pv-ink:" + colour.rgb_to_hex(resolved["light"]["ink"]), line)
 
     def test_the_output_is_stable(self):
         self.assertEqual(self.css, palettes.css(palettes.load(), list(self.all)))

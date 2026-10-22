@@ -206,52 +206,123 @@ class Site:
 
     APPEARANCES = ("system", "light", "dark")
 
-    def palette_label(self, pid):
-        """A palette's name for the interface: (text, language it is written in)."""
+    def palette_label(self, pid, code=None):
+        """A palette's name for the interface (or for the language `code`): (text, language it is written in)."""
+        code = code or self.interface
         names = self.palettes[pid].get("names", {})
-        if self.interface in names:
-            return names[self.interface], self.interface
+        if code in names:
+            return names[code], code
         key = "palette_" + pid.replace("-", "_")
         if self.messages.has(key):
-            return self.messages.format(self.interface, key)
+            return self.messages.format(code, key)
         if "en" in names:
             return names["en"], "en"
         if names:
-            code, text = next(iter(names.items()))
-            return text, code
+            first, text = next(iter(names.items()))
+            return text, first
         return pid, self.interface
 
-    @staticmethod
-    def radio(name, value, label, attrs, checked):
+    def both(self, key, **html_params):
+        """A message in each language of the pair, as spans of which the language toggle shows one. Params are HTML already."""
+        parts = []
+        for n, code in enumerate((self.frm, self.to), 1):
+            text, lang = self.messages.format(code, key, html_mode=True, **html_params)
+            parts.append(f'<span class="t" data-n="{n}"{self.la(lang)}>{text}</span>')
+        return "".join(parts)
+
+    def both_named(self, key, code):
+        """A message that names the language `code`, in each language of the pair, with the name written in that language:
+        the pack's name for it in that language, or else the language's own name for itself (its endonym)."""
+        parts = []
+        for n, shown in enumerate((self.frm, self.to), 1):
+            if shown == self.interface:
+                name = self.language_name(code)
+            else:
+                name = self.meta(code).get("names", {}).get(shown) or self.endonym(code)
+            text, lang = self.messages.format(shown, key, html_mode=True, language=e(name))
+            parts.append(f'<span class="t" data-n="{n}"{self.la(lang)}>{text}</span>')
+        return "".join(parts)
+
+    def both_palette(self, pid):
+        """A palette's name in each language of the pair, as `both` does."""
+        parts = []
+        for n, code in enumerate((self.frm, self.to), 1):
+            text, lang = self.palette_label(pid, code)
+            parts.append(f'<span class="t" data-n="{n}"{self.la(lang)}>{e(text)}</span>')
+        return "".join(parts)
+
+    def language_toggle(self, radio_name, codes):
+        """The radios and the bar that choose which language of the pair a page shows. The first radio is checked."""
+        radios = "".join(
+            f'<input type="radio" class="lang-radio" name="{radio_name}" id="{radio_name}-{e(code)}" value="{e(code)}"'
+            f'{" checked" if i == 0 else ""}>'
+            for i, code in enumerate(codes)
+        )
+        labels = "".join(f'<label for="{radio_name}-{e(code)}">{self.inline(code, self.endonym(code))}</label>' for code in codes)
+        bar = f'<div class="lang-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
+        return radios, bar
+
+    ICONS_FOR_APPEARANCE = {"light": "light", "dark": "asleep", "system": "screen"}
+
+    def appearance_card(self):
+        """Light, dark or the device's own, as three large icon tiles."""
+        tiles = "".join(
+            f'<label class="mode"><input type="radio" name="appearance" value="{v}" data-pref="appearance"'
+            f'{" checked" if v == "system" else ""}><span class="mode-box">{self.ui_icons[self.ICONS_FOR_APPEARANCE[v]]}'
+            f'{self.both("appearance_" + v)}</span></label>'
+            for v in self.APPEARANCES
+        )
         return (
-            f'<label><input type="radio" name="{name}" value="{value}" {attrs}'
-            f'{" checked" if checked else ""}> {label}</label>'
+            f'<section class="card" aria-labelledby="h-appearance"><h2 id="h-appearance">{self.both("appearance")}</h2>'
+            f'<p class="hint">{self.both("appearance_hint")}</p>'
+            f'<div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div></section>'
         )
 
-    @staticmethod
-    def pref_group(title, radios):
-        """One choice as an accordion panel: opens and closes with no script, and one panel is open at a time."""
+    def palette_levels(self):
+        """The accessibility levels the offered palettes fall into, in the order standard, safe, high."""
+        used = {palettes.access_level(self.palettes[pid]) for pid in self.palette_ids}
+        return [level for level in palettes.ACCESS_LEVELS if level in used]
+
+    def accessibility_card(self, levels, first):
+        """Standard, safe colours or high contrast: chooses which colour schemes are listed. It changes no scheme."""
+        radios = "".join(
+            f'<label><input type="radio" name="access" value="{level}" data-pref="access"{" checked" if level == first else ""}>'
+            f'<span class="seg-label">{self.both("access_" + level)}</span></label>'
+            for level in levels
+        )
+        hints = "".join(f'<p class="hint" data-hint="{level}">{self.both("access_" + level + "_hint")}</p>' for level in levels)
         return (
-            f'<details class="pref" name="prefs"><summary>{title}</summary>'
-            f'<fieldset><legend class="sr-only">{title}</legend>{radios}</fieldset></details>'
+            f'<section class="card" aria-labelledby="h-access"><h2 id="h-access">{self.both("accessibility")}</h2>'
+            f'<p class="hint">{self.both("access_hint")}</p>'
+            f'<div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}</section>'
+        )
+
+    def colours_card(self):
+        """Each offered colour scheme as a small picture of itself, drawn from its own colours (see palettes.css)."""
+        cards = "".join(
+            f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
+            f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == palettes.DEFAULT else ""}>'
+            f'<span class="preview" data-palette="{pid}" aria-hidden="true"><i class="pv-bar"></i><i class="pv-tile"><b></b></i>'
+            f'<i class="pv-card"><b></b><b></b></i><i class="pv-dot"></i></span>'
+            f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
+            for pid in self.palette_ids
+        )
+        return (
+            f'<section class="card" aria-labelledby="h-colours"><h2 id="h-colours">{self.both("colours")}</h2>'
+            f'<p class="hint">{self.both("colours_hint")}</p>'
+            f'<div class="swatches" role="radiogroup" aria-labelledby="h-colours">{cards}</div>'
+            f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p></section>'
         )
 
     def theme_controls(self):
-        """Light or dark, and a colour palette. The palette choice appears only when the edition offers more than one."""
-        appearance = "".join(
-            self.radio("appearance", v, self.h("appearance_" + v), 'data-pref="appearance"', v == "system")
-            for v in self.APPEARANCES
-        )
-        fields = [self.pref_group(self.h("appearance"), appearance)]
+        """Light or dark, the accessibility level and the colour schemes. The last two appear only when the edition offers a choice."""
+        out = self.appearance_card()
         if len(self.palette_ids) > 1:
-            choices = "".join(
-                self.radio(
-                    "palette", pid, self.inline(*self.palette_label(pid)[::-1]), 'data-pref="palette"', pid == palettes.DEFAULT
-                )
-                for pid in self.palette_ids
-            )
-            fields.append(self.pref_group(self.h("colours"), choices))
-        return "".join(fields)
+            levels = self.palette_levels()
+            if len(levels) > 1:
+                out += self.accessibility_card(levels, palettes.access_level(self.palettes[palettes.DEFAULT]))
+            out += self.colours_card()
+        return out
 
     def variety_fields(self):
         """A choice per displayed language that has varieties."""
@@ -260,14 +331,17 @@ class Site:
             varieties = self.varieties(code)
             if not varieties:
                 continue
-            options = [("all", e(self.plain("variety_all")))] + [(v["id"], self.commentary(code, v["name"])) for v in varieties]
+            options = [("all", self.both("variety_all"))] + [(v["id"], self.commentary(code, v["name"])) for v in varieties]
             radios = "".join(
                 f'<label><input type="radio" name="variety-{e(code)}" value="{vid}" data-variety-lang="{e(code)}"'
-                f'{" checked" if vid == "all" else ""}> {label}</label>'
+                f'{" checked" if vid == "all" else ""}><span class="seg-label">{label}</span></label>'
                 for vid, label in options
             )
-            legend = self.h("regional_forms", language=e(self.language_name(code)))
-            fields.append(self.pref_group(legend, radios))
+            legend = self.both_named("regional_forms", code)
+            fields.append(
+                f'<section class="card" aria-labelledby="h-var-{e(code)}"><h2 id="h-var-{e(code)}">{legend}</h2>'
+                f'<div class="seg" role="radiogroup" aria-labelledby="h-var-{e(code)}">{radios}</div></section>'
+            )
         return "".join(fields)
 
     def prefs_controls(self):
@@ -707,31 +781,29 @@ class Site:
         return m
 
     def settings_page(self):
-        """The visitor's choices (appearance, colours, regional forms), on a page of their own. Words only from messages."""
-        second, lang2 = self.ui_text(self.to, "settings")
+        """The visitor's choices (appearance, accessibility, colours, regional forms), on a page of their own. A toggle at the top
+        right shows the page in one language of the pair at a time, with no script. Words only from messages."""
+        radios, bar = self.language_toggle("settings-lang", [self.frm, self.to])
         head = (
-            "<header>"
-            f'<h1>{self.ui_html(self.frm, "settings")}</h1>'
-            f'<p class="title-l2"{self.la(lang2)}>{e(second)}</p>'
-            f'<p class="lede">{self.h("settings_lede")}</p></header>'
+            f'<div class="page-head"><header><h1>{self.both("settings")}</h1></header>{bar}</div>'
+            f'<p class="lede">{self.both("settings_lede")}</p>'
         )
-        about = (
-            f'<section id="about"><h2>{self.h("about_app")}</h2><ul class="links">'
-            + "".join(
-                f'<li><a href="{href}">{l1}{l2}</a></li>'
-                for href, key in (
-                    *((("about.html", "about"),) if self.edition.get("about_page") else ()),
-                    ("how-to.html", "how_to"),
-                    ("sources.html", "sources"),
-                )
-                for l1, l2 in [self.ui_pair(key)]
+        links = "".join(
+            f'<li><a href="{href}">{self.both(key)}</a></li>'
+            for href, key in (
+                *((("about.html", "about"),) if self.edition.get("about_page") else ()),
+                ("how-to.html", "how_to"),
+                ("sources.html", "sources"),
             )
-            + "</ul></section>"
         )
-        return (
-            head + f'<section id="settings">{self.prefs_controls()}'
-            f'<noscript><p class="intro">{self.h("settings_no_script")}</p></noscript></section>' + about
+        about = f'<section class="card" id="about"><h2>{self.both("about_app")}</h2><ul class="links">{links}</ul></section>'
+        body = (
+            head
+            + f'<section id="settings">{self.prefs_controls()}'
+            + f'<noscript><p class="intro">{self.h("settings_no_script")}</p></noscript></section>'
+            + about
         )
+        return f'<div class="l10n">{radios}<div class="l10n-body">{body}</div></div>'
 
     def about_page(self):
         """The About page: the aims and philosophy in each language the edition gives, one shown at a time. The choice is a group of

@@ -142,14 +142,25 @@ def check_colour_vision(where, colours, level, kind):
             )
 
 
-def tokens(colours):
-    return ";".join(f"--{role}:{colour.rgb_to_hex(colours[role])}" for role in ROLES)
+ACCESS_LEVELS = ("standard", "safe", "high")  # the settings page offers one list of colour schemes per level
+
+
+def access_level(palette):
+    """The accessibility level a palette belongs to: level AAA is "high" (high contrast); otherwise a palette that
+    promises colour vision is "safe" (safe colours); anything else is "standard"."""
+    if palette.get("level", "AA") == "AAA":
+        return "high"
+    return "safe" if palette.get("colour_vision") else "standard"
+
+
+def tokens(colours, prefix="--"):
+    return ";".join(f"{prefix}{role}:{colour.rgb_to_hex(colours[role])}" for role in ROLES)
 
 
 def css(palettes, ids):
     """The stylesheet for the offered palettes. The default palette is the page's baseline, with no attribute.
 
-    Each palette gets three rules, all of which win over the baseline in the right cases:
+    Each palette gets three rules (and three more for its preview, see below), all of which win over the baseline in the right cases:
       light:         the variant when nothing says dark
       system dark:   the dark variant when the system prefers dark and the visitor has not chosen light
       chosen dark:   the dark variant when the visitor chose dark
@@ -163,4 +174,13 @@ def css(palettes, ids):
             f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{tokens(resolved["dark"])};color-scheme:dark}}}}'
         )
         out.append(f':root{mark}[data-theme="dark"]{{{tokens(resolved["dark"])};color-scheme:dark}}')
+    # Each palette's own colours for the small picture on the settings page, whatever palette the page is in now.
+    for pid in ids:
+        resolved = resolve(palettes[pid])
+        pick = f'.preview[data-palette="{pid}"]'
+        out.append(f":root {pick}{{{tokens(resolved['light'], '--pv-')}}}")
+        out.append(
+            f'@media (prefers-color-scheme:dark){{:root:not([data-theme="light"]) {pick}{{{tokens(resolved["dark"], "--pv-")}}}}}'
+        )
+        out.append(f':root[data-theme="dark"] {pick}{{{tokens(resolved["dark"], "--pv-")}}}')
     return "\n".join(out) + "\n"

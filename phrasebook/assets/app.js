@@ -1,12 +1,13 @@
 /* Phrasebook framework: remembers display preferences in this browser only.
-   Preferences: light or dark appearance, a colour palette, and a regional form per language.
+   Preferences: light or dark appearance, a colour palette (and the palette last picked at each accessibility level),
+   and a regional form per language.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
    palette, and shows every regional form equally. */
 (function () {
   "use strict";
 
-  var VERSION = 2;
+  var VERSION = 3;
   var root = document.documentElement;
   // Each site names its own storage (data-storage on <html>), so two phrasebooks on one origin, such as
   // different projects under one github.io name, never read or overwrite each other's choices.
@@ -17,18 +18,24 @@
   var ID = /^[a-z][a-z0-9-]*$/;
   var APPEARANCES = ["system", "light", "dark"];
   var DEFAULT_PALETTE = "default";
+  var LEVELS = ["standard", "safe", "high"];  // the accessibility levels: standard, safe colours, high contrast
 
   function empty() {
-    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, varieties: {} };
+    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, picks: {}, varieties: {} };
   }
 
-  // Keep only values we understand. Anything else in storage is ignored. Version 1 held only varieties
-  // and is still read, so an earlier choice survives the upgrade.
+  // Keep only values we understand. Anything else in storage is ignored. Versions 1 (only varieties) and 2
+  // (no remembered picks) are still read, so an earlier choice survives the upgrade.
   function clean(raw) {
     var out = empty();
-    if (!raw || typeof raw !== "object" || (raw.v !== 1 && raw.v !== VERSION)) return out;
+    if (!raw || typeof raw !== "object" || [1, 2, VERSION].indexOf(raw.v) === -1) return out;
     if (APPEARANCES.indexOf(raw.appearance) !== -1) out.appearance = raw.appearance;
     if (typeof raw.palette === "string" && ID.test(raw.palette)) out.palette = raw.palette;
+    if (raw.picks && typeof raw.picks === "object") {
+      LEVELS.forEach(function (level) {
+        if (typeof raw.picks[level] === "string" && ID.test(raw.picks[level])) out.picks[level] = raw.picks[level];
+      });
+    }
     var saved = raw.varieties;
     if (!saved || typeof saved !== "object") return out;
     Object.keys(saved).forEach(function (lang) {
@@ -119,12 +126,42 @@
         setVariety(lang, "all");
       }
     });
-    var palettes = themes.filter(function (r) { return r.getAttribute("data-pref") === "palette"; })
-      .map(function (r) { return r.value; });
-    if (palettes.indexOf(prefs.palette) === -1) {
-      prefs.palette = DEFAULT_PALETTE;
-      setPalette(DEFAULT_PALETTE);
+    var swatches = themes.filter(function (r) { return r.getAttribute("data-pref") === "palette"; });
+    var levelRadios = themes.filter(function (r) { return r.getAttribute("data-pref") === "access"; });
+    var note = typeof panel.querySelector === "function" ? panel.querySelector(".colours-only") : null;
+    var offered = swatches.map(function (r) { return r.value; });
+
+    // The accessibility level a palette belongs to is written on its swatch.
+    function levelOf(id) {
+      var found = swatches.filter(function (r) { return r.value === id; })[0];
+      return found ? found.getAttribute("data-tier") : null;
     }
+
+    // The palette to use when a level is chosen: the one last picked there, or else the first the level lists.
+    function paletteFor(level) {
+      var pick = prefs.picks[level];
+      if (pick && levelOf(pick) === level) return pick;
+      var inLevel = swatches.filter(function (r) { return r.getAttribute("data-tier") === level; });
+      var preferred = inLevel.filter(function (r) { return r.value === DEFAULT_PALETTE; })[0];
+      return (preferred || inLevel[0] || { value: DEFAULT_PALETTE }).value;
+    }
+
+    // A level with a single scheme says so, since there is nothing to choose.
+    function showNote(level) {
+      if (!note) return;
+      var count = swatches.filter(function (r) { return r.getAttribute("data-tier") === level; }).length;
+      note.hidden = count > 1;
+    }
+
+    // A saved palette the page does not offer counts as the default.
+    if (swatches.length && offered.indexOf(prefs.palette) === -1) {
+      prefs.palette = offered.indexOf(DEFAULT_PALETTE) === -1 ? offered[0] : DEFAULT_PALETTE;
+      setPalette(prefs.palette);
+    }
+    var level = levelOf(prefs.palette);
+    levelRadios.forEach(function (r) { r.checked = r.value === level; });
+    swatches.forEach(function (r) { r.checked = r.value === prefs.palette; });
+    showNote(level);
 
     varieties.forEach(function (r) {
       var lang = r.getAttribute("data-variety-lang");
@@ -143,15 +180,23 @@
 
     themes.forEach(function (r) {
       var pref = r.getAttribute("data-pref");
-      if (pref !== "appearance" && pref !== "palette") return;
-      r.checked = prefs[pref] === r.value;
+      if (pref !== "appearance" && pref !== "palette" && pref !== "access") return;
+      if (pref === "appearance") r.checked = prefs.appearance === r.value;
       r.addEventListener("change", function () {
         if (!r.checked) return;
-        prefs[pref] = r.value;
         if (pref === "appearance") {
+          prefs.appearance = r.value;
           setAppearance(r.value);
-        } else {
+        } else if (pref === "palette") {
+          prefs.palette = r.value;
+          if (levelOf(r.value)) prefs.picks[levelOf(r.value)] = r.value;
           setPalette(r.value);
+        } else {
+          // Choosing a level changes which schemes are listed, and returns to the one last picked there.
+          prefs.palette = paletteFor(r.value);
+          setPalette(prefs.palette);
+          swatches.forEach(function (s) { s.checked = s.value === prefs.palette; });
+          showNote(r.value);
         }
         save(prefs);
       });

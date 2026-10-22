@@ -101,6 +101,27 @@ Settings / About pages to have a Cy|En toggle button on them rather than inline 
 Use icons for light dark and an accessibility/high contrast toggle. Colour schemes to feature miniature pallets below those options.
 All oklch compatible. 
 
+**Plan (mockup: `docs/mockups/settings-mockup.html`, open it in a browser; the controls change its colours).**
+
+- [x] **1. Decide the open questions** (below), then freeze the mockup.
+- [x] **2. Messages.** New keys for the section headings, the three modes, the contrast switch and its hint, the palette badges and the language toggle label. The framework keeps English only; the Welsh strings go in the Welsh pack's `ui` table and are listed in the project's `REVIEW.md`.
+- [x] **3. Page markup** (`Site.settings_page`, `theme_controls`, `variety_fields`). Replace the accordion with cards that are all visible: Appearance, Accessibility, Colour schemes, Regional forms, About this app. Appearance becomes three icon tiles (light, dark, same as device). Accessibility becomes a three-way segmented control, **Standard | Safe colours | High contrast**, that **filters** the colour schemes on offer and changes no scheme. Palettes become a grid of swatch cards, each a miniature page (header bar, tile, card with two text lines, accent dot) drawn from that palette's own colours, with a badge for AAA and colour-blind-safe. Each scheme belongs to exactly one level, worked out from its palette file: `level: AAA` is High contrast; otherwise any `colour_vision` claim makes it Safe colours; otherwise it is Standard (today in the Welsh app: Standard has `default` and `yellow-green`; Safe colours has `red-green-safe`, `blue-yellow-safe` and `yellow-green-safe`; High contrast has `high-contrast` and `yellow-green-high-contrast`). The build writes the level on each card, and CSS (`:has` on the checked radio) lists only the cards of the chosen level, so it works with no script; if a level has only one scheme, a line says more appear when a palette is added for it. Regional forms become a segmented control with a live example.
+- [x] **4. Palette previews at build time.** The build already holds each palette's light and dark colours as oklch (`palettes.py`). Emit them as custom properties on each swatch (`--pv-bg`, `--pv-tile` and so on) in the generated `palettes.css`, so the preview follows the current mode with no script. No new colour maths and nothing hard-coded in the stylesheet.
+- [x] **5. Language toggle (Cy|En).** Reuse the About page's radio toggle at the top right. Each label is rendered once per language of the pair and the stylesheet shows one; the controls and their state exist once. The toggle is the same group of radios, so it works with no script. This is the "toggle rather than inline translations" note above, and applies to Settings and About together.
+- [x] **6. Preferences** (`app.js`). Prefs version 3 adds `access` (`standard`, `safe` or `high`) and keeps `appearance`, `palette` and the varieties. Each level remembers the scheme last picked in it, so changing level and coming back returns to your earlier choice. A saved palette that is not in the active level falls back to that level's first scheme, and choosing a palette also sets the level it belongs to when prefs are read. Versions 1 and 2 still read. Remember the toggle's language too. Node tests for read, validate, apply and save, and for old versions.
+- [x] **7. Styles** (`style.css`). Segmented control and icon tiles, switch, swatch grid (2 across on a phone, 4 on wide screens), selected and focus rings that do not rely on colour alone, 44px targets, logical properties only, `forced-colors` and `prefers-reduced-motion`.
+- [x] **8. Icons.** Add Carbon `light`, `asleep`, `screen` and `contrast` to `ui-icons/` (same package and version, Apache-2.0), and record them in `ASSETS.md`. The mockup uses stand-in drawings.
+- [x] **9. Tests and checks.** Build tests for each control, the preview properties and the toggle; the no-script fallback (controls hidden, language toggle works); the palette contrast checks still pass; update the tests that expect the accordion.
+- [ ] **10. Look at it** on a phone and desktop in every palette, light and dark, right to left, forced colours and keyboard only, then run the screenshot script (`--screenshots`) and read the pictures.
+
+**Built (2026-10-22).** Steps 1 to 9. Not done: the Cy|En toggle does not remember its language between visits (the page shows the first language of the pair each time); Settings now has the toggle, About keeps its own; and step 10, looking at it in real browsers and with the screenshot script, is still to do. Welsh words for the new settings messages are drafts in the project's `REVIEW.md`.
+
+**Open questions.** (Settled: Accessibility has three levels, Standard, Safe colours and High contrast, which filter the schemes on offer by a rule on the palette file; no scheme changes. More schemes can be added later as palette files.)
+
+1. **Keep the three modes, or only light and dark?** The mockup keeps "same as device" as the third tile, because it is the default.
+2. **Should the Safe colours schemes name the kind of colour blindness they cover** (red-green, blue-yellow) on the card, as well as the badge? The labels are drafts.
+3. **Where should Regional forms sit?** Last, as now, or above Colour schemes, since it changes the words rather than the look.
+
 ## Usability
 
 Script to generate and test each screen and score them for usability. Run each time a screen is modified. Not every build.

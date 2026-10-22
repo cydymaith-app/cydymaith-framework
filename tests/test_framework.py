@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import fixture  # noqa: E402
 import phrasebook  # noqa: E402
-from phrasebook import channels, cli, content, dictionary, plural  # noqa: E402
+from phrasebook import channels, cli, content, dictionary, palettes, plural  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
 from phrasebook.messages import Messages  # noqa: E402
 
@@ -940,6 +940,56 @@ class PaletteSiteTests(Scratch):
         self.assertNotIn('data-pref="palette"', page)
         self.assertIn('data-pref="appearance"', page)
 
+    def test_the_settings_page_has_an_accessibility_level_that_lists_the_schemes_of_that_level(self):
+        page = self.built(self.project())["settings.html"]
+        for level in ("standard", "safe", "high"):
+            self.assertIn(f'name="access" value="{level}" data-pref="access"', page)
+        self.assertIn('name="access" value="standard" data-pref="access" checked', page)
+        for pid, level in (
+            ("default", "standard"),
+            ("red-green", "standard"),
+            ("red-green-safe", "safe"),
+            ("blue-yellow-safe", "safe"),
+            ("high-contrast", "high"),
+        ):
+            at = page.index(f'name="palette" value="{pid}"')
+            self.assertIn(f'data-tier="{level}"', page[page.rindex("<label", 0, at) : at], pid)
+
+    def test_each_scheme_is_drawn_as_a_small_picture_of_itself(self):
+        page = self.built(self.project())["settings.html"]
+        self.assertEqual(page.count('<span class="preview" data-palette='), 5)
+        self.assertIn('<span class="preview" data-palette="high-contrast" aria-hidden="true">', page)
+
+    def test_the_level_is_worked_out_from_the_palette_file(self):
+        self.assertEqual(palettes.access_level({"level": "AAA"}), "high")
+        self.assertEqual(palettes.access_level({"level": "AAA", "colour_vision": ["deutan"]}), "high")
+        self.assertEqual(palettes.access_level({"colour_vision": ["tritan"]}), "safe")
+        self.assertEqual(palettes.access_level({"level": "AA", "colour_vision": []}), "standard")
+        self.assertEqual(palettes.access_level({}), "standard")
+
+    def test_an_edition_whose_palettes_share_one_level_has_no_accessibility_choice_but_still_has_the_colours(self):
+        proj = self.project()
+        self.edit_edition(proj, palettes=["default", "red-green"])
+        page = self.built(proj)["settings.html"]
+        self.assertNotIn('data-pref="access"', page)
+        self.assertEqual(page.count('data-pref="palette"'), 2)
+
+    def test_the_settings_page_has_a_language_toggle_and_shows_each_text_in_both_languages(self):
+        page = self.built(self.project())["settings.html"]
+        self.assertIn(
+            '<input type="radio" class="lang-radio" name="settings-lang" id="settings-lang-qaa" value="qaa" checked>', page
+        )
+        self.assertIn('id="settings-lang-qab" value="qab">', page)
+        self.assertIn('<div class="lang-bar" role="group" aria-label="Language">', page)
+        h1 = page[page.index("<h1>") : page.index("</h1>")]
+        self.assertIn(
+            '<span class="t" data-n="1"', h1
+        )  # the fixture has no Alphish words for settings, so the English fallback is marked
+        self.assertIn('<span class="t" data-n="2"', h1)
+        self.assertIn("<script", page)  # the page's own scripts are untouched; the toggle itself needs none
+        bar = page[page.index('<div class="lang-bar"') :]
+        self.assertNotIn("onclick", bar)
+
     def test_bad_palette_lists_are_rejected(self):
         for bad in (["high-contrast"], ["default", "default"], ["default", "no-such-palette"], "default"):
             proj = self.project()
@@ -953,7 +1003,8 @@ class PaletteSiteTests(Scratch):
         self.add_palette(proj, "sepia", names={"qaa": "Sepia paper"}, light=light)
         out = self.build_out(proj, "added")
         page = (out / "settings.html").read_text(encoding="utf-8")
-        self.assertIn('name="palette" value="sepia" data-pref="palette"> Sepia paper</label>', page)
+        self.assertIn('name="palette" value="sepia" data-pref="palette">', page)
+        self.assertIn('<span class="t" data-n="1">Sepia paper</span>', page)
         self.assertIn(':root[data-palette="sepia"]{--bg:#', (out / "palettes.css").read_text(encoding="utf-8"))
 
     def test_a_project_palette_with_no_name_for_the_interface_falls_back_to_english_and_then_the_id(self):
@@ -961,14 +1012,14 @@ class PaletteSiteTests(Scratch):
         self.add_palette(proj, "plain")
         self.add_palette(proj, "other", names={"en": "Other colours"})
         page = self.built(proj)["settings.html"]
-        self.assertIn('value="plain" data-pref="palette"> plain</label>', page)
-        self.assertIn('value="other" data-pref="palette"> <span lang="en">Other colours</span></label>', page)
+        self.assertIn('<span class="t" data-n="1">plain</span>', page)
+        self.assertIn('<span class="t" data-n="1" lang="en">Other colours</span>', page)
 
     def test_a_palette_named_only_in_another_language_is_marked_with_that_language(self):
         proj = self.project()
         self.add_palette(proj, "foreign", names={"qab": "Betish colours"})
         page = self.built(proj)["settings.html"]
-        self.assertIn('value="foreign" data-pref="palette"> <span lang="qab">Betish colours</span></label>', page)
+        self.assertIn('<span class="t" data-n="1" lang="qab">Betish colours</span>', page)
 
     def test_a_project_can_recolour_the_default(self):
         proj = self.project()
