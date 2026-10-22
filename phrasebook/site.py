@@ -490,10 +490,18 @@ class Site:
     def tiles(self, items, order):
         """A grid of tiles. `order` names the screen whose tile order is saved (data-order), so the script can find it.
         Edit order adds a bar above the grid: a hint, and Done and Reset. Its messages go in data attributes for the script."""
-        keys = {"picked": "picked", "moved": "moved", "cancelled": "cancelled", "saved": "saved", "reset": "reset_done", "failed": "failed"}
+        keys = {
+            "picked": "picked",
+            "moved": "moved",
+            "cancelled": "cancelled",
+            "saved": "saved",
+            "reset": "reset_done",
+            "failed": "failed",
+        }
         # The script fills {name}, {n} and {total} in; here they pass through as they are.
         messages = "".join(
-            f' data-{attr}="{e(self.plain("arrange_" + key, n="{n}", name="{name}", total="{total}"))}"' for attr, key in keys.items()
+            f' data-{attr}="{e(self.plain("arrange_" + key, n="{n}", name="{name}", total="{total}"))}"'
+            for attr, key in keys.items()
         )
         bar = (
             f'<div class="arrange-bar" data-arrange-bar{messages}>'
@@ -694,12 +702,16 @@ class Site:
         frm, to = self.frm, self.to
         home = self.edition.get("home", {})
         groups = [
-            self.tile(f"group-{g['id']}.html", self.group_title(frm, g["id"]), self.group_title(to, g["id"]), g.get("icon"), g["id"])
+            self.tile(
+                f"group-{g['id']}.html", self.group_title(frm, g["id"]), self.group_title(to, g["id"]), g.get("icon"), g["id"]
+            )
             for g in self.groups
         ]
         lcode, lede = self.prose(lambda c: home.get("lede", {}).get(c))
         acode, about = self.prose(lambda c: home.get("about", {}).get(c))
         link = f'<a href="sources.html">{self.h("sources_link")}</a>'
+        if self.edition.get("about_page"):
+            link = f'<a href="about.html">{self.h("about_app")}</a> · {link}'
         return (
             f'<header><p class="kicker">{self.ui_html(frm, "phrasebook")} / {self.ui_html(to, "phrasebook")}</p>'
             f'<h1>{self.inline(frm, home["headline"][frm])}</h1>'
@@ -842,6 +854,25 @@ class Site:
         )
         return f'<div class="l10n">{radios}<div class="l10n-body">{body}</div></div>'
 
+    def about_block(self, code, block):
+        """One body block of an About section, in the language `code`."""
+        if isinstance(block, str):
+            return f"<p>{e(block)}</p>"
+        kind, value = next(iter(block.items()))
+        if kind == "list":
+            return f'<ul class="notes">{"".join(f"<li>{e(item)}</li>" for item in value)}</ul>'
+        if kind == "quote":
+            return f'<blockquote class="principle"><p>{e(value)}</p></blockquote>'
+        if kind == "links":
+            items = "".join(f'<li><a href="{e(link["href"])}">{e(link["text"])}</a></li>' for link in value)
+            return f'<ul class="links">{items}</ul>'
+        copied = e(self.ui_text(code, "share_copied")[0])
+        return (
+            f'<p class="share-line"><a href="{e(value)}">{e(value)}</a> '
+            f'<button type="button" class="share" data-url="{e(value)}" data-copied="{copied}" hidden>{self.ui_html(code, "share")}</button>'
+            '<span class="share-status" role="status"></span></p>'
+        )
+
     def about_page(self):
         """The About page: the aims and philosophy in each language the edition gives, one shown at a time. The choice is a group of
         radio buttons that a stylesheet turns into a toggle at the top, so it works with no script; the first language of the pair shows first.
@@ -868,14 +899,7 @@ class Site:
                 parts.append(f'<p class="lede">{e(page["lede"])}</p>')
             parts.append("</header>")
             for section in page["sections"]:
-                body = "".join(
-                    (
-                        f"<p>{e(block)}</p>"
-                        if isinstance(block, str)
-                        else f'<ul class="notes">{"".join(f"<li>{e(item)}</li>" for item in block["list"])}</ul>'
-                    )
-                    for block in section["body"]
-                )
+                body = "".join(self.about_block(code, block) for block in section["body"])
                 parts.append(f'<section><h2>{e(section["title"])}</h2>{body}</section>')
             parts.append(f'<p class="about-more"><a href="sources.html">{self.ui_html(code, "sources")}</a></p>')
             articles.append(f'<article class="about-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>')

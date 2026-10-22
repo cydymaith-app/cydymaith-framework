@@ -761,7 +761,6 @@ class NoVisibleNumberingTests(unittest.TestCase):
         self.assertEqual(doc["nodes"][0]["id"], "1")
 
 
-
 class ArrangeTests(Scratch):
     """Edit order: the tiles carry their ids and the screen's name, the controls are hidden until the script runs, and a saved
     order is applied before the first paint."""

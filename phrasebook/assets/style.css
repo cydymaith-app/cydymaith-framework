@@ -205,6 +205,13 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .about-bar label + label,.lang-bar label + label{margin-inline-start:-1px}
 .about-text{display:none;max-width:38rem}
 .about-text p,.about-text .notes{margin-block:.5rem}
+.principle{margin:1rem 0;padding:.25rem 0 .25rem 1rem;border-inline-start:4px solid var(--accent);font:500 1.25rem/1.4 var(--font-l2)}
+.principle p{margin:0}
+.about-text .links{margin-block:.75rem}
+.share-line{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;overflow-wrap:anywhere}
+.share{min-height:2.75rem;padding:0 1rem;border:1px solid var(--rule-strong);border-radius:8px;background:var(--surface);color:var(--ink);font:600 .95rem/1 var(--font-ui);cursor:pointer}
+.share[hidden]{display:none}
+.share-status{color:var(--muted);font-size:.9rem}
 .about-more{margin-top:1.75rem}
 .about-radio:nth-of-type(1):checked ~ .about-text:nth-of-type(1){display:block}
 .about-radio:nth-of-type(1):checked ~ .about-bar label:nth-of-type(1){background:var(--tile);color:var(--on-tile)}

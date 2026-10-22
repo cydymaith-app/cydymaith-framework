@@ -386,15 +386,39 @@ def validate_about(where, about, langs):
         for section in sections:
             if not isinstance(section, dict) or not section.get("title") or not section.get("body"):
                 raise ContentError(f"{here}: each section needs a 'title' and a 'body'")
+            check_status(f"{here}: section {section['title']!r}", section)
             for block in section["body"]:
-                items = block.get("list") if isinstance(block, dict) else None
-                ok = (
-                    isinstance(block, str)
-                    and block.strip()
-                    or (isinstance(items, list) and items and all(isinstance(i, str) and i.strip() for i in items))
-                )
-                if not ok:
-                    raise ContentError(f'{here}: a body block must be a text or {{"list": [texts]}}')
+                validate_about_block(here, block)
+
+
+ABOUT_HREF = re.compile(r"^(https://\S+|[a-z0-9-]+\.html(#[\w.-]+)?)$")
+
+
+def validate_about_block(here, block):
+    """A body block of an About section: a paragraph, or one of {"list": [...]}, {"quote": text},
+    {"links": [{"text", "href"}]} and {"share": "https://address"}."""
+    if isinstance(block, str) and block.strip():
+        return
+    if isinstance(block, dict) and len(block) == 1:
+        kind, value = next(iter(block.items()))
+        if kind == "list" and isinstance(value, list) and value and all(isinstance(i, str) and i.strip() for i in value):
+            return
+        if kind == "quote" and isinstance(value, str) and value.strip():
+            return
+        if kind == "share":
+            if isinstance(value, str) and value.startswith("https://") and " " not in value:
+                return
+            raise ContentError(f"{here}: 'share' must be an https address")
+        if kind == "links" and isinstance(value, list) and value:
+            for link in value:
+                if not isinstance(link, dict) or not str(link.get("text", "")).strip():
+                    raise ContentError(f"{here}: each link needs 'text' and 'href'")
+                if not isinstance(link.get("href"), str) or not ABOUT_HREF.match(link["href"]):
+                    raise ContentError(
+                        f"{here}: a link 'href' must be an https address or a page of the site: {link.get('href')!r}"
+                    )
+            return
+    raise ContentError(f'{here}: a body block must be a text or one of {{"list"}}, {{"quote"}}, {{"links"}}, {{"share"}}')
 
 
 # ---------------------------------------------------------------- reports

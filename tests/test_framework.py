@@ -207,7 +207,9 @@ class FixtureBuildTests(Scratch):
 
     def test_no_third_party_request_without_the_project_asking(self):
         for name, text in self.pages.items():
-            self.assertIsNone(re.search(r'(?:href|src)="https?://', text.replace('href="https://creativecommons', "")), name)
+            self.assertIsNone(
+                re.search(r'(?:<link[^>]*\shref|\ssrc)="https?://', text), name
+            )  # nothing is loaded; a link a person follows is theirs to follow
         self.assertNotIn("fonts.googleapis", "".join(self.pages.values()))
 
     def test_licence_words_come_from_messages(self):
@@ -624,6 +626,88 @@ class AboutPageTests(Scratch):
             fixture.edit(proj / "editions" / "demo.json", lambda d, bad=bad: d.update(about_page=bad))
             with self.assertRaises(ContentError, msg=repr(bad)):
                 content.validate(content.read(proj))
+
+    def test_a_quote_links_and_a_share_address_render(self):
+        page = self.pages["about.html"]
+        self.assertIn('<blockquote class="principle"><p>qaa founding statement</p></blockquote>', page)
+        self.assertIn(
+            '<ul class="links"><li><a href="https://example.org/x">qaa outside</a></li><li><a href="sources.html">qaa sources</a></li></ul>',
+            page,
+        )
+        self.assertIn('<a href="https://example.org/book/">https://example.org/book/</a>', page)
+        self.assertRegex(
+            page, r'<button type="button" class="share" data-url="https://example.org/book/" data-copied="[^"]+" hidden>'
+        )
+        self.assertIn('class="share-status" role="status"', page)
+
+    def test_a_held_back_about_section_is_left_out_of_the_release_but_built_in_development(self):
+        self.assertNotIn("qaa soon", self.pages["about.html"])
+        out = self.tmp / "about-dev"
+        quiet_build(out, project_dir=self.proj, channel="development")
+        self.assertIn("qaa soon", (out / "about.html").read_text(encoding="utf-8"))
+
+    def test_a_language_with_every_section_held_back_is_dropped_and_so_is_a_page_with_none(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "editions" / "demo.json",
+            lambda d: [s.update(status="development") for s in d["about_page"]["qab"]["sections"]],
+        )
+        page = self.built(proj)["about.html"]
+        self.assertNotIn('id="about-qab"', page)
+        self.assertNotIn("about-bar", page)
+        fixture.edit(
+            proj / "editions" / "demo.json",
+            lambda d: [s.update(status="development") for s in d["about_page"]["qaa"]["sections"]],
+        )
+        pages = self.built(proj)
+        self.assertNotIn("about.html", pages)
+        for name, text in pages.items():
+            self.assertNotIn("about.html", text, name)
+
+    def test_a_section_status_must_be_a_known_one(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d["about_page"]["qaa"]["sections"][0].update(status="soon"))
+        with self.assertRaises(ContentError):
+            content.validate(content.read(proj))
+
+    def test_the_new_blocks_are_checked(self):
+        bad_blocks = (
+            {"quote": ""},
+            {"quote": 3},
+            {"links": []},
+            {"links": [{"text": "x", "href": "http://example.org"}]},
+            {"links": [{"text": "x", "href": "javascript:alert(1)"}]},
+            {"links": [{"text": "", "href": "https://example.org"}]},
+            {"links": [{"text": "x"}]},
+            {"share": "http://example.org"},
+            {"share": "https://example.org with space"},
+            {"share": ""},
+            {"quote": "a", "list": ["b"]},
+            {"mystery": "x"},
+        )
+        for block in bad_blocks:
+            proj = self.project()
+            fixture.edit(
+                proj / "editions" / "demo.json",
+                lambda d, block=block: d["about_page"]["qaa"]["sections"][0]["body"].append(block),
+            )
+            with self.assertRaises(ContentError, msg=repr(block)):
+                content.validate(content.read(proj))
+
+    def test_a_link_may_name_a_page_of_the_site_with_an_anchor(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "editions" / "demo.json",
+            lambda d: d["about_page"]["qaa"]["sections"][0]["body"].append({"links": [{"text": "x", "href": "p1.html#s1"}]}),
+        )
+        content.validate(content.read(proj))
+
+    def test_the_home_page_links_to_the_about_page_beside_the_sources(self):
+        home = self.pages["index.html"]
+        self.assertLess(home.index('<a href="about.html">'), home.index('<a href="sources.html">'))
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("about_page"))
+        self.assertNotIn('<a href="about.html">', self.built(proj)["index.html"])
 
     def test_about_is_a_reserved_page_name(self):
         proj = self.project()

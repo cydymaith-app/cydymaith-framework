@@ -27,13 +27,14 @@ function makeRadio(lang, value, pref, tier) {
 }
 
 // readyState "loading" means the script runs in the head, as it does on the real pages.
-function run({ stored, storage, radios, withPanel = true, readyState = "loading", site, key = KEY } = {}) {
+function run({ stored, storage, radios, langRadios, shareButtons, navigator, withPanel = true, readyState = "loading", site, key = KEY } = {}) {
   const attrs = {};
   const data = Object.assign({}, stored === undefined ? {} : { [key]: stored });
   const localStorage = storage || {
     getItem: (k) => (k in data ? data[k] : null),
     setItem: (k, v) => { data[k] = String(v); },
   };
+  const everything = (selector) => [...(langRadios || []), ...(shareButtons || [])].filter((el) => selector.split(",").some((part) => el.matches(part.trim())));
   const panel = {
     hidden: true,
     querySelectorAll: (selector) => (radios || []).filter((r) => (selector.includes("data-variety-lang") ? r.lang : r.pref)),
@@ -49,15 +50,16 @@ function run({ stored, storage, radios, withPanel = true, readyState = "loading"
     addEventListener: (type, fn) => { if (type === "DOMContentLoaded") readyHandlers.push(fn); },
     getElementById: (id) => (id === "prefs" && withPanel ? panel : null),
   };
-  vm.runInNewContext(SOURCE, { document, window: { localStorage } });
+  if (langRadios || shareButtons) document.querySelectorAll = everything;
+  vm.runInNewContext(SOURCE, { document, window: { localStorage, navigator } });
   return {
     attrs, data, panel,
     domReady() { readyHandlers.forEach((fn) => fn()); },
   };
 }
 
-const saved = (varieties, extra = {}) => JSON.stringify({ v: 3, varieties, ...extra });
-const state = (varieties = {}, extra = {}) => ({ v: 3, appearance: "system", palette: "default", picks: {}, varieties, ...extra });
+const saved = (varieties, extra = {}) => JSON.stringify({ v: 4, varieties, ...extra });
+const state = (varieties = {}, extra = {}) => ({ v: 4, appearance: "system", palette: "default", picks: {}, varieties, ...extra });
 
 test("applies a saved variety to the page before it is painted", () => {
   const page = run({ stored: saved({ cy: "north" }) });
@@ -74,8 +76,8 @@ test("nothing is applied when nothing is stored", () => {
 });
 
 test("corrupt, foreign or wrong-version data is ignored", () => {
-  for (const stored of ["{not json", "null", "42", '"north"', JSON.stringify({ v: 4, varieties: { cy: "north" } }),
-                        JSON.stringify({ v: 3 }), JSON.stringify({ v: 3, varieties: "north" })]) {
+  for (const stored of ["{not json", "null", "42", '"north"', JSON.stringify({ v: 5, varieties: { cy: "north" } }),
+                        JSON.stringify({ v: 4 }), JSON.stringify({ v: 4, varieties: "north" })]) {
     assert.deepEqual(run({ stored }).attrs, {}, stored);
   }
 });
@@ -374,4 +376,99 @@ test("a level with one scheme shows the note, and a level with several hides it"
   radios[0].checked = true;
   radios[0].fire("change");
   assert.equal(note.hidden, true);
+});
+
+// ---- the Cy|En toggles remember their language
+
+// An element stand-in for the toggles and the Share button: matches() answers the selectors the script uses.
+function makeToggle(className, value) {
+  const listeners = {};
+  return {
+    value,
+    checked: false,
+    matches: (selector) => selector === "input." + className,
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    fire(type) { listeners[type](); },
+  };
+}
+
+test("version 3 data, which had no remembered language, is still read", () => {
+  const page = run({ stored: JSON.stringify({ v: 3, appearance: "dark", palette: "default", picks: {}, varieties: {} }) });
+  assert.deepEqual(page.attrs, { "data-theme": "dark" });
+});
+
+test("the saved language is ticked on every toggle, Settings and About alike", () => {
+  const settings = [makeToggle("lang-radio", "cy"), makeToggle("lang-radio", "en")];
+  const about = [makeToggle("about-radio", "cy"), makeToggle("about-radio", "en")];
+  const page = run({ stored: saved({}, { lang: "en" }), langRadios: [...settings, ...about] });
+  page.domReady();
+  assert.deepEqual([...settings, ...about].map((r) => r.checked), [false, true, false, true]);
+});
+
+test("a language the page does not offer changes nothing", () => {
+  const radios = [makeToggle("lang-radio", "cy"), makeToggle("lang-radio", "en")];
+  const page = run({ stored: saved({}, { lang: "fr" }), langRadios: radios });
+  page.domReady();
+  assert.deepEqual(radios.map((r) => r.checked), [false, false]);
+});
+
+test("choosing a language is remembered, with the other choices kept", () => {
+  const radios = [makeToggle("about-radio", "cy"), makeToggle("about-radio", "en")];
+  const page = run({ stored: saved({}, { appearance: "dark" }), langRadios: radios });
+  page.domReady();
+  radios[1].checked = true;
+  radios[1].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]), state({}, { appearance: "dark", lang: "en" }));
+});
+
+test("a language that is not a plain language tag is never kept", () => {
+  for (const lang of ['x"><script>', "UPPER", 7, ["cy"], null, ""]) {
+    const radios = [makeToggle("lang-radio", "cy")];
+    const page = run({ stored: saved({}, { lang }), langRadios: radios });
+    page.domReady();
+    assert.equal(radios[0].checked, false, JSON.stringify(lang));
+  }
+});
+
+// ---- the Share button
+
+function makeButton(url) {
+  const listeners = {};
+  const status = { textContent: "" };
+  return {
+    hidden: true,
+    status,
+    matches: (selector) => selector === "button.share",
+    getAttribute: (name) => (name === "data-url" ? url : name === "data-copied" ? "Link copied" : null),
+    parentNode: { querySelector: () => status },
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    click() { listeners.click(); },
+  };
+}
+
+test("the Share button stays hidden when the browser can neither share nor copy", () => {
+  const button = makeButton("https://example.org/");
+  run({ shareButtons: [button], navigator: {} }).domReady();
+  assert.equal(button.hidden, true);
+});
+
+test("the Share button shows and uses the browser's share sheet when there is one", async () => {
+  const shared = [];
+  const button = makeButton("https://example.org/");
+  run({ shareButtons: [button], navigator: { share: (data) => { shared.push(data); return Promise.resolve(); } } }).domReady();
+  assert.equal(button.hidden, false);
+  button.click();
+  assert.equal(JSON.stringify(shared), JSON.stringify([{ url: "https://example.org/" }]));
+});
+
+test("without a share sheet the Share button copies the address and says so", async () => {
+  const copied = [];
+  const button = makeButton("https://example.org/");
+  run({ shareButtons: [button], navigator: { clipboard: { writeText: (t) => { copied.push(t); return Promise.resolve(); } } } }).domReady();
+  assert.equal(button.hidden, false);
+  button.click();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(copied, ["https://example.org/"]);
+  assert.equal(button.status.textContent, "Link copied");
 });

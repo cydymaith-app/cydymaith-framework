@@ -1,13 +1,13 @@
 /* Phrasebook framework: remembers display preferences in this browser only.
    Preferences: light or dark appearance, a colour palette (and the palette last picked at each accessibility level),
-   and a regional form per language.
+   a regional form per language, and the language shown by the Cy|En toggles. It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
    palette, and shows every regional form equally. */
 (function () {
   "use strict";
 
-  var VERSION = 3;
+  var VERSION = 4;
   var root = document.documentElement;
   // Each site names its own storage (data-storage on <html>), so two phrasebooks on one origin, such as
   // different projects under one github.io name, never read or overwrite each other's choices.
@@ -28,9 +28,10 @@
   // (no remembered picks) are still read, so an earlier choice survives the upgrade.
   function clean(raw) {
     var out = empty();
-    if (!raw || typeof raw !== "object" || [1, 2, VERSION].indexOf(raw.v) === -1) return out;
+    if (!raw || typeof raw !== "object" || [1, 2, 3, VERSION].indexOf(raw.v) === -1) return out;
     if (APPEARANCES.indexOf(raw.appearance) !== -1) out.appearance = raw.appearance;
     if (typeof raw.palette === "string" && ID.test(raw.palette)) out.palette = raw.palette;
+    if (typeof raw.lang === "string" && LANG.test(raw.lang)) out.lang = raw.lang;
     if (raw.picks && typeof raw.picks === "object") {
       LEVELS.forEach(function (level) {
         if (typeof raw.picks[level] === "string" && ID.test(raw.picks[level])) out.picks[level] = raw.picks[level];
@@ -108,7 +109,45 @@
     setVariety(lang, prefs.varieties[lang]);
   });
 
+  // The Cy|En toggles are radios that work with no script; this only remembers the language chosen and shows it again.
+  function initLanguage() {
+    if (typeof document.querySelectorAll !== "function") return;
+    var radios = Array.prototype.slice.call(document.querySelectorAll("input.lang-radio, input.about-radio"));
+    radios.forEach(function (r) {
+      if (r.value === prefs.lang) r.checked = true;
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        prefs.lang = r.value;
+        save(prefs);
+      });
+    });
+  }
+
+  // The Share button is hidden until here, and only shown if the browser can share or copy. No request is made.
+  function initShare() {
+    if (typeof document.querySelectorAll !== "function") return;
+    var nav = (window && window.navigator) || {};
+    var canCopy = !!(nav.clipboard && nav.clipboard.writeText);
+    Array.prototype.slice.call(document.querySelectorAll("button.share")).forEach(function (button) {
+      var url = button.getAttribute("data-url");
+      if (!url || !(nav.share || canCopy)) return;
+      button.hidden = false;
+      button.addEventListener("click", function () {
+        if (nav.share) {
+          nav.share({ url: url }).catch(function () {});
+        } else {
+          nav.clipboard.writeText(url).then(function () {
+            var status = button.parentNode.querySelector(".share-status");
+            if (status) status.textContent = button.getAttribute("data-copied") || "";
+          }, function () {});
+        }
+      });
+    });
+  }
+
   ready(function () {
+    initLanguage();
+    initShare();
     var panel = document.getElementById("prefs");
     if (!panel) return;
     var varieties = Array.prototype.slice.call(panel.querySelectorAll("input[data-variety-lang]"));

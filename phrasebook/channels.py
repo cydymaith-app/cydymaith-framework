@@ -2,7 +2,7 @@
 
 A section marked "status": "development" in pages/<slug>.json is held back from the release channel, the
 default. The development channel includes it. Every channel validates the whole project, so held-back content
-must stay correct; only the output differs. A page left with no sections is dropped from the release, with
+must stay correct; only the output differs. An About page section marked the same way is left out too, and an About page left with no sections is dropped. A page left with no sections is dropped from the release, with
 its pack pages and its place in structure.json.
 
     python3 build.py dist                          release: held-back sections are left out
@@ -45,6 +45,16 @@ def select(raw, channel=RELEASE):
             pp = pack["pages"].get(slug)
             if pp:
                 pp["sections"] = {sid: sec for sid, sec in pp.get("sections", {}).items() if sid not in held}
+    for edition in out["editions"].values():
+        about = edition.get("about_page")
+        if not about:
+            continue
+        for code in list(about):
+            about[code]["sections"] = [s for s in about[code]["sections"] if s.get("status") != HELD_BACK]
+            if not about[code]["sections"]:
+                del about[code]
+        if not about:
+            del edition["about_page"]
     kept = {slug for slug, page in out["pages"].items() if page["sections"]}
     for slug in set(out["pages"]) - kept:
         del out["pages"][slug]

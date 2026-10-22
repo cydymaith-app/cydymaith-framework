@@ -108,7 +108,21 @@ def make_project(root, interface="qaa", ui_extra=None):
                     "title": f"{code} about",
                     "lede": f"{code} about lede",
                     "sections": [
-                        {"title": f"{code} aims", "body": [f"{code} first paragraph", {"list": [f"{code} one", f"{code} two"]}]}
+                        {"title": f"{code} aims", "body": [f"{code} first paragraph", {"list": [f"{code} one", f"{code} two"]}]},
+                        {"title": f"{code} principle", "body": [{"quote": f"{code} founding statement"}]},
+                        {
+                            "title": f"{code} more",
+                            "body": [
+                                {
+                                    "links": [
+                                        {"text": f"{code} outside", "href": "https://example.org/x"},
+                                        {"text": f"{code} sources", "href": "sources.html"},
+                                    ]
+                                },
+                                {"share": "https://example.org/book/"},
+                            ],
+                        },
+                        {"title": f"{code} soon", "status": "development", "body": [f"{code} not yet"]},
                     ],
                 }
                 for code in ("qaa", "qab")

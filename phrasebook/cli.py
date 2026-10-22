@@ -99,6 +99,7 @@ def build(out_dir, project_dir=None, strict=False, edition=None, channel=RELEASE
             raise ContentError(f"unreviewed draft sources remain: {listing}")
         print(f"warning: unreviewed draft sources: {listing}", file=sys.stderr)
     view = select_channel(raw, channel)
+    _, ed = content.pick_edition(view, edition)  # the channel's own edition: it can hold sections back from the About page
     site = Site(view, ed, messages=Messages(view["packs"]))
     rendered = site.render_all()
     out = pathlib.Path(out_dir)
