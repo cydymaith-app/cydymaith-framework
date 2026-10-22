@@ -104,11 +104,11 @@ class IconParsingTests(unittest.TestCase):
                 icons.validate({name: GOOD})
         icons.validate({"cloud-rain": GOOD})
 
-    def test_the_framework_ships_only_its_three_interface_icons_with_their_licence(self):
+    def test_the_framework_ships_only_its_four_interface_icons_with_their_licence(self):
         found = sorted(p for p in ENGINE.rglob("*.svg"))
         self.assertEqual(
             [f.relative_to(ENGINE).as_posix() for f in found],
-            ["ui-icons/arrow--left.svg", "ui-icons/search.svg", "ui-icons/settings.svg"],
+            ["ui-icons/arrow--left.svg", "ui-icons/information.svg", "ui-icons/search.svg", "ui-icons/settings.svg"],
         )
         self.assertIn("Apache", (ENGINE / "ui-icons" / "LICENSE").read_text(encoding="utf-8"))
         assets = (ROOT / "docs" / "ASSETS.md").read_text(encoding="utf-8")
@@ -147,8 +147,8 @@ class IconSiteTests(Scratch):
     def test_the_only_icons_without_a_project_icon_are_the_frames_own(self):
         pages = self.built(self.project())
         for name, page in pages.items():
-            self.assertLessEqual(page.count("<svg"), 4, name)  # search, back, the gear and the figure at most
-        self.assertEqual(pages["index.html"].count("<svg"), 2, "search and the gear in the rail")
+            self.assertLessEqual(page.count("<svg"), 5, name)  # search, back, about, the gear and the figure at most
+        self.assertEqual(pages["index.html"].count("<svg"), 3, "search, about and the gear in the rail")
 
     def test_a_named_icon_must_have_a_file(self):
         proj = self.project()

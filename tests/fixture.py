@@ -103,6 +103,16 @@ def make_project(root, interface="qaa", ui_extra=None):
             "languages": list(LANGS),
             "interface": interface,
             "default_pair": ["qaa", "qab"],
+            "about_page": {
+                code: {
+                    "title": f"{code} about",
+                    "lede": f"{code} about lede",
+                    "sections": [
+                        {"title": f"{code} aims", "body": [f"{code} first paragraph", {"list": [f"{code} one", f"{code} two"]}]}
+                    ],
+                }
+                for code in ("qaa", "qab")
+            },
             "home": {
                 "headline": {c: f"{c} headline" for c in LANGS},
                 "lede": {"qaa": "A lede."},

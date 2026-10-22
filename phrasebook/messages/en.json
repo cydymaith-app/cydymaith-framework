@@ -46,6 +46,8 @@
   "regional_forms": "{language}: regional forms",
   "variety_all": "All",
   "settings": "Settings",
+  "about": "About",
+  "about_language": "Language",
   "settings_lede": "Choose how the site looks. Your choices stay on this device and are never sent anywhere.",
   "settings_no_script": "Settings need scripts to be switched on in your browser. Without them the site follows your device's light or dark setting and uses the default colours.",
   "appearance": "Appearance",

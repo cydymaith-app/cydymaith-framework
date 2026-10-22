@@ -42,7 +42,7 @@ LICENCES = {
     "draft": (None, None),
 }
 DRAFT = "draft"  # allowed in a normal build, rejected by --strict
-RESERVED_SLUGS = ("index", "sources", "how-to", "settings")
+RESERVED_SLUGS = ("index", "sources", "how-to", "settings", "about")
 GROUP_PAGE_PREFIX = "group-"  # generated pages, one per group, are group-<id>.html
 GROUP_ID = re.compile(r"^[a-z][a-z0-9-]*$")
 
@@ -362,7 +362,39 @@ def validate_edition(name, ed, packs, available_palettes):
             raise ContentError(
                 f"{where}: icon {src!r} has unknown purpose {icon['purpose']!r}; accepted: {', '.join(ICON_PURPOSES)}"
             )
+    validate_about(where, ed.get("about_page"), langs)
     validate_text(where, ed)
+
+
+def validate_about(where, about, langs):
+    """The optional About page: for each language it is written in, a title, an optional lede and sections of paragraphs and lists."""
+    if about is None:
+        return
+    if not isinstance(about, dict) or not about:
+        raise ContentError(f"{where}: 'about_page' must map language codes to the page in that language")
+    for code, page in about.items():
+        here = f"{where}: about_page.{code}"
+        if code not in langs:
+            raise ContentError(f"{where}: about_page names {code!r}, which is not a language of the edition")
+        if not isinstance(page, dict) or not page.get("title"):
+            raise ContentError(f"{here} needs a 'title'")
+        if page.get("lede") is not None and not isinstance(page["lede"], str):
+            raise ContentError(f"{here}: 'lede' must be a text")
+        sections = page.get("sections")
+        if not isinstance(sections, list) or not sections:
+            raise ContentError(f"{here} needs at least one section")
+        for section in sections:
+            if not isinstance(section, dict) or not section.get("title") or not section.get("body"):
+                raise ContentError(f"{here}: each section needs a 'title' and a 'body'")
+            for block in section["body"]:
+                items = block.get("list") if isinstance(block, dict) else None
+                ok = (
+                    isinstance(block, str)
+                    and block.strip()
+                    or (isinstance(items, list) and items and all(isinstance(i, str) and i.strip() for i in items))
+                )
+                if not ok:
+                    raise ContentError(f'{here}: a body block must be a text or {{"list": [texts]}}')
 
 
 # ---------------------------------------------------------------- reports

@@ -160,7 +160,16 @@ class FixtureBuildTests(Scratch):
     def test_a_project_the_engine_has_never_seen_builds(self):
         self.assertEqual(
             set(self.pages),
-            {"index.html", "group-g1.html", "p1.html", "points.html", "sources.html", "how-to.html", "settings.html"},
+            {
+                "index.html",
+                "group-g1.html",
+                "p1.html",
+                "points.html",
+                "sources.html",
+                "how-to.html",
+                "settings.html",
+                "about.html",
+            },
         )
 
     def test_no_trace_of_the_real_project_in_the_output(self):
@@ -536,6 +545,91 @@ class ListenFirstTests(Scratch):
         selected = channels.select(content.read(proj))
         self.assertEqual([g["id"] for g in selected["structure"]["groups"]], ["g2"])
         self.assertEqual(selected["structure"]["groups"][0]["links"], [])
+
+
+# ---------------------------------------------------------------- the About page
+
+
+class AboutPageTests(Scratch):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.proj = cls.project()
+        cls.pages = cls.built(cls.proj)
+
+    def test_the_page_has_each_language_and_shows_the_first_of_the_pair(self):
+        page = self.pages["about.html"]
+        self.assertIn('<article class="about-text" id="about-qaa"><header><h1>qaa about</h1>', page)
+        self.assertIn('<article class="about-text" id="about-qab" lang="qab"><header><h1>qab about</h1>', page)
+        self.assertIn('<input type="radio" class="about-radio" name="about-lang" id="about-lang-qaa" value="qaa" checked>', page)
+        self.assertNotIn('id="about-lang-qab" value="qab" checked', page)
+
+    def test_the_toggle_names_each_language_in_that_language_and_needs_no_script(self):
+        page = self.pages["about.html"]
+        bar = page[page.index('<div class="about-bar"') : page.index("</div>", page.index('<div class="about-bar"'))]
+        self.assertIn('<label for="about-lang-qaa">Alphish</label>', bar)
+        self.assertIn('<label for="about-lang-qab"><span lang="qab">Betish</span></label>', bar)
+        self.assertNotIn("<script", page[page.index('<main id="main">') : page.index("</main>")])
+
+    def test_the_sections_render_as_paragraphs_and_lists_and_link_to_the_sources(self):
+        page = self.pages["about.html"]
+        self.assertIn(
+            '<section><h2>qaa aims</h2><p>qaa first paragraph</p><ul class="notes"><li>qaa one</li><li>qaa two</li></ul></section>',
+            page,
+        )
+        self.assertEqual(page.count('<p class="about-more"><a href="sources.html">'), 2)
+
+    def test_the_page_is_not_in_the_pager_and_its_trail_leads_home(self):
+        page = self.pages["about.html"]
+        self.assertNotIn('class="pager"', page)
+        self.assertIn('<li><a href="index.html">', page)
+        self.assertIn('<span aria-current="page">', page)
+
+    def test_every_page_links_to_it_from_the_rail_above_the_settings_gear(self):
+        for name, page in self.pages.items():
+            rail = page[page.index('<nav class="rail"') : page.index("</nav>", page.index('<nav class="rail"'))]
+            self.assertLess(rail.index('href="about.html"'), rail.rindex('href="settings.html"'), name)
+        self.assertIn('href="about.html" aria-label="About" title="About" aria-current="page"', self.pages["about.html"])
+        self.assertNotIn('href="about.html" aria-label="About" title="About" aria-current', self.pages["p1.html"])
+
+    def test_the_settings_page_lists_it_with_the_other_pages_about_the_app(self):
+        self.assertIn('<li><a href="about.html">', self.pages["settings.html"])
+
+    def test_a_project_without_the_page_has_no_page_and_no_rail_link(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("about_page"))
+        pages = self.built(proj)
+        self.assertNotIn("about.html", pages)
+        for name, page in pages.items():
+            self.assertNotIn("about.html", page, name)
+
+    def test_one_language_has_no_toggle(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d["about_page"].pop("qab"))
+        page = self.built(proj)["about.html"]
+        self.assertNotIn("about-bar", page)
+        self.assertNotIn('id="about-qab"', page)
+
+    def test_the_page_is_checked(self):
+        for bad in (
+            {"zzz": {"title": "t", "sections": [{"title": "s", "body": ["b"]}]}},
+            {"qaa": {"sections": [{"title": "s", "body": ["b"]}]}},
+            {"qaa": {"title": "t", "sections": []}},
+            {"qaa": {"title": "t", "sections": [{"title": "s", "body": []}]}},
+            {"qaa": {"title": "t", "sections": [{"title": "s", "body": [{"list": []}]}]}},
+            {"qaa": {"title": "t", "sections": [{"title": "s", "body": [3]}]}},
+            {},
+        ):
+            proj = self.project()
+            fixture.edit(proj / "editions" / "demo.json", lambda d, bad=bad: d.update(about_page=bad))
+            with self.assertRaises(ContentError, msg=repr(bad)):
+                content.validate(content.read(proj))
+
+    def test_about_is_a_reserved_page_name(self):
+        proj = self.project()
+        shutil.copy(proj / "pages" / "p1.json", proj / "pages" / "about.json")
+        with self.assertRaises(ContentError):
+            content.validate(content.read(proj))
 
 
 # ---------------------------------------------------------------- text rules
@@ -942,7 +1036,7 @@ class CommandLineTests(Scratch):
         out = self.tmp / "cli-out"
         code, stdout, _ = self.run_main(str(out), "--project", str(proj))
         self.assertEqual(code, 0)
-        self.assertIn("wrote 7 pages", stdout)
+        self.assertIn("wrote 8 pages", stdout)
         self.assertIn("coverage: qaa", stdout)
         self.assertTrue((out / "index.html").is_file())
 

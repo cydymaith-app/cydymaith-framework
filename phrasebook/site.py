@@ -371,8 +371,8 @@ class Site:
             gid = self.group_of(current)["id"]
             steps.append((f"group-{gid}.html", self.pair_spans(self.group_title(frm, gid), self.group_title(to, gid))))
             steps.append((None, self.pair_spans(self.title(frm, current), self.title(to, current))))
-        elif current == "settings":
-            steps.append((None, self.ui_pair("settings")))
+        elif current in ("settings", "about"):
+            steps.append((None, self.ui_pair(current)))
         else:  # the how-to and sources pages sit under settings
             steps += [
                 ("settings.html", self.ui_pair("settings")),
@@ -541,12 +541,20 @@ class Site:
             f'<button type="button" class="rail-link search" id="search-button" hidden aria-label="{search_name}" '
             f'title="{search_name}" aria-expanded="false" aria-controls="search-card">{self.ui_icons["search"]}</button>'
         )
+        about = ""
+        if self.edition.get("about_page"):
+            about_name = e(self.plain("about"))
+            about_mark = ' aria-current="page"' if current == "about" else ""
+            about = (
+                f'<a class="rail-link" href="about.html" aria-label="{about_name}" title="{about_name}"{about_mark}>'
+                f'{self.ui_icons["information"]}</a>'
+            )
         return (
             f'<a class="skip" href="#main">{self.h("skip_to_content")}</a>'
             '<div class="app">'
             f'<header class="topbar"><div class="titles{" has-trail" if trail else ""}"><a class="brand" href="index.html"><span class="word">{e(self.name)}</span>'
             f"<small>{self.brand_small()}</small></a>{trail}</div></header>"
-            f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>{settings}</nav>'
+            f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div><div class="rail-group">{about}{settings}</div></nav>'
             f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
             f"{self.search_card(current)}"
             "</div>"
@@ -711,7 +719,11 @@ class Site:
             f'<section id="about"><h2>{self.h("about_app")}</h2><ul class="links">'
             + "".join(
                 f'<li><a href="{href}">{l1}{l2}</a></li>'
-                for href, key in (("how-to.html", "how_to"), ("sources.html", "sources"))
+                for href, key in (
+                    *((("about.html", "about"),) if self.edition.get("about_page") else ()),
+                    ("how-to.html", "how_to"),
+                    ("sources.html", "sources"),
+                )
                 for l1, l2 in [self.ui_pair(key)]
             )
             + "</ul></section>"
@@ -720,6 +732,45 @@ class Site:
             head + f'<section id="settings">{self.prefs_controls()}'
             f'<noscript><p class="intro">{self.h("settings_no_script")}</p></noscript></section>' + about
         )
+
+    def about_page(self):
+        """The About page: the aims and philosophy in each language the edition gives, one shown at a time. The choice is a group of
+        radio buttons that a stylesheet turns into a toggle at the top, so it works with no script; the first language of the pair shows first.
+        """
+        about = self.edition["about_page"]
+        codes = []
+        for code in [self.frm, self.to, *self.langs]:
+            if code in about and code not in codes:
+                codes.append(code)
+        radios = "".join(
+            f'<input type="radio" class="about-radio" name="about-lang" id="about-lang-{e(code)}" value="{e(code)}"'
+            f'{" checked" if i == 0 else ""}>'
+            for i, code in enumerate(codes)
+        )
+        labels = "".join(f'<label for="about-lang-{e(code)}">{self.inline(code, self.endonym(code))}</label>' for code in codes)
+        toggle = ""
+        if len(codes) > 1:
+            toggle = f'<div class="about-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
+        articles = []
+        for code in codes:
+            page = about[code]
+            parts = [f'<header><h1>{e(page["title"])}</h1>']
+            if page.get("lede"):
+                parts.append(f'<p class="lede">{e(page["lede"])}</p>')
+            parts.append("</header>")
+            for section in page["sections"]:
+                body = "".join(
+                    (
+                        f"<p>{e(block)}</p>"
+                        if isinstance(block, str)
+                        else f'<ul class="notes">{"".join(f"<li>{e(item)}</li>" for item in block["list"])}</ul>'
+                    )
+                    for block in section["body"]
+                )
+                parts.append(f'<section><h2>{e(section["title"])}</h2>{body}</section>')
+            parts.append(f'<p class="about-more"><a href="sources.html">{self.ui_html(code, "sources")}</a></p>')
+            articles.append(f'<article class="about-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>')
+        return f'<div class="about">{radios}{toggle}{"".join(articles)}</div>'
 
     def how_to_page(self):
         """How to move through the tree: keys, touch and buttons. Words only from the interface messages."""
@@ -837,6 +888,13 @@ class Site:
             self.settings_page(),
             with_pager=False,
         )
+        if self.edition.get("about_page"):
+            out["about.html"] = page(
+                "about",
+                self.plain("page_title", page=self.ui_text(self.frm, "about")[0], site=self.name),
+                self.about_page(),
+                with_pager=False,
+            )
         out["how-to.html"] = page(
             "how-to",
             self.plain("page_title", page=self.ui_text(self.frm, "how_to")[0], site=self.name),
