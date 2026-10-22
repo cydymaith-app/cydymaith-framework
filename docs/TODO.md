@@ -83,7 +83,38 @@ Work top to bottom. Tick items off in the commit that completes them. The Welsh 
 - [ ] Sport section. Football, Rugby, Cricket, Athletics - (can keep expanding).
 - [ ] Travel/transport section incliding roads/traffic news and How place names are constructed in Welsh. Eg. Rhos, llys, maes, pentre, pen, dref, caer, llan, ffordd, lon, etc
 - [ ] Technology. Begin with app development as we develop this app, keep it updated with findings.
+- [ ] Culture. Events such as  nos galan gaeaf. What is Mari Lwyd etc. Traditional songs and meanings e,g, Calon Lan.
 
+[  ] - About section.  App target audience is improvers, not beginners. Best experience is, of course, interacting with people.
+Qr code/ Share link.
+Instructions on how to install the app for offline use.
+To contain also the philosophy of app creation. No nagging or addiction. Private by default, minimal data use, no tracking, usability built in (side - note - is there a name for this kind of development ethos?)
+
+[  ] - Links to resources:
+  https://www.learnwelsh.cymru
+  https://www.gov.wales/welsh-language-support-and-services
+
+Settings / About pages to have a Cy|En toggle button on them rather than inline translations.
+
+### Settings screen
+
+Use icons for light dark and an accessibility/high contrast toggle. Colour schemes to feature miniature pallets below those options.
+All oklch compatible. 
+
+## Usability
+
+Script to generate and test each screen and score them for usability. Run each time a screen is modified. Not every build.
+
+## Screen tile reordering
+
+Ability to customise the order of tiles on home page and sub pages. A spanner or other icon - toggle the edit order mode on. Edit order mode shows smaller buttons with just their icon. User can drag the buttons to where they want like on an app screen. Toggle edit mode off saves the new config. 
+Screen background changes colour, and the toggled edit icon background matches it. Title says drag to reorder. Needs a reset default option.
+
+
+## Report issue screen
+
+Via a flag icon on the side bar. 
+Opens a mode like edit mode, says select the element that is wrong, or skip - button to skip. Next step, an email is created with a report section in markdown filled out. User can type what else they want and the email is sent. Can it send in the background? Can I set up a separate email for it? Save this for a future feature.
 
 ## Done
 
