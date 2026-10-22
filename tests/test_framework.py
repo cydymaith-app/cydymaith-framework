@@ -588,7 +588,9 @@ class AboutPageTests(Scratch):
 
     def test_each_language_ends_with_when_the_site_was_built_written_the_same_way_in_utc(self):
         page = self.pages["about.html"]
-        stamp = re.findall(r'<time datetime="(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)">(\d{4}-\d\d-\d\d \d\d:\d\d) UTC</time></p></article>', page)
+        stamp = re.findall(
+            r'<time datetime="(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)">(\d{4}-\d\d-\d\d \d\d:\d\d) UTC</time></p></article>', page
+        )
         self.assertEqual(len(stamp), 2, "one in each language's article, at its foot")
         self.assertEqual(stamp[0], stamp[1])
         self.assertEqual(stamp[0][0][:16].replace("T", " "), stamp[0][1])

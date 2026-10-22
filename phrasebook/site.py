@@ -982,10 +982,10 @@ class Site:
         # first paint, slides this page in from the same side, and takes the mark out of the address again. A page reached any
         # other way plays nothing. It does not depend on the referrer, and it stores nothing.
         slide = (
-            '<script>(function(d,w){var m=/^#slide=(forward|back)$/.exec(w.location.hash);'
+            "<script>(function(d,w){var m=/^#slide=(forward|back)$/.exec(w.location.hash);"
             "if(!m||w.PageRevealEvent)return;"
             'd.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in");'
-            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){}})(document,window)</script>\n'
+            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){};})(document,window)</script>\n'
         )
         # Where the browser animates moves between pages itself (cross-document view transitions), say which way the page
         # moves: in from the end when this page's parent is the page we came from, in from the start when we came from

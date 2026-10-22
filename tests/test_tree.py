@@ -520,7 +520,7 @@ class FrameTests(Scratch):
 
     def test_the_head_script_reads_the_way_the_page_goes_from_the_address_and_never_the_referrer(self):
         page = self.pages["p1.html"]
-        self.assertIn('/^#slide=(forward|back)$/.exec(w.location.hash)', page)
+        self.assertIn("/^#slide=(forward|back)$/.exec(w.location.hash)", page)
         self.assertIn('w.history.replaceState(null,"",w.location.pathname+w.location.search)', page)
         self.assertNotIn("referrer", page.split("<body>")[0])
 
