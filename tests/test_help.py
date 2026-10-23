@@ -418,6 +418,20 @@ class HelpButtonTests(Scratch):
         self.assertNotIn("help-icon", pager)
         self.assertIn('data-help="finding-your-way#pager"', topic)
 
+    def test_the_trail_icon_sits_beside_the_titles_in_the_title_bar_in_its_colour_and_adds_no_height(self):
+        page = self.pages["p1.html"]
+        bar = page[page.index('<header class="topbar">') : page.index("</header>", page.index('<header class="topbar">'))]
+        titles = bar[bar.index('<div class="titles') : bar.index("</div>", bar.index('<div class="titles'))]
+        self.assertNotIn("help-icon", titles, "not under the titles, which would make the bar taller")
+        self.assertIn('data-help="finding-your-way#trail"', bar)
+        self.assertLess(bar.index("</div>"), bar.index("help-icon"), "after the titles, as a second item of the bar")
+        css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
+        rule = css[css.index(".topbar a.help-icon{") : css.index("}", css.index(".topbar a.help-icon{"))]
+        self.assertIn("color:var(--on-header)", rule, "the bar's own text colour, so it contrasts with the bar")
+        self.assertIn("margin-inline-start:auto", rule)
+        self.assertIn("margin-block:-", rule, "the 44px target does not grow the bar")
+        self.assertNotIn("help-icon", self.pages["index.html"][self.pages["index.html"].index('<header class="topbar">') : self.pages["index.html"].index("</header>")], "the home page has no trail")
+
     def test_the_icons_are_hidden_until_the_page_is_helping_so_without_the_script_they_never_show(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
         self.assertIn("a.help-icon{display:none", css)
@@ -464,10 +478,37 @@ class HelpButtonTests(Scratch):
         self.assertIn('data-pair="qaa&gt;qab"', page)
         self.assertIn("Demo Book", re.search(r'data-subject="([^"]*)"', page).group(1))
 
-    def test_the_card_labels_are_in_both_languages_of_the_pair(self):
+    def test_the_card_has_the_language_toggle_not_two_languages_stacked(self):
         page = self.pages["index.html"]
         card = page[page.index('class="help-card"') :]
-        self.assertRegex(card, r'<span class="l1"[^>]*>[^<]+</span><span class="l2"[^>]*>[^<]+</span>')
+        self.assertEqual(card.count('name="help-lang"'), 2, "one radio for each language of the pair")
+        self.assertEqual(card.count('class="lang-bar"'), 1)
+        self.assertIn('<div class="l10n-body">', card, "the toggle's styles apply inside the body")
+        self.assertRegex(card, r'<span class="t" data-n="1"[^>]*>[^<]+</span><span class="t" data-n="2"[^>]*>[^<]+</span>')
+        self.assertNotRegex(card, r'<span class="l1"[^>]*>[^<]+</span><span class="l2"')
+        css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
+        self.assertIn(".lang-radio:nth-of-type(1):checked ~ .l10n-body .t:not([data-n=\"1\"])", css)
+
+    def test_the_toggle_comes_before_the_content_it_switches_and_in_the_head_by_the_x(self):
+        page = self.pages["index.html"]
+        card = page[page.index('class="help-card"') :]
+        self.assertLess(card.index('name="help-lang"'), card.index('class="l10n-body"'))
+        head = card[card.index('class="help-head"') : card.index('data-view="sheet"')]
+        self.assertLess(head.index('class="lang-bar"'), head.index('class="help-close"'))
+
+    def test_the_sheet_closes_with_a_small_x_that_is_named_in_both_languages(self):
+        page = self.pages["index.html"]
+        close = re.search(r'<button type="button" class="help-close" data-act="close" aria-label="([^"]*)" title="([^"]*)">(.*?)</button>', page, re.S)
+        self.assertTrue(close)
+        self.assertEqual(close.group(1), close.group(2))
+        self.assertIn(" / ", close.group(1), "named in both languages of the pair")
+        self.assertIn("<svg", close.group(3))
+        self.assertEqual(re.sub(r"<[^>]*>", "", close.group(3)).strip(), "", "an icon, no words")
+
+    def test_the_status_lines_hold_every_message_hidden_for_the_script_to_choose(self):
+        page = self.pages["index.html"]
+        for name in ("loading", "failed", "copied", "copy-failed"):
+            self.assertRegex(page, rf'<span data-msg="{name}" hidden>')
 
     def test_the_stylesheet_gives_the_sheet_its_layer_and_a_phone_first_shape(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")

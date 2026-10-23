@@ -559,7 +559,7 @@ class Site:
             items.append(
                 f'<li><a href="{href}">{inner}</a></li>' if href else f'<li><span aria-current="page">{inner}</span></li>'
             )
-        return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>{self.help_icon("trail")}'
+        return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>'
 
     # Right after a list of tiles, and after the sections of a topic, so it runs as soon as they exist and before anything is painted:
     # it asks order.js (loaded in the head) to put them in order, so they are never seen moving. Without that script nothing happens and
@@ -746,7 +746,8 @@ class Site:
             )
         # The help button turns on the help icons, so it is only on a page that has some. Hidden until help.js runs.
         helping = ""
-        if 'data-help="' in content + pager + trail:
+        trail_help = self.help_icon("trail") if trail else ""  # at the end of the title bar, beside the titles, not under them
+        if 'data-help="' in content + pager + trail_help:
             help_name = e(self.plain("help_toggle"))
             helping = (
                 f'<button type="button" class="rail-link help-toggle" id="help-toggle" hidden aria-pressed="false" '
@@ -765,7 +766,7 @@ class Site:
             f'<a class="skip" href="#main">{self.h("skip_to_content")}</a>'
             '<div class="app">'
             f'<header class="topbar"><div class="titles{" has-trail" if trail else ""}"><a class="brand" href="index.html"><span class="word">{e(self.name)}</span>'
-            f"<small>{self.brand_small()}</small></a>{trail}</div></header>"
+            f"<small>{self.brand_small()}</small></a>{trail}</div>{trail_help}</header>"
             f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>'
             f'<div class="rail-group">{helping}{arrange}{about}{settings}</div></nav>'
             f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
@@ -1130,18 +1131,17 @@ class Site:
             f'data-title="{e(title)}" aria-label="{label}" title="{label}">{self.ui_icons["help"]}</a>'
         )
 
-    def pair_html(self, key):
-        """A message in each language of the pair, one above the other (the first large, the second small)."""
-        return f'{self.ui_span("l1", self.frm, key)}{self.ui_span("l2", self.to, key)}'
-
-    def pair_text(self, key):
-        """The same as plain text, for a message the script shows: the two languages with a slash between."""
-        return " / ".join(self.ui_text(code, key)[0] for code in (self.frm, self.to))
+    def help_status(self, name, key):
+        """One message the script can show in a status line: all of them wait in the page, hidden, and help.js shows the one it
+        wants. Each is in both languages of the pair, of which the Cy|En toggle shows one."""
+        return f'<span data-msg="{name}" hidden>{self.both(key)}</span>'
 
     def help_card(self):
         """The sheet that a help icon opens, shut and hidden: What's this? (the text of one feature, loaded by help.js from the
-        help book), and Report a problem (an email written in the person's mail app) where the edition has an address. The address
-        is kept in two pieces so it does not sit in the page as a line a scraper would take. help.js fills the rest in."""
+        help book), and Report a problem (an email written in the person's mail app) where the edition has an address. The card has
+        a Cy|En toggle like the Settings and About pages: the two languages of the pair are in the page, one is shown, and the choice
+        is the one remembered for the whole site. The address is kept in two pieces so it does not sit in the page as a line a
+        scraper would take. help.js fills the rest in."""
         contact = self.edition.get("contact") or ""
         user, _, host = contact.partition("@")
         built = self.built.strftime("%Y-%m-%d") if self.built else ""
@@ -1149,41 +1149,43 @@ class Site:
         subject = self.plain("help_subject", site=self.name)
         data = (
             f' data-contact-user="{e(user)}" data-contact-host="{e(host)}" data-built="{e(built)}" data-pair="{e(pair)}"'
-            f' data-subject="{e(subject)}" data-loading="{e(self.pair_text("help_loading"))}"'
-            f' data-failed="{e(self.pair_text("help_failed"))}" data-copied="{e(self.pair_text("help_copied"))}"'
-            f' data-copy-failed="{e(self.pair_text("help_copy_failed"))}"'
+            f' data-subject="{e(subject)}"'
         )
-        sheet_buttons = f'<button type="button" data-act="help">{self.pair_html("help_whats_this")}</button>'
+        radios, bar = self.language_toggle("help-lang", [self.frm, self.to])
+        close_name = e(" / ".join(self.ui_text(code, "help_close")[0] for code in (self.frm, self.to)))  # the x has no words, so its name has both
+        sheet_buttons = f'<button type="button" data-act="help">{self.both("help_whats_this")}</button>'
         report_view = ""
         if contact:
-            sheet_buttons += f'<button type="button" data-act="report">{self.pair_html("help_report")}</button>'
+            sheet_buttons += f'<button type="button" data-act="report">{self.both("help_report")}</button>'
             report_view = (
                 '<div class="help-view" data-view="report" hidden>'
-                f'<h3>{self.pair_html("help_report")}</h3>'
-                f'<p>{self.pair_html("help_report_lede")}</p>'
-                f'<label class="help-label">{self.pair_html("help_report_words")}'
+                f'<h3>{self.both("help_report")}</h3>'
+                f'<p>{self.both("help_report_lede")}</p>'
+                f'<label class="help-label">{self.both("help_report_words")}'
                 '<textarea rows="4" data-report-words></textarea></label>'
-                f'<label class="help-label">{self.pair_html("help_report_context")}'
+                f'<label class="help-label">{self.both("help_report_context")}'
                 '<textarea rows="4" readonly data-report-added></textarea></label>'
-                f'<p class="help-actions"><a class="help-button" data-report-mail href="#">{self.pair_html("help_open_email")}</a>'
-                f'<button type="button" data-act="copy">{self.pair_html("help_copy")}</button>'
-                f'<button type="button" data-act="back">{self.pair_html("back")}</button></p>'
-                '<p class="help-status" role="status" data-report-status></p></div>'
+                f'<p class="help-actions"><a class="help-button" data-report-mail href="#">{self.both("help_open_email")}</a>'
+                f'<button type="button" data-act="copy">{self.both("help_copy")}</button>'
+                f'<button type="button" data-act="back">{self.both("back")}</button></p>'
+                f'<p class="help-status" role="status" data-report-status>{self.help_status("copied", "help_copied")}'
+                f'{self.help_status("copy-failed", "help_copy_failed")}</p></div>'
             )
-        else:
-            report_view = ""
         return (
             '<div class="help-layer" hidden>'
             f'<div class="help-card" id="help-card" role="dialog" aria-modal="true" aria-labelledby="help-card-title" inert{data}>'
-            '<div class="help-head"><h2 id="help-card-title" data-title></h2>'
-            f'<button type="button" class="help-close" data-act="close">{self.pair_html("help_close")}</button></div>'
+            f'{radios}<div class="l10n-body">'
+            f'<div class="help-head"><h2 id="help-card-title" data-title></h2>{bar}'
+            f'<button type="button" class="help-close" data-act="close" aria-label="{close_name}" title="{close_name}">'
+            f'{self.ui_icons["close"]}</button></div>'
             f'<div class="help-view" data-view="sheet"><p class="help-actions">{sheet_buttons}</p></div>'
             '<div class="help-view" data-view="help" hidden>'
-            '<p class="help-status" role="status" data-help-status></p><div data-help-body></div>'
-            f'<p class="help-actions"><a class="help-button" data-help-more href="#">{self.pair_html("help_more")}</a>'
-            f'<button type="button" data-act="back">{self.pair_html("back")}</button></p></div>'
+            f'<p class="help-status" role="status" data-help-status>{self.help_status("loading", "help_loading")}'
+            f'{self.help_status("failed", "help_failed")}</p><div data-help-body></div>'
+            f'<p class="help-actions"><a class="help-button" data-help-more href="#">{self.both("help_more")}</a>'
+            f'<button type="button" data-act="back">{self.both("back")}</button></p></div>'
             f"{report_view}"
-            "</div></div>"
+            "</div></div></div>"
         )
 
     def help_slot(self, feature):

@@ -305,10 +305,10 @@
     "help-icons": {
       "title": "Asking about a feature",
       "body": [
-        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second, where the site has an address for reports."
+        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second, where the site has an address for reports. A toggle at the top of the window switches between the two languages, and the small x closes it."
       ],
       "keys": "Tab to an icon, then Enter. Escape closes the window.",
-      "touch": "Tap an icon, then What's this?. Tap Close, or outside the window, to dismiss it."
+      "touch": "Tap an icon, then What's this?. Tap the x, or outside the window, to dismiss it."
     },
     "report-a-problem": {
       "title": "Reporting a problem",

@@ -96,7 +96,23 @@
     return found;
   }
 
+  // Which of the pair's two languages a section of the book is written in: 1 (the first), 2 (the second), or 0 when it is in
+  // neither (the book falls back to English), in which case it is always shown. `lang` empty means the language of the page.
+  function place(lang, pair, page) {
+    var wanted = lang || page;
+    var at = String(pair || "").split(">").indexOf(wanted);
+    return at === -1 ? 0 : at + 1;
+  }
+
+  // Show one message of a status line and hide the others; no name hides them all.
+  function say(line, name) {
+    var all = line.querySelectorAll("[data-msg]");
+    for (var i = 0; i < all.length; i++) all[i].hidden = all[i].getAttribute("data-msg") !== name;
+  }
+
   var api = {
+    place: place,
+    say: say,
     apply: apply, toggle: toggle, anchor: anchor, fit: fit, context: context, message: message, mailto: mailto,
     copied: copied, sections: sections, MAX_CONTEXT: MAX_CONTEXT
   };
@@ -161,10 +177,10 @@
       var status = card.querySelector("[data-help-status]");
       more.setAttribute("href", sheet.page + "#" + sheet.feature);
       body.textContent = "";
-      status.textContent = card.getAttribute("data-loading");
+      say(status, "loading");
       show("help");
       if (!PAGE.test(sheet.page) || typeof fetch !== "function" || typeof DOMParser !== "function") {
-        status.textContent = card.getAttribute("data-failed");
+        say(status, "failed");
         return;
       }
       var wanted = sheet;
@@ -183,14 +199,17 @@
           var heading = copy.querySelector("h2");
           if (heading) heading.remove();
           var wrap = doc.createElement("div");
-          wrap.className = "help-text";
+          // One language of the pair at a time, as the toggle chooses (the stylesheet hides the other); a section in neither stays.
+          var n = place(one.lang, card.getAttribute("data-pair"), root.getAttribute("lang"));
+          wrap.className = n ? "t help-text" : "help-text";  // the stylesheet hides every .t that is not the chosen language
+          if (n) wrap.setAttribute("data-n", String(n));
           if (one.lang) wrap.setAttribute("lang", one.lang);
           wrap.appendChild(copy);
           body.appendChild(wrap);
         });
-        status.textContent = "";
+        say(status, null);
       }).catch(function () {
-        if (sheet === wanted) status.textContent = card.getAttribute("data-failed");
+        if (sheet === wanted) say(status, "failed");
       });
     }
 
@@ -223,7 +242,7 @@
 
     function report() {
       var words = card.querySelector("[data-report-words]");
-      card.querySelector("[data-report-status]").textContent = "";
+      say(card.querySelector("[data-report-status]"), null);
       preview();
       show("report");
       words.focus();
@@ -236,12 +255,12 @@
       var nav = typeof navigator !== "undefined" ? navigator : {};
       if (nav.clipboard && nav.clipboard.writeText) {
         nav.clipboard.writeText(text).then(function () {
-          status.textContent = card.getAttribute("data-copied");
+          say(status, "copied");
         }, function () {
-          status.textContent = card.getAttribute("data-copy-failed");
+          say(status, "copy-failed");
         });
       } else {
-        status.textContent = card.getAttribute("data-copy-failed");
+        say(status, "copy-failed");
       }
     }
 

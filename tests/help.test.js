@@ -10,7 +10,7 @@ const vm = require("node:vm");
 
 const FILE = path.join(__dirname, "..", "phrasebook", "assets", "help.js");
 const SOURCE = fs.readFileSync(FILE, "utf8");
-const { apply, toggle, anchor, fit, context, message, mailto, copied, sections, MAX_CONTEXT } = require(FILE);
+const { apply, toggle, place, say, anchor, fit, context, message, mailto, copied, sections, MAX_CONTEXT } = require(FILE);
 
 function fakeRoot() {
   const attrs = {};
@@ -150,4 +150,30 @@ test("sections picks the text of one feature in each language the chapter has", 
   const doc = { querySelectorAll: (sel) => (sel === '[data-feature="tiles"]' ? [node("cy"), node("en")] : []) };
   assert.deepEqual(sections(doc, "tiles").map((s) => s.lang), ["cy", "en"]);
   assert.deepEqual(sections(doc, "back"), []);
+});
+
+test("place says which language of the pair a section is in, or none when it is in neither", () => {
+  assert.equal(place("cy", "cy>en", "en"), 1);
+  assert.equal(place("en", "cy>en", "en"), 2);
+  assert.equal(place("", "cy>en", "en"), 2, "no language means the language of the page");
+  assert.equal(place("", "en>cy", "en"), 1);
+  assert.equal(place("fr", "cy>en", "en"), 0, "a section in neither stays on show");
+  assert.equal(place("cy", "", "en"), 0);
+  assert.equal(place("cy", undefined, "en"), 0);
+});
+
+test("say shows one message of a status line and hides the rest", () => {
+  const make = (name) => ({ name, hidden: true, getAttribute: () => name });
+  const items = [make("loading"), make("failed"), make("copied")];
+  const line = { querySelectorAll: () => items };
+  say(line, "failed");
+  assert.deepEqual(items.map((i) => i.hidden), [true, false, true]);
+  say(line, "copied");
+  assert.deepEqual(items.map((i) => i.hidden), [true, true, false]);
+  say(line, null);
+  assert.deepEqual(items.map((i) => i.hidden), [true, true, true]);
+});
+
+test("a status line is never written with text from the page, only shown or hidden", () => {
+  assert.doesNotMatch(SOURCE, /status\.textContent\s*=/);
 });

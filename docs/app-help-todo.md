@@ -26,7 +26,7 @@ Still to do:
 - [x] Rail button, in the **4th slot from the bottom**, directly above the edit-order spanner. Done 2026-10-23 (`#help-toggle`, `help.js`).
 - [x] Hidden in-context help icons, each marked `data-help="<chapter>#<feature>"` and a plain link to `help-<chapter>.html#<feature>`. First set done 2026-10-23: the trail, tile grids, jump links, section Order lines, the pager, the Related row, and six Settings choices. Still open: which other features and tiles get one.
 - [x] Sheet on each icon: **What's this?** first, **Report a problem** second. Done 2026-10-23.
-- [x] Overlay that loads the text of one feature from its chapter page (cached offline). Done: it looks for `[data-feature="<anchor>"]`, so the second language's suffixed ids do not matter, and shows each language the chapter has. Dismissed by Escape, Close and a tap outside; focus returns to the icon; the page behind is inert.
+- [x] Overlay that loads the text of one feature from its chapter page (cached offline). Done: it looks for `[data-feature="<anchor>"]`, so the second language's suffixed ids do not matter, and shows each language the chapter has. Dismissed by the small x, Escape and a tap outside, and it has the Cy|En toggle; focus returns to the icon; the page behind is inert.
 - [x] Without the script, each icon is a plain link to `help-<chapter>.html#<feature>`; with it, the icon opens the sheet. Icons and the button are hidden until the script runs.
 - [x] Report a problem: at most 256 characters of context, a preview, *Open email* (`mailto:`) and *Copy*; no background sending. The address is the edition's `contact`, kept in two pieces in the page.
 - [x] Chapter 7 is shown (the `ask` condition is gone). The report feature in it needs the edition's `contact`.
