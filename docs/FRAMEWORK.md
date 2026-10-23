@@ -276,7 +276,7 @@ Be aware of these before relying on the framework for a language that needs them
 
 ## Starting a new translator
 
-1. Copy the `cydymaith` repository's `content/gair-wrth-air/` to `content/<new-name>/`, or start from the fixture in `tests/fixture.py`.
+1. Copy the `cydymaith` repository's `content/cydymaith/` to `content/<new-name>/`, or start from the fixture in `tests/fixture.py`.
 2. Replace the packs, pages, structure and edition. Keep `static/` for your fonts and typography.
 3. `python3 build.py dist --project content/<new-name>`. If it is the only folder in `content/`, no flag is needed.
 4. To publish separately, copy the framework files listed at the top into the new repository.
