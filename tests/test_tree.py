@@ -403,8 +403,8 @@ class FrameTests(Scratch):
 
     def test_the_generated_pages_go_back_to_the_right_place(self):
         self.assertIn('<a class="rail-link back" href="index.html" data-back aria-label="Back"', self.pages["settings.html"])
-        self.assertIn('<a class="rail-link back" href="settings.html" data-back aria-label="Back"', self.pages["how-to.html"])
-        self.assertIn('<a class="rail-link back" href="settings.html" data-back aria-label="Back"', self.pages["sources.html"])
+        self.assertIn('<a class="rail-link back" href="about.html" data-back aria-label="Back"', self.pages["how-to.html"])
+        self.assertIn('<a class="rail-link back" href="about.html" data-back aria-label="Back"', self.pages["sources.html"])
 
     def test_back_and_the_trail_are_named_by_messages(self):
         page = self.pages["p1.html"]
@@ -484,11 +484,17 @@ class FrameTests(Scratch):
             self.assertNotIn("<img", page, name)
         self.assertFalse(list(self.out.rglob("*.svg")))
 
-    def test_the_settings_page_lists_how_to_and_sources_under_about(self):
-        page = self.pages["settings.html"]
-        self.assertIn('id="about"', page)
-        self.assertIn('<a href="how-to.html">', page)
-        self.assertIn('<a href="sources.html">', page)
+    def test_the_about_page_links_how_to_and_sources_and_settings_does_not(self):
+        about, settings = self.pages["about.html"], self.pages["settings.html"]
+        self.assertIn('<a href="how-to.html">', about)
+        self.assertIn('<a href="sources.html">', about)
+        self.assertNotIn('<a href="how-to.html">', settings)
+        self.assertNotIn('<a href="sources.html">', settings)
+
+    def test_how_to_and_sources_sit_under_about_in_the_trail_when_there_is_an_about_page(self):
+        for name in ("how-to.html", "sources.html"):
+            trail = self.pages[name].split('class="trail"')[1].split("</ol>")[0]
+            self.assertEqual(re.findall(r'<li><a href="([^"]+)"', trail), ["index.html", "about.html"], name)
 
     def test_every_page_but_home_names_its_parent_and_home_names_none(self):
         self.assertNotIn("data-parent", self.pages["index.html"].split("</head>")[0].split("<head>")[0])
@@ -497,8 +503,8 @@ class FrameTests(Scratch):
             "p1.html": "group-g1.html",
             "points.html": "group-g1.html",
             "settings.html": "index.html",
-            "how-to.html": "settings.html",
-            "sources.html": "settings.html",
+            "how-to.html": "about.html",
+            "sources.html": "about.html",
         }
         for name, parent in expected.items():
             self.assertIn(f' data-parent="{parent}">', self.pages[name].split("<head>")[0], name)
@@ -645,9 +651,9 @@ class HowToTests(Scratch):
         quiet_build(cls.out, project_dir=cls.proj)
         cls.pages = {f.name: f.read_text(encoding="utf-8") for f in cls.out.glob("*.html")}
 
-    def test_the_page_is_built_and_linked_from_settings(self):
+    def test_the_page_is_built_and_linked_from_the_about_page(self):
         self.assertIn("how-to.html", self.pages)
-        self.assertIn('<a href="how-to.html">', self.pages["settings.html"])
+        self.assertIn('<a href="how-to.html">', self.pages["about.html"])
 
     def test_it_marks_itself_as_the_current_page_and_has_no_pager(self):
         page = self.pages["how-to.html"]

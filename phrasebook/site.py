@@ -475,9 +475,10 @@ class Site:
             steps.append((None, self.pair_spans(self.title(frm, current), self.title(to, current))))
         elif current in ("settings", "about"):
             steps.append((None, self.ui_pair(current)))
-        else:  # the how-to and sources pages sit under settings
+        else:  # the how-to and sources pages sit under About, or under Settings where the edition has no About page
+            under = "about" if self.edition.get("about_page") else "settings"
             steps += [
-                ("settings.html", self.ui_pair("settings")),
+                (f"{under}.html", self.ui_pair(under)),
                 (None, self.ui_pair("how_to" if current == "how-to" else current)),
             ]
         return steps
@@ -750,20 +751,21 @@ class Site:
         ]
         lcode, lede = self.prose(lambda c: home.get("lede", {}).get(c))
         acode, about = self.prose(lambda c: home.get("about", {}).get(c))
-        link = f'<a href="sources.html">{self.h("sources_link")}</a>'
         if self.edition.get("about_page"):
-            link = f'<a href="about.html">{self.h("about_app")}</a> · {link}'
-        return (
-            f'<header><p class="kicker">{self.ui_html(frm, "phrasebook")} / {self.ui_html(to, "phrasebook")}</p>'
-            f'<h1>{self.inline(frm, home["headline"][frm])}</h1>'
-            f'<p class="title-l2"{self.la(to)}>{e(home["headline"][to])}</p>'
-            f'<p class="lede">{self.inline(lcode, lede) if lede else ""}</p></header>'
-            + self.tiles(groups, "index")
-            + (
+            # The About page holds the links to the app's own pages, so the closing line is only the note, if there is one.
+            closing = f'<p class="about">{self.inline(acode, about)}</p>' if about else ""
+        else:
+            link = f'<a href="sources.html">{self.h("sources_link")}</a>'
+            closing = (
                 f'<p class="about">{self.h("home_about", about=self.inline(acode, about), link=link)}</p>'
                 if about
                 else f'<p class="about">{link}</p>'
             )
+        return (
+            f'<header><p class="kicker">{self.ui_html(frm, "phrasebook")} / {self.ui_html(to, "phrasebook")}</p>'
+            f'<h1>{self.inline(frm, home["headline"][frm])}</h1>'
+            f'<p class="title-l2"{self.la(to)}>{e(home["headline"][to])}</p>'
+            f'<p class="lede">{self.inline(lcode, lede) if lede else ""}</p></header>' + self.tiles(groups, "index") + closing
         )
 
     def group_page(self, group):
@@ -881,15 +883,13 @@ class Site:
             f'<div class="page-head"><header><h1>{self.both("settings")}</h1></header>{bar}</div>'
             f'<p class="lede">{self.both("settings_lede")}</p>'
         )
-        links = "".join(
-            f'<li><a href="{href}">{self.both(key)}</a></li>'
-            for href, key in (
-                *((("about.html", "about"),) if self.edition.get("about_page") else ()),
-                ("how-to.html", "how_to"),
-                ("sources.html", "sources"),
+        about = ""
+        if not self.edition.get("about_page"):  # with an About page, that is where How to use the app and Sources are linked
+            links = "".join(
+                f'<li><a href="{href}">{self.both(key)}</a></li>'
+                for href, key in (("how-to.html", "how_to"), ("sources.html", "sources"))
             )
-        )
-        about = f'<section class="card" id="about"><h2>{self.both("about_app")}</h2><ul class="links">{links}</ul></section>'
+            about = f'<section class="card" id="about"><h2>{self.both("about_app")}</h2><ul class="links">{links}</ul></section>'
         # Every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices.
         reset_orders = (
             f'<div class="reset-orders" data-reset-orders hidden><h2>{self.h("reset_orders_title")}</h2>'
@@ -953,7 +953,10 @@ class Site:
             for section in page["sections"]:
                 body = "".join(self.about_block(code, block) for block in section["body"])
                 parts.append(f'<section><h2>{e(section["title"])}</h2>{body}</section>')
-            parts.append(f'<p class="about-more"><a href="sources.html">{self.ui_html(code, "sources")}</a></p>')
+            parts.append(
+                f'<p class="about-more"><a href="how-to.html">{self.ui_html(code, "how_to")}</a> · '
+                f'<a href="sources.html">{self.ui_html(code, "sources")}</a></p>'
+            )
             if self.built:
                 # The label is in the article's language; the time is written the same in all of them, in UTC, so no month names.
                 utc = self.built.astimezone(datetime.timezone.utc)

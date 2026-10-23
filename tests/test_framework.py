@@ -389,6 +389,10 @@ class LocalisedInterfaceTests(Scratch):
         cls.messages = Messages(cls.raw["packs"])
         built = datetime.datetime(2026, 1, 2, 3, 4, tzinfo=datetime.timezone.utc)
         cls.pages = phrasebook.Site(cls.raw, cls.ed, messages=cls.messages, built=built).render_all()
+        # An edition with no About page keeps the links to How to use the app and Sources on the home page and in Settings, which
+        # use messages the other does not; rendered with the same catalogue so that every message is seen used.
+        bare = {k: v for k, v in cls.ed.items() if k != "about_page"}
+        cls.bare_pages = phrasebook.Site(cls.raw, bare, messages=cls.messages, built=built).render_all()
 
     def test_the_pseudo_translation_is_valid(self):
         content.validate(self.raw)
@@ -590,7 +594,8 @@ class AboutPageTests(Scratch):
             '<section><h2>qaa aims</h2><p>qaa first paragraph</p><ul class="notes"><li>qaa one</li><li>qaa two</li></ul></section>',
             page,
         )
-        self.assertEqual(page.count('<p class="about-more"><a href="sources.html">'), 2)
+        self.assertEqual(page.count('<p class="about-more"><a href="how-to.html">'), 2, "one in each language")
+        self.assertEqual(page.count('</a> · <a href="sources.html">'), 2)
 
     def test_each_language_ends_with_when_the_site_was_built_written_the_same_way_in_utc(self):
         page = self.pages["about.html"]
@@ -621,8 +626,23 @@ class AboutPageTests(Scratch):
         self.assertIn('href="about.html" aria-label="About" title="About" aria-current="page"', self.pages["about.html"])
         self.assertNotIn('href="about.html" aria-label="About" title="About" aria-current', self.pages["p1.html"])
 
-    def test_the_settings_page_lists_it_with_the_other_pages_about_the_app(self):
-        self.assertIn('<li><a href="about.html">', self.pages["settings.html"])
+    def test_the_settings_page_no_longer_lists_the_pages_about_the_app(self):
+        settings = self.pages["settings.html"]
+        self.assertNotIn('id="about"', settings)
+        for target in ("about.html", "how-to.html", "sources.html"):
+            if target == "about.html":
+                self.assertEqual(settings.count(f'href="{target}"'), 1, "only the rail's information icon")
+            else:
+                self.assertNotIn(f'href="{target}"', settings)
+
+    def test_an_edition_with_no_about_page_keeps_the_list_in_settings(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("about_page"))
+        settings = self.built(proj)["settings.html"]
+        self.assertIn('id="about"', settings)
+        self.assertIn('<a href="how-to.html">', settings)
+        self.assertIn('<a href="sources.html">', settings)
+        self.assertNotIn('<li><a href="about.html">', settings)
 
     def test_a_project_without_the_page_has_no_page_and_no_rail_link(self):
         proj = self.project()
@@ -729,12 +749,24 @@ class AboutPageTests(Scratch):
         )
         content.validate(content.read(proj))
 
-    def test_the_home_page_links_to_the_about_page_beside_the_sources(self):
+    def test_the_home_page_leaves_the_links_to_the_about_page_which_holds_them(self):
         home = self.pages["index.html"]
-        self.assertLess(home.index('<a href="about.html">'), home.index('<a href="sources.html">'))
+        self.assertNotIn('href="sources.html"', home)
+        self.assertNotIn('href="how-to.html"', home)
+        self.assertEqual(home.count('href="about.html"'), 1, "only the rail's information icon")
+        self.assertIn('<p class="about">Lorem ipsum.</p>', home, "the note stays, with no links")
+
+    def test_with_no_note_there_is_no_closing_line_at_all(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d["home"].pop("about"))
+        self.assertNotIn('class="about"', self.built(proj)["index.html"])
+
+    def test_an_edition_with_no_about_page_keeps_the_links_on_the_home_page_so_the_pages_stay_reachable(self):
         proj = self.project()
         fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("about_page"))
-        self.assertNotIn('<a href="about.html">', self.built(proj)["index.html"])
+        home = self.built(proj)["index.html"]
+        self.assertIn('<a href="sources.html">', home)
+        self.assertNotIn('href="about.html"', home)
 
     def test_about_is_a_reserved_page_name(self):
         proj = self.project()
