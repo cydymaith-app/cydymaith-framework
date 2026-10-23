@@ -9,6 +9,7 @@ import pathlib
 import re
 import sys
 import unittest
+from html.parser import HTMLParser
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -253,6 +254,72 @@ class BuildTests(Scratch):
                         match = re.match(r"help-([a-z-]+)\.html#([a-z-]+)$", link["href"])
                         if match:
                             self.assertIn(match.group(2), ANCHORS)
+
+
+class BuiltBookTests(Scratch):
+    """The real book, built on the fixture: what the reader gets."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.pages = cls.built(cls.project())
+        cls.help_pages = {n: t for n, t in cls.pages.items() if n.startswith("help-") or n == "how-to.html"}
+
+    def ids(self, text):
+        found = []
+
+        class Collect(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                found.extend(v for k, v in attrs if k == "id")
+
+        Collect().feed(text)
+        return found
+
+    def test_there_is_a_page_for_every_chapter_and_the_contents(self):
+        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html"})
+
+    def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
+        chapter = self.ids(self.pages["help-finding-your-way.html"])
+        for anchor in ANCHORS:
+            self.assertEqual(chapter.count(anchor), 1, anchor)
+            self.assertNotIn(anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them")
+        for name, text in self.help_pages.items():
+            ids = self.ids(text)
+            self.assertEqual(len(ids), len(set(ids)), f"{name}: duplicate ids")
+
+    def test_the_book_has_no_unrendered_template_and_makes_no_request_to_another_site(self):
+        for name, text in self.help_pages.items():
+            self.assertNotIn("{{", text, name)
+            self.assertNotIn("}}", text, name)
+            self.assertNotRegex(text, r'(src|href)="https?://', name)
+            self.assertNotIn("<script src=\"http", text, name)
+
+    def test_every_link_in_the_contents_goes_to_a_real_anchor(self):
+        chapter_ids = {n: set(self.ids(t)) for n, t in self.pages.items()}
+        for href in re.findall(r'href="(help-[a-z-]+\.html)(?:#([a-z-]+))?"', self.pages["how-to.html"]):
+            page, anchor = href
+            self.assertIn(page, self.pages, page)
+            if anchor:
+                self.assertIn(anchor, chapter_ids[page], f"{page}#{anchor}")
+
+    def test_every_help_entry_is_well_formed(self):
+        for ident, entry in EN["features"].items():
+            self.assertTrue(entry["title"].strip(), ident)
+            self.assertTrue(entry["body"], ident)
+            for block in entry["body"]:
+                self.assertTrue(isinstance(block, str) and block.strip() or isinstance(block, dict) and set(block) <= {"list", "links"}, ident)
+            for field in ("keys", "touch"):
+                if field in entry:
+                    self.assertTrue(isinstance(entry[field], str) and entry[field].strip(), f"{ident} {field}")
+            self.assertLessEqual(set(entry), {"title", "body", "keys", "touch"}, ident)
+        for chapter in EN["chapters"].values():
+            self.assertLessEqual(set(chapter), {"title", "lede"})
+
+    def test_help_text_is_in_normal_form_c(self):
+        import unicodedata
+
+        text = (ENGINE / "help" / "en.json").read_text(encoding="utf-8")
+        self.assertEqual(unicodedata.normalize("NFC", text), text)
 
 
 if __name__ == "__main__":

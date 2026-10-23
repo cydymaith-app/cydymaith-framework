@@ -44,6 +44,8 @@ Planned 2026-10-23. Covers the book itself. The in-context icons, sheet, overlay
 
 ## Phase 2: tests (framework)
 
+**Done 2026-10-23.** Most of this landed with Phase 1 in `tests/test_help.py`; the rest (anchor ids exactly once, unique ids per page, no unrendered templates or requests to another site, every contents link reaching a real anchor, well-formed entries, normal form C) was added after. The project's own tests cover the pages generically (ids, `{{`, current-page marks).
+
 - Every anchor in `help.py` has English text.
 - Anchors are unique, valid ids, and appear exactly once in the built pages.
 - A feature whose condition is not met is absent, with its contents link.
