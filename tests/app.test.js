@@ -59,7 +59,7 @@ function run({ stored, storage, radios, langRadios, shareButtons, navigator, wit
 }
 
 const saved = (varieties, extra = {}) => JSON.stringify({ v: 4, varieties, ...extra });
-const state = (varieties = {}, extra = {}) => ({ v: 4, appearance: "system", palette: "default", picks: {}, varieties, ...extra });
+const state = (varieties = {}, extra = {}) => ({ v: 4, appearance: "system", palette: "default", order: "written", picks: {}, varieties, ...extra });
 
 test("applies a saved variety to the page before it is painted", () => {
   const page = run({ stored: saved({ cy: "north" }) });
@@ -233,6 +233,55 @@ test("the theme controls show the saved choice", () => {
   page.domReady();
   assert.deepEqual(radios.map((r) => r.checked), [false, true, false, false, true]);
   assert.equal(page.panel.hidden, false);
+});
+
+// ---- the order of tiles and sections
+
+test("the order the tiles and sections are in is a preference, as written until chosen", () => {
+  const radios = [makeRadio(null, "written", "order"), makeRadio(null, "simple", "order"), makeRadio(null, "advanced", "order")];
+  const page = run({ radios });
+  page.domReady();
+  assert.deepEqual(radios.map((r) => r.checked), [true, false, false], "nothing saved: as written");
+  radios[2].checked = true;
+  radios[2].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]), state({}, { order: "advanced" }));
+  radios[1].checked = true;
+  radios[1].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]), state({}, { order: "simple" }));
+  radios[0].checked = true;
+  radios[0].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]), state());
+});
+
+test("the controls show the saved order", () => {
+  for (const order of ["written", "simple", "advanced"]) {
+    const radios = [makeRadio(null, "written", "order"), makeRadio(null, "simple", "order"), makeRadio(null, "advanced", "order")];
+    const page = run({ stored: saved({}, { order }), radios });
+    page.domReady();
+    assert.deepEqual(radios.map((r) => r.value === order && r.checked), radios.map((r) => r.value === order), order);
+    assert.equal(radios.filter((r) => r.checked).length, 1, order);
+  }
+});
+
+test("a saved order that is not one of the three counts as written", () => {
+  for (const order of ["alphabetical", "", 7, null, ["simple"], "SIMPLE", '"><script>']) {
+    const radios = [makeRadio(null, "written", "order"), makeRadio(null, "simple", "order"), makeRadio(null, "advanced", "order")];
+    const page = run({ stored: saved({}, { order }), radios });
+    page.domReady();
+    assert.deepEqual(radios.map((r) => r.checked), [true, false, false], JSON.stringify(order));
+  }
+});
+
+test("the order is kept when the other choices change, and an earlier version's choices survive the new field", () => {
+  const radios = [makeRadio(null, "system", "appearance"), makeRadio(null, "dark", "appearance")];
+  const page = run({ stored: saved({}, { order: "simple" }), radios });
+  page.domReady();
+  radios[1].checked = true;
+  radios[1].fire("change");
+  assert.deepEqual(JSON.parse(page.data[KEY]), state({}, { appearance: "dark", order: "simple" }));
+  const older = run({ stored: JSON.stringify({ v: 3, appearance: "dark", palette: "default", varieties: {} }) });
+  older.domReady();
+  assert.equal(older.attrs["data-theme"], "dark");
 });
 
 test("choosing an appearance updates the page and is remembered", () => {

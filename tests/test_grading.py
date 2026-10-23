@@ -79,6 +79,12 @@ class GradeTests(Scratch):
         self.assertEqual(group["median"], 1.0)
         self.assertEqual(group["level"], 1, "a group takes the typical entry of every page it lists")
 
+    def test_the_levels_come_as_lookups_for_the_site_to_write_on_its_tiles_and_sections(self):
+        found = grading.levels(self.graded(self.project()))
+        self.assertEqual(found["groups"], {"g1": 1})
+        self.assertEqual(found["pages"], {"p1": 2, "points": 1})
+        self.assertEqual(found["sections"], {("p1", "s1"): 2, ("p1", "s2"): 2, ("p1", "s3"): 2, ("points", "dirs"): 1})
+
     def test_a_level_set_by_hand_wins_and_the_rule_is_kept_beside_it(self):
         proj = self.project()
         fixture.edit(proj / "pages" / "p1.json", lambda d: d["sections"][0].update(level=1))

@@ -15,7 +15,7 @@ import pathlib
 import re
 import unicodedata
 
-from . import colour, icons, palettes
+from . import colour, grading, icons, palettes
 from .figures import FIGURE_CONCEPTS, FIGURES
 from .content import LICENCES, STORAGE_NAME
 from .messages import Messages
@@ -39,6 +39,7 @@ class Site:
         self.frm, self.to = pair or edition["default_pair"]
         self.skel = raw["pages"]
         self.packs = raw["packs"]
+        self.levels = grading.levels(grading.grade(raw, edition))  # how demanding each group, page and section is
         self.messages = messages or Messages(raw["packs"])
         self.palettes = raw["palettes"]
         self.palette_ids = edition.get("palettes") or list(self.palettes)
@@ -347,9 +348,33 @@ class Site:
             )
         return "".join(fields)
 
+    ORDERS = ("written", "simple", "advanced")  # as written, simplest first, most advanced first
+
+    def has_levels(self):
+        """True when the site has something to put in order: tiles or sections of more than one level."""
+        found = {level for table in self.levels.values() for level in table.values()}
+        return len(found) > 1
+
+    def order_card(self):
+        """Put tiles and sections in order from simple to advanced, or the other way round, or leave them as written. Only offered
+        when the levels differ somewhere, so it is never a control that does nothing. A screen the visitor has arranged keeps their order.
+        """
+        if not self.has_levels():
+            return ""
+        radios = "".join(
+            f'<label><input type="radio" name="order" value="{v}" data-pref="order"{" checked" if v == "written" else ""}>'
+            f'<span class="seg-label">{self.both("order_" + v)}</span></label>'
+            for v in self.ORDERS
+        )
+        return (
+            f'<section class="card" aria-labelledby="h-order"><h2 id="h-order">{self.both("order_title")}</h2>'
+            f'<p class="hint">{self.both("order_hint")}</p>'
+            f'<div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div></section>'
+        )
+
     def prefs_controls(self):
         """Every choice the visitor can make. Hidden until app.js runs, so it is never a dead control."""
-        return f'<div class="prefs" id="prefs" hidden>{self.theme_controls()}{self.variety_fields()}</div>'
+        return f'<div class="prefs" id="prefs" hidden>{self.theme_controls()}{self.order_card()}{self.variety_fields()}</div>'
 
     def palettes_css(self):
         return palettes.css(self.palettes, self.palette_ids)
@@ -480,13 +505,20 @@ class Site:
             )
         return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>'
 
-    def tile(self, href, first, second, icon, ident):
+    # Right after a list of tiles, and after the sections of a topic, so it runs as soon as they exist and before anything is painted:
+    # it asks order.js (loaded in the head) to put them in order, so they are never seen moving. Without that script nothing happens and
+    # they stay as written. It is written without a closing brace pair, which the project's check for unrendered templates rejects.
+    ORDER_HOOK = '<script>(function(d){var v=new Event("phrasebook:order");v.page=d.currentScript.parentNode;d.dispatchEvent(v)})(document)</script>'
+
+    def tile(self, href, first, second, icon, ident, level=None):
         """A large touch target: the icon on a tile, with the name in both languages beneath. No icon, the name goes in the tile.
-        `ident` names the tile for a saved order (data-tile), so the order is kept whatever the tile's label says."""
+        `ident` names the tile for a saved order (data-tile), so the order is kept whatever the tile's label says. `level` is how
+        demanding it is, from 1 to 3 (data-level), for putting the tiles in order from simple to advanced."""
         l1, l2 = self.pair_spans(first, second)
         inner = self.icon_html(icon) or f'<span class="tile-text" aria-hidden="true">{e(first)}</span>'
+        graded = f' data-level="{level}"' if level else ""
         return (
-            f'<li data-tile="{e(ident)}"><a class="tile-link" href="{href}"><span class="tile">{inner}</span>'
+            f'<li data-tile="{e(ident)}"{graded}><a class="tile-link" href="{href}"><span class="tile">{inner}</span>'
             f'<span class="tile-name">{l1}{l2}</span></a></li>'
         )
 
@@ -515,23 +547,9 @@ class Site:
         )
         # Read aloud, not seen: the script says each change here for a screen reader, so the region stays in the page.
         live = '<p class="sr-only" role="status" data-arrange-status></p>'
-        # The order saved on this device for this screen is applied by the script right after the list, as soon as the list exists and
-        # before anything is painted, so the tiles are never seen in their default order and nothing has to be hidden. It does what
-        # arrange.js does (the saved ids first, then any the order does not name, in their default places) and needs no other script.
-        # arrange.js applies the same order to the copy of a page that nav.js slides in, so that arrives in order too.
-        arranged = (
-            "<script>(function(d){try{var u=d.currentScript.previousElementSibling,"
-            's=JSON.parse(window.localStorage.getItem((d.documentElement.getAttribute("data-storage")||"phrasebook")+":order"));'
-            's=s&&s.v===1&&s.screens&&s.screens[u.getAttribute("data-order")];if(!Array.isArray(s))return;'
-            "var a=[].slice.call(u.children),m=Object.create(null);"
-            'a.forEach(function(li){m[li.getAttribute("data-tile")]=li});'
-            "s.forEach(function(k){if(m[k])u.appendChild(m[k]),m[k]=null});"
-            'a.forEach(function(li){if(m[li.getAttribute("data-tile")])u.appendChild(li)})'
-            "}catch(err){};})(document)</script>"
-        )
         return (
             f'{bar}{live}<ul class="tiles" data-tiles data-order="{e(order)}" aria-label="{e(self.plain("topics_label"))}">'
-            f'{"".join(items)}</ul>{arranged}'
+            f'{"".join(items)}</ul>{self.ORDER_HOOK}'
         )
 
     # -- pages
@@ -607,7 +625,7 @@ class Site:
                 f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>'
             )
         return (
-            f'<section id="{sid}">{heading}{order}{intro}'
+            f'<section id="{sid}" data-level="{self.levels["sections"].get((slug, sid), 1)}">{heading}{order}{intro}'
             f'<div class="card"><table class="terms pair"><thead class="sr-only"><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
             f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>'
@@ -714,14 +732,19 @@ class Site:
             f'<p class="title-l2"{self.la(to)}>{e(self.title(to, slug))}</p>'
             f"{lede_html}</header>"
         )
-        return head + figure + jump + "".join(self.render_section(slug, s) for s in sections)
+        return head + figure + jump + "".join(self.render_section(slug, s) for s in sections) + self.ORDER_HOOK
 
     def home_page(self):
         frm, to = self.frm, self.to
         home = self.edition.get("home", {})
         groups = [
             self.tile(
-                f"group-{g['id']}.html", self.group_title(frm, g["id"]), self.group_title(to, g["id"]), g.get("icon"), g["id"]
+                f"group-{g['id']}.html",
+                self.group_title(frm, g["id"]),
+                self.group_title(to, g["id"]),
+                g.get("icon"),
+                g["id"],
+                self.levels["groups"].get(g["id"]),
             )
             for g in self.groups
         ]
@@ -751,7 +774,14 @@ class Site:
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
         pages = [
-            self.tile(f"{slug}.html", self.title(frm, slug), self.title(to, slug), self.skel[slug].get("icon"), slug)
+            self.tile(
+                f"{slug}.html",
+                self.title(frm, slug),
+                self.title(to, slug),
+                self.skel[slug].get("icon"),
+                slug,
+                self.levels["pages"].get(slug),
+            )
             for slug in group["pages"] + group["links"]
         ]
         return head + self.tiles(pages, f"group-{gid}")
@@ -975,7 +1005,7 @@ class Site:
     def document(self, title, body, parent=None):
         # The script is blocking on purpose: it sets the saved preferences before the first paint.
         script = (
-            '<script src="app.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
+            '<script src="app.js"></script>\n<script src="order.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
             '<script src="arrange.js" defer></script>\n'
         )
         fonts = "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("fonts", []))

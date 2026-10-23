@@ -27,8 +27,9 @@ Every group, page and section has a **level** from 1 (beginner) to 3 (advanced),
 - **Check it.** `python3 build.py --grades --project path/to/project` prints every group, page and section with its level, its median and how many entries it was worked out from. It builds nothing. Read it as a learner would: simple things first, complex ones following.
 - **Correct it.** Where the rule is plainly wrong, add `"level": 1`, `2` or `3` to the group (in `structure.json`), page or section (in `pages/<slug>.json`). The report stars it and says what the rule would have given. Keep these few, say why in a test, and have a fluent speaker review the grades with the rest of the content.
 - **Tune it.** For a language that does not fit, an edition can set `"grading": {"language": "...", "bounds": [1.5, 2.5]}`. The framework counts words by white space, so for a language written without spaces set the bounds to suit or set the levels by hand.
+- **Order the tiles and sections by it.** The build writes the level on every tile and section (`data-level`), and the Settings page offers **Default** (as written, which stays the default), **Simplest first** and **Most advanced first**, once the levels differ somewhere. A screen whose tiles a person has arranged themselves keeps their order, and the same level keeps the written order. The tiles and sections are moved before the page is painted (`assets/order.js`) and in the copy of a page that slides in, so nothing is seen moving. Translate the `order_*` messages in each language's pack.
 
-The reference, with the rules for what counts as a word, how a group and a page are graded, and the errors the build gives, is in [docs/FRAMEWORK.md](docs/FRAMEWORK.md#grading-how-demanding-a-tile-or-section-is). Ordering tiles by level in the pages themselves is not done yet.
+The reference, with the rules for what counts as a word, how a group and a page are graded, and the errors the build gives, is in [docs/FRAMEWORK.md](docs/FRAMEWORK.md#grading-how-demanding-a-tile-or-section-is).
 
 ## The promises
 

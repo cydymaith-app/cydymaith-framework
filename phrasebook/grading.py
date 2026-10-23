@@ -146,6 +146,18 @@ def grade(raw, edition):
     return {"language": language, "bounds": bounds, "groups": groups}
 
 
+def levels(graded):
+    """The grades as lookups: {"groups": {id: level}, "pages": {slug: level}, "sections": {(slug, id): level}}."""
+    found = {"groups": {}, "pages": {}, "sections": {}}
+    for group in graded["groups"]:
+        found["groups"][group["id"]] = group["level"]
+        for page in group["pages"]:
+            found["pages"][page["id"]] = page["level"]
+            for section in page["sections"]:
+                found["sections"][(page["id"], section["id"])] = section["level"]
+    return found
+
+
 def report(graded):
     """The grades as text, one line per group, page and section, for checking them by eye."""
     low, high = graded["bounds"]

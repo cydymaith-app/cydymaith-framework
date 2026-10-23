@@ -3,9 +3,10 @@
    should go, and the arrow keys move a picked tile (Escape puts it back). Save order, or the spanner again, saves the order on this
    device. Leaving the page without saving discards the changes. Reset puts one screen back in its default order, and Settings
    resets them all. The order has its own key in localStorage, separate from the preferences, and is sent nowhere. A saved order is
-   applied to the page by a few lines right after the tile list (Site.tiles), before anything is painted, and to the copy of
-   another page that nav.js slides in (below), so tiles are never seen moving into place. Without this script the tiles keep their
-   default order and no control is shown. */
+   applied before anything is painted, and to the copy of a page that nav.js slides in, by order.js (loaded in the head), which also
+   puts a screen that has no saved order in order from simple to advanced when the person asks for that. It leaves two things on each
+   list for this script: the order as written (data-written) and the order the screen has when nothing is saved (data-default), which
+   is where Reset goes. Without this script the tiles keep the order they were given and no control is shown. */
 (function () {
   "use strict";
 
@@ -95,7 +96,8 @@
   var resetBox = document.querySelector("[data-reset-orders]");
   var resetStatus = resetBox ? resetBox.querySelector("[data-reset-status]") : null;
   var data = clean(null);
-  var defaults = [];
+  var defaults = [];  // the tiles in the order they are written, which a saved order is merged into
+  var fallback = [];  // the order the screen has with nothing saved for it: as written, or simple to advanced if the person asked
   var state = { arranging: false, picked: null, press: null, ignoreClick: false };
 
   // Storage can be blocked, full or empty (private windows, site data cleared). Never let that break the page.
@@ -123,6 +125,13 @@
   function idOf(li) { return li.getAttribute("data-tile"); }
   function linkOf(li) { return li.querySelector(".tile-link"); }
   function tileIds() { return tiles().map(idOf); }
+
+  // The ids order.js left on the list in `name`, if they are all still tiles of this list; otherwise the tiles as they stand.
+  function listed(name) {
+    var now = tileIds();
+    var ids = (list.getAttribute(name) || "").split(" ").filter(Boolean);
+    return ids.length === now.length && ids.every(function (id) { return now.indexOf(id) !== -1; }) ? ids : now;
+  }
   function indexOf(li) { return tiles().indexOf(li); }
 
   // A tile's name as a screen reader should hear it: both languages.
@@ -179,7 +188,7 @@
   // The order to show: the saved one for this screen, or the default.
   function wanted() {
     var saved = data.screens[screen];
-    return saved ? merge(defaults, saved) : defaults.slice();
+    return saved ? merge(defaults, saved) : fallback.slice();
   }
 
   // Moves one tile to place `to`. The order is kept only in the page until it is saved.
@@ -255,7 +264,7 @@
     unpick();
     delete data.screens[screen];
     if (!persist()) say("data-failed");
-    reorder(defaults.slice(), true);
+    reorder(fallback.slice(), true);
     say("data-reset");
   }
 
@@ -344,7 +353,8 @@
   function init() {
     data = load();
     if (list) {
-      defaults = tileIds();
+      defaults = listed("data-written");
+      fallback = listed("data-default");
       reorder(wanted(), false);
     }
     if (list && bar && button) {
@@ -368,19 +378,6 @@
       if (event.persisted && state.arranging) leave(false);
     });
   }
-
-  // nav.js slides a copy of another page in beside this one. Put its tiles in the order saved for that screen first, so they
-  // arrive where they will stay and do not move when the real page takes their place. The order is read fresh from storage.
-  document.addEventListener("phrasebook:peek", function (event) {
-    var copy = event.detail && event.detail.page;
-    var other = copy && copy.querySelector ? copy.querySelector("[data-tiles][data-order]") : null;
-    var saved = other ? load().screens[other.getAttribute("data-order")] : null;
-    if (!saved) return;
-    var items = Array.prototype.slice.call(other.querySelectorAll(":scope > li[data-tile]"));
-    var byId = {};
-    items.forEach(function (li) { byId[idOf(li)] = li; });
-    merge(items.map(idOf), saved).forEach(function (id) { other.appendChild(byId[id]); });
-  });
 
   init();
 })();

@@ -6,11 +6,8 @@ The panel script's moves are tested in nav.test.js. Run from the repo root: pyth
 
 import html
 import json
-import os
 import pathlib
 import re
-import shutil
-import subprocess
 import sys
 import unittest
 from html.parser import HTMLParser
@@ -382,7 +379,7 @@ class FrameTests(Scratch):
         self.assertNotIn('class="pager"', home)
         self.assertIn('<ul class="tiles" data-tiles data-order="index" aria-label=', home)
         self.assertEqual(home.count('class="tile-link"'), 1)
-        self.assertIn('<li data-tile="g1"><a class="tile-link" href="group-g1.html">', home)
+        self.assertIn('<li data-tile="g1" data-level="1"><a class="tile-link" href="group-g1.html">', home)
 
     def test_a_group_page_has_back_to_home_and_tiles_for_its_topics_without_counts(self):
         page = self.pages["group-g1.html"]
@@ -718,6 +715,48 @@ class SettingsPageTests(Scratch):
         for name, page in self.pages.items():
             self.assertIn('href="settings.html"', page, name)
 
+    def test_the_order_of_tiles_and_sections_is_a_choice_of_three_with_as_written_chosen(self):
+        page = self.pages["settings.html"]
+        self.assertIn('<section class="card" aria-labelledby="h-order"><h2 id="h-order">', page)
+        for value in ("written", "simple", "advanced"):
+            self.assertIn(f'<input type="radio" name="order" value="{value}" data-pref="order"', page)
+        self.assertIn('name="order" value="written" data-pref="order" checked', page)
+        self.assertEqual(page.count('name="order"'), 3)
+        self.assertLess(page.index('id="h-appearance"'), page.index('id="h-order"'), "after the looks, before the regional forms")
+        self.assertLess(page.index('id="h-order"'), page.index('data-variety-lang="qab"'))
+        for name, other in self.pages.items():
+            if name != "settings.html":
+                self.assertNotIn('data-pref="order"', other, name)
+
+    def test_the_order_choice_is_said_in_both_languages_of_the_pair_and_says_a_saved_order_wins(self):
+        page = self.pages["settings.html"]
+        section = page[
+            page.index('aria-labelledby="h-order"') : page.index("</section>", page.index('aria-labelledby="h-order"'))
+        ]
+        self.assertIn("Simplest first", section)
+        self.assertIn("Most advanced first", section)
+        self.assertIn("keeps your order", section)
+        self.assertEqual(
+            section.count('class="t" data-n="1"'), section.count('class="t" data-n="2"'), "every text in both languages"
+        )
+
+    def test_with_every_level_the_same_there_is_nothing_to_order_and_no_choice_is_offered(self):
+        proj = self.project()
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(level=2))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        fixture.edit(proj / "pages" / "points.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        page = self.built(proj)["settings.html"]
+        self.assertNotIn('name="order"', page)
+        self.assertNotIn('id="h-order"', page)
+
+    def test_one_level_apart_anywhere_is_enough_to_offer_it(self):
+        proj = self.project()
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(level=2))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        fixture.edit(proj / "pages" / "points.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d["sections"][0].update(level=3))
+        self.assertIn('name="order"', self.built(proj)["settings.html"])
+
     def test_the_controls_are_on_that_page_only(self):
         for name, page in self.pages.items():
             if name == "settings.html":
@@ -808,10 +847,10 @@ class ArrangeTests(Scratch):
     def test_each_tile_carries_its_id_and_each_screen_its_name_for_the_saved_order(self):
         home = self.pages["index.html"]
         self.assertIn('data-order="index"', home)
-        self.assertIn('<li data-tile="g1"><a class="tile-link" href="group-g1.html">', home)
+        self.assertIn('<li data-tile="g1" data-level="1"><a class="tile-link" href="group-g1.html">', home)
         group = self.pages["group-g1.html"]
         self.assertIn('data-order="group-g1"', group)
-        self.assertIn('<li data-tile="p1"><a class="tile-link" href="p1.html">', group)
+        self.assertIn('<li data-tile="p1" data-level="2"><a class="tile-link" href="p1.html">', group)
 
     def test_the_spanner_is_hidden_until_the_script_shows_it(self):
         home = self.pages["index.html"]
@@ -839,74 +878,51 @@ class ArrangeTests(Scratch):
         self.assertNotIn("data-arrange-pending", (ENGINE / "assets" / "style.css").read_text(encoding="utf-8"))
         self.assertTrue((self.out / "arrange.js").is_file())
 
-    def test_the_saved_order_is_applied_by_a_script_right_after_each_tile_list_before_anything_is_painted(self):
-        after_the_list = re.compile(r"</ul><script>\(function\(d\)\{try\{var u=d\.currentScript\.previousElementSibling")
+    def test_every_tile_list_asks_for_its_order_right_after_it_and_before_anything_is_painted(self):
+        hook = '</ul><script>(function(d){var v=new Event("phrasebook:order");v.page=d.currentScript.parentNode;d.dispatchEvent(v)})(document)</script>'
         for name, page in self.pages.items():
-            if 'data-tiles data-order="' not in page:
-                self.assertNotIn("previousElementSibling", page, name)
-                continue
-            self.assertEqual(len(after_the_list.findall(page)), 1, name)
-            self.assertLess(page.index("previousElementSibling"), page.index("</main>"), name)
+            if 'data-tiles data-order="' in page:
+                self.assertEqual(page.count(hook), 1, name)
+                self.assertLess(page.index(hook), page.index("</main>"), name)
+            elif name != "p1.html" and name != "points.html":
+                self.assertNotIn("phrasebook:order", page, name)
 
-    def run_order_script(self, saved, storage_throws=False):
-        """The home page's order script under Node, against a list of four tiles a, b, c, d: the ids it leaves in order."""
-        node = shutil.which("node")
-        if node is None:
-            if os.environ.get("REQUIRE_NODE"):
-                self.fail("Node is required (REQUIRE_NODE is set) but was not found")
-            self.skipTest("Node is not installed")
-        script = re.search(r"</ul><script>(.*?)</script>", self.pages["index.html"]).group(1)
-        harness = """
-const [script, saved, throws] = process.argv.slice(1);
-const li = (id) => ({ id, getAttribute: (n) => (n === 'data-tile' ? id : null) });
-const ul = {
-  children: ['a', 'b', 'c', 'd'].map(li),
-  getAttribute: (n) => (n === 'data-order' ? 'index' : null),
-  appendChild(x) { this.children = this.children.filter((c) => c !== x); this.children.push(x); return x; },
-};
-const document = {
-  currentScript: { previousElementSibling: ul },
-  documentElement: { getAttribute: (n) => (n === 'data-storage' ? 'demo' : null) },
-};
-const window = {
-  localStorage: {
-    getItem: (k) => {
-      if (throws === '1') throw new Error('blocked');
-      return k === 'demo:order' && saved !== '' ? saved : null;
-    },
-  },
-};
-new Function('document', 'window', script)(document, window);
-console.log(ul.children.map((c) => c.id).join(','));
-"""
-        result = subprocess.run(
-            [node, "-e", harness, script, saved, "1" if storage_throws else "0"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return result.stdout.strip()
+    def test_a_topic_asks_for_its_order_after_its_sections_and_before_the_pager(self):
+        for name in ("p1.html", "points.html"):
+            page = self.pages[name]
+            self.assertEqual(page.count('new Event("phrasebook:order")'), 1, name)
+            self.assertLess(page.rindex("</section>"), page.index('new Event("phrasebook:order")'), name)
+            if 'class="pager"' in page:
+                self.assertLess(page.index('new Event("phrasebook:order")'), page.index('class="pager"'), name)
 
-    @staticmethod
-    def saved(ids):
-        return json.dumps({"v": 1, "screens": {"index": ids}})
+    def test_the_hook_has_no_pair_of_closing_braces_which_the_check_for_unrendered_templates_rejects(self):
+        for name, page in self.pages.items():
+            self.assertNotIn("}}", page, name)
 
-    def test_the_order_script_puts_the_saved_tiles_first_and_the_rest_after_in_their_default_places(self):
-        self.assertEqual(self.run_order_script(self.saved(["c", "a"])), "c,a,b,d")
-        self.assertEqual(self.run_order_script(self.saved(["d", "c", "b", "a"])), "d,c,b,a")
+    def test_order_js_is_in_the_head_after_app_js_and_before_the_page_so_it_can_answer_the_hook(self):
+        for name, page in self.pages.items():
+            head = page.split("<body>")[0]
+            self.assertIn('<script src="app.js"></script>\n<script src="order.js"></script>\n', head, name)
+            self.assertLess(head.index('src="order.js"'), head.index('src="nav.js"'), name)
+            self.assertLess(head.index('src="order.js"'), head.index('src="arrange.js"'), name)
+            self.assertNotIn('src="order.js" defer', head, name)
+        self.assertTrue((self.out / "order.js").is_file())
 
-    def test_the_order_script_ignores_names_the_screen_no_longer_has_and_repeats(self):
-        self.assertEqual(self.run_order_script(self.saved(["zzz", "b", "b", "a"])), "b,a,c,d")
-        self.assertEqual(self.run_order_script(self.saved(["__proto__", "constructor", "c"])), "c,a,b,d")
+    def test_each_tile_and_each_section_carries_the_level_the_build_worked_out(self):
+        home, group, topic = self.pages["index.html"], self.pages["group-g1.html"], self.pages["p1.html"]
+        self.assertIn('<li data-tile="g1" data-level="1"><a class="tile-link"', home)
+        self.assertIn('<li data-tile="p1" data-level="2"><a class="tile-link" href="p1.html">', group)
+        self.assertIn('<li data-tile="points" data-level="1"><a class="tile-link"', group)
+        self.assertIn('<section id="s1" data-level="2">', topic)
+        self.assertIn('<section id="s3" data-level="2">', topic)
 
-    def test_the_order_script_leaves_the_default_order_when_nothing_usable_is_saved(self):
-        self.assertEqual(self.run_order_script(""), "a,b,c,d")
-        self.assertEqual(self.run_order_script("not json"), "a,b,c,d")
-        self.assertEqual(self.run_order_script(json.dumps({"v": 2, "screens": {"index": ["c"]}})), "a,b,c,d")
-        self.assertEqual(self.run_order_script(self.saved("c")), "a,b,c,d", "an order that is not a list")
-        self.assertEqual(self.run_order_script(json.dumps({"v": 1, "screens": {"group-x": ["c"]}})), "a,b,c,d")
-        self.assertEqual(self.run_order_script(self.saved(["c"]), storage_throws=True), "a,b,c,d", "blocked storage")
+    def test_arrange_js_takes_its_orders_from_the_lists_so_reset_goes_to_the_default_and_not_to_the_saved_order(self):
+        script = (ENGINE / "assets" / "arrange.js").read_text(encoding="utf-8")
+        self.assertIn('defaults = listed("data-written")', script)
+        self.assertIn('fallback = listed("data-default")', script)
+        self.assertIn("reorder(fallback.slice(), true)", script)
+        self.assertNotIn("reorder(defaults.slice(), true)", script)
+        self.assertNotIn("phrasebook:peek", script, "the copy of a page is ordered by order.js")
 
 
 if __name__ == "__main__":

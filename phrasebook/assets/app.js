@@ -1,6 +1,8 @@
 /* Phrasebook framework: remembers display preferences in this browser only.
    Preferences: light or dark appearance, a colour palette (and the palette last picked at each accessibility level),
-   a regional form per language, and the language shown by the Cy|En toggles. It also reveals the Share button.
+   a regional form per language, the language shown by the Cy|En toggles, and whether tiles and sections are put in order from
+   simple to advanced, the reverse, or left as written (order.js does the ordering; this only remembers the choice).
+   It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
    palette, and shows every regional form equally. */
@@ -19,9 +21,10 @@
   var APPEARANCES = ["system", "light", "dark"];
   var DEFAULT_PALETTE = "default";
   var LEVELS = ["standard", "safe", "high"];  // the accessibility levels: standard, safe colours, high contrast
+  var ORDERS = ["written", "simple", "advanced"];  // tiles and sections as written, simplest first, most advanced first
 
   function empty() {
-    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, picks: {}, varieties: {} };
+    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, order: "written", picks: {}, varieties: {} };
   }
 
   // Keep only values we understand. Anything else in storage is ignored. Versions 1 (only varieties) and 2
@@ -30,6 +33,7 @@
     var out = empty();
     if (!raw || typeof raw !== "object" || [1, 2, 3, VERSION].indexOf(raw.v) === -1) return out;
     if (APPEARANCES.indexOf(raw.appearance) !== -1) out.appearance = raw.appearance;
+    if (ORDERS.indexOf(raw.order) !== -1) out.order = raw.order;
     if (typeof raw.palette === "string" && ID.test(raw.palette)) out.palette = raw.palette;
     if (typeof raw.lang === "string" && LANG.test(raw.lang)) out.lang = raw.lang;
     if (raw.picks && typeof raw.picks === "object") {
@@ -219,13 +223,16 @@
 
     themes.forEach(function (r) {
       var pref = r.getAttribute("data-pref");
-      if (pref !== "appearance" && pref !== "palette" && pref !== "access") return;
+      if (pref !== "appearance" && pref !== "palette" && pref !== "access" && pref !== "order") return;
       if (pref === "appearance") r.checked = prefs.appearance === r.value;
+      if (pref === "order") r.checked = prefs.order === r.value;
       r.addEventListener("change", function () {
         if (!r.checked) return;
         if (pref === "appearance") {
           prefs.appearance = r.value;
           setAppearance(r.value);
+        } else if (pref === "order") {
+          prefs.order = r.value;  // takes effect on the pages that follow; order.js reads it as each one loads
         } else if (pref === "palette") {
           prefs.palette = r.value;
           if (levelOf(r.value)) prefs.picks[levelOf(r.value)] = r.value;
