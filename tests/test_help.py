@@ -364,5 +364,83 @@ class BuiltBookTests(Scratch):
         self.assertEqual(unicodedata.normalize("NFC", text), text)
 
 
+class HelpButtonTests(Scratch):
+    """The rail button and the icons it reveals (help.js, Site.help_icon)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        proj = cls.project()
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))
+        cls.pages = cls.built(proj)
+        cls.proj = proj
+
+    def data_help(self, page):
+        return set(re.findall(r'data-help="([a-z-]+#[a-z-]+)"', page))
+
+    def test_icons_are_on_the_screens_that_have_the_feature(self):
+        self.assertIn("finding-your-way#tiles", self.data_help(self.pages["index.html"]))
+        self.assertIn("finding-your-way#tiles", self.data_help(self.pages["group-g1.html"]))
+        topic = self.data_help(self.pages["p1.html"])
+        for want in ("finding-your-way#trail", "finding-your-way#pager", "finding-your-way#jump-links", "reading-a-topic#related-topics"):
+            self.assertIn(want, topic)
+        settings = self.data_help(self.pages["settings.html"])
+        for want in ("your-settings#view-mode", "your-settings#reset-tile-layouts"):
+            self.assertIn(want, settings)
+
+    def test_every_icon_names_a_feature_of_a_chapter_that_exists_and_links_to_it(self):
+        for name, page in self.pages.items():
+            for chapter, feature in (pair.split("#") for pair in self.data_help(page)):
+                self.assertIn(f"help-{chapter}.html", self.pages, f"{name}: {chapter}")
+                self.assertIn(f'href="help-{chapter}.html#{feature}"', page, f"{name}: {feature}")
+                self.assertRegex(self.pages[f"help-{chapter}.html"], rf'id="{feature}" data-feature="{feature}"', f"{name}: {feature}")
+
+    def test_the_button_is_on_exactly_the_pages_that_have_icons_and_is_hidden_until_the_script_runs(self):
+        for name, page in self.pages.items():
+            has_button = 'id="help-toggle"' in page
+            self.assertEqual(has_button, "data-help=" in page, name)
+            if has_button:
+                self.assertRegex(page, r'<button type="button" class="rail-link help-toggle" id="help-toggle" hidden aria-pressed="false"', name)
+
+    def test_the_button_is_the_fourth_from_the_bottom_above_edit_order(self):
+        rail = self.pages["index.html"]
+        group = rail[rail.index('<div class="rail-group"><button type="button" class="rail-link help-toggle"') :]
+        order = [group.index(m) for m in ('id="help-toggle"', 'id="arrange-button"', 'href="about.html"', 'href="settings.html"')]
+        self.assertEqual(order, sorted(order))
+        topic = self.pages["p1.html"]
+        self.assertLess(topic.index('id="help-toggle"'), topic.index('href="about.html" aria-label'))
+        self.assertNotIn('id="arrange-button"', topic)
+
+    def test_the_icons_are_hidden_until_the_page_is_helping_so_without_the_script_they_never_show(self):
+        css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
+        self.assertIn(".help-icon{display:none", css)
+        self.assertIn("html[data-helping] .help-icon{display:inline-grid", css)
+        self.assertNotIn("data-helping", "".join(self.pages.values()), "only the script sets the mark")
+        self.assertIn('<script src="help.js" defer></script>', self.pages["index.html"])
+
+    def test_an_icon_has_a_name_in_the_interface_language_and_makes_no_request(self):
+        page = self.pages["index.html"]
+        for tag in re.findall(r'<a class="help-icon"[^>]*>', page):
+            self.assertRegex(tag, r'aria-label="[^"]+"')
+            self.assertNotRegex(tag, r'href="https?:')
+
+    def test_the_help_book_itself_still_has_its_button_and_no_anchor_clashes_with_an_id_in_the_frame(self):
+        frame_ids = set()
+        for name in ("index.html", "settings.html", "p1.html"):
+            frame_ids |= set(BuiltBookTests.ids(None, self.pages[name]))
+        self.assertEqual(frame_ids & set(ANCHORS), set(), "an anchor is also an id in the frame")
+
+    def test_a_feature_the_edition_does_not_show_has_no_icon_and_a_page_with_none_has_no_button(self):
+        raw = content.read(self.proj)
+        other = helpbook.Book(
+            [{"id": "zed", "features": [{"id": "zz"}]}],
+            {"en": {"chapters": {"zed": {"title": "Z"}}, "features": {"zz": {"title": "ZZ", "body": ["x"]}}}},
+        )
+        pages = phrasebook.Site(raw, content.pick_edition(raw)[1], help_book=other).render_all()
+        for name, page in pages.items():
+            self.assertNotIn("data-help=", page, name)
+            self.assertNotIn("help-toggle", page, name)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -295,7 +295,7 @@ class Site:
         )
         return self.subsection(
             "h-appearance",
-            self.both("view_mode"),
+            self.both("view_mode") + self.help_icon("view-mode"),
             f'<p class="hint">{self.both("appearance_hint")}</p><div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div>',
         )
 
@@ -314,7 +314,7 @@ class Site:
         hints = "".join(f'<p class="hint" data-hint="{level}">{self.both("access_" + level + "_hint")}</p>' for level in levels)
         return self.subsection(
             "h-access",
-            self.both("accessibility"),
+            self.both("accessibility") + self.help_icon("accessibility"),
             f'<p class="hint">{self.both("access_hint")}</p><div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}',
         )
 
@@ -331,7 +331,7 @@ class Site:
         )
         return self.subsection(
             "h-colours",
-            self.both("colours"),
+            self.both("colours") + self.help_icon("colour-schemes"),
             f'<p class="hint">{self.both("colours_hint")}</p>'
             f'<div class="swatches" role="radiogroup" aria-labelledby="h-colours">{cards}</div>'
             f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p>',
@@ -364,7 +364,7 @@ class Site:
             legend = self.both_named("regional_forms", code)
             fields.append(
                 self.fold(
-                    f'<h2 id="h-var-{e(code)}">{legend}</h2>',
+                    f'<h2 id="h-var-{e(code)}">{legend}{self.help_icon("regional-forms")}</h2>',
                     f'<div class="seg" role="radiogroup" aria-labelledby="h-var-{e(code)}">{radios}</div>',
                     card=True,
                     labelled=f"h-var-{e(code)}",
@@ -392,7 +392,7 @@ class Site:
         )
         return self.subsection(
             "h-order",
-            self.both("order_title"),
+            self.both("order_title") + self.help_icon("order-setting"),
             f'<p class="hint">{self.both("order_hint")}</p><div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div>',
         )
 
@@ -400,7 +400,7 @@ class Site:
         """Tile layout: every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices."""
         return self.subsection(
             "h-layout",
-            self.both("reset_orders_title"),
+            self.both("reset_orders_title") + self.help_icon("reset-tile-layouts"),
             f'<p class="hint">{self.both("reset_orders_lede")}</p>'
             f'<p><button type="button">{self.h("reset_orders")}</button></p>'
             f'<p class="arrange-status" role="status" data-reset-status '
@@ -498,7 +498,7 @@ class Site:
             parts.append(link(seq[i - 1], "prev", "previous"))
         if i < len(seq) - 1:
             parts.append(link(seq[i + 1], "next", "next"))
-        return f'<nav class="pager" aria-label="{e(self.plain("pager_label"))}">{"".join(parts)}</nav>'
+        return f'<nav class="pager" aria-label="{e(self.plain("pager_label"))}">{"".join(parts)}{self.help_icon("pager")}</nav>'
 
     # -- the frame: Back, the trail and tiles
 
@@ -559,7 +559,7 @@ class Site:
             items.append(
                 f'<li><a href="{href}">{inner}</a></li>' if href else f'<li><span aria-current="page">{inner}</span></li>'
             )
-        return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>'
+        return back, f'<nav aria-label="{e(self.plain("trail_label"))}"><ol class="trail">{"".join(items)}</ol></nav>{self.help_icon("trail")}'
 
     # Right after a list of tiles, and after the sections of a topic, so it runs as soon as they exist and before anything is painted:
     # it asks order.js (loaded in the head) to put them in order, so they are never seen moving. Without that script nothing happens and
@@ -605,7 +605,7 @@ class Site:
         # Read aloud, not seen: the script says each change here for a screen reader, so the region stays in the page.
         live = '<p class="sr-only" role="status" data-arrange-status></p>'
         return (
-            f'{bar}{live}<ul class="tiles" data-tiles data-order="{e(order)}" aria-label="{e(self.plain("topics_label"))}">'
+            f'{self.help_slot("tiles")}{bar}{live}<ul class="tiles" data-tiles data-order="{e(order)}" aria-label="{e(self.plain("topics_label"))}">'
             f'{"".join(items)}</ul>{self.ORDER_HOOK}'
         )
 
@@ -658,7 +658,7 @@ class Site:
                     f"{self.ui_icons['headphones']}<span class=\"sr-only\">{self.h('also_heard')}</span></span> {also}</td></tr>"
                 )
         order = "".join(
-            f'<p class="order">{self.h("section_order", order=self.markup(code, sec["order"]))}</p>'
+            f'<p class="order">{self.h("section_order", order=self.markup(code, sec["order"]))}{self.help_icon("sections-order")}</p>'
             for code in (frm, to)
             for sec in [self.pack_section(code, slug, sid)]
             if sec.get("order")
@@ -744,6 +744,14 @@ class Site:
                 f'<a class="rail-link" href="about.html" aria-label="{about_name}" title="{about_name}"{about_mark}>'
                 f'{self.ui_icons["information"]}</a>'
             )
+        # The help button turns on the help icons, so it is only on a page that has some. Hidden until help.js runs.
+        helping = ""
+        if 'data-help="' in content + pager + trail:
+            help_name = e(self.plain("help_toggle"))
+            helping = (
+                f'<button type="button" class="rail-link help-toggle" id="help-toggle" hidden aria-pressed="false" '
+                f'aria-label="{help_name}" title="{help_name}">{self.ui_icons["help"]}</button>'
+            )
         # Edit order is for the screens that are tiles: the home page and a group page. Hidden until arrange.js runs.
         arrange = ""
         if current == "index" or current.startswith("group-"):
@@ -758,7 +766,7 @@ class Site:
             f'<header class="topbar"><div class="titles{" has-trail" if trail else ""}"><a class="brand" href="index.html"><span class="word">{e(self.name)}</span>'
             f"<small>{self.brand_small()}</small></a>{trail}</div></header>"
             f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>'
-            f'<div class="rail-group">{arrange}{about}{settings}</div></nav>'
+            f'<div class="rail-group">{helping}{arrange}{about}{settings}</div></nav>'
             f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
             f"{self.search_card(current)}"
             "</div>"
@@ -795,7 +803,7 @@ class Site:
             return ""
         (first, first_lang), (second, second_lang) = self.ui_text(frm, "related"), self.ui_text(to, "related")
         heading = (
-            f'<h2 id="h-related">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span></h2>'
+            f'<h2 id="h-related">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span>{self.help_icon("related-topics")}</h2>'
         )
         return (
             f'<section class="related" aria-labelledby="h-related">{heading}'
@@ -821,6 +829,7 @@ class Site:
                     for s in sections
                 )
                 + "</ul>"
+                + self.help_slot("jump-links")
             )
         lcode, lede = self.prose(lambda c: self.pack_page(c, slug).get("lede"))
         lede_html = f'<p class="lede"{self.la(lcode)}>{e(lede)}</p>' if lede else ""
@@ -1103,6 +1112,28 @@ class Site:
         """A chapter's title in the first language of the pair, as plain text."""
         return self.book.entry(self.frm, "chapters", ident)[0]["title"]
 
+    def help_chapter_of(self, feature):
+        """The chapter this edition shows a feature in, or None: a feature the edition lacks the thing for has no icon either."""
+        return next((c["id"] for c in self.help_chapters() for f in c["features"] if f["id"] == feature), None)
+
+    def help_icon(self, feature):
+        """A question-mark link to a feature of the help book: hidden by the stylesheet until the rail's help button turns help on
+        (help.js), and an ordinary link to help-<chapter>.html#<feature>. Nothing for a feature the edition does not show."""
+        chapter = self.help_chapter_of(feature)
+        if chapter is None:
+            return ""
+        title = self.book.entry(self.interface, "features", feature)[0]["title"]
+        label = e(self.plain("help_icon", feature=title))
+        return (
+            f'<a class="help-icon" href="{HELP_PREFIX}{chapter}.html#{feature}" data-help="{chapter}#{feature}" '
+            f'aria-label="{label}" title="{label}">{self.ui_icons["help"]}</a>'
+        )
+
+    def help_slot(self, feature):
+        """A line of its own for an icon that has no heading to sit beside; nothing, not even the line, without the icon."""
+        icon = self.help_icon(feature)
+        return f'<p class="help-slot">{icon}</p>' if icon else ""
+
     def how_to_page(self):
         """The contents of the help book: each chapter, with a link to each of its features."""
         second, lang2 = self.ui_text(self.to, "how_to")
@@ -1196,7 +1227,7 @@ class Site:
         # The script is blocking on purpose: it sets the saved preferences before the first paint.
         script = (
             '<script src="app.js"></script>\n<script src="order.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
-            '<script src="arrange.js" defer></script>\n'
+            '<script src="arrange.js" defer></script>\n<script src="help.js" defer></script>\n'
         )
         fonts = "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("fonts", []))
         extra = '<link rel="stylesheet" href="varieties.css">\n' if self.has_varieties() else ""

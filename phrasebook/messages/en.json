@@ -98,5 +98,7 @@
   "reset_orders": "Reset tile layouts",
   "reset_orders_done": "Every tile is back in its default order.",
   "how_to_lede": "Short answers about how the app works, a chapter at a time.",
-  "help_chapters_label": "Chapters"
+  "help_chapters_label": "Chapters",
+  "help_toggle": "Help",
+  "help_icon": "Help: {feature}"
 }

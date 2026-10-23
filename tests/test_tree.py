@@ -113,6 +113,7 @@ class IconParsingTests(unittest.TestCase):
                 "ui-icons/arrow--left.svg",
                 "ui-icons/asleep.svg",
                 "ui-icons/headphones.svg",
+                "ui-icons/help.svg",
                 "ui-icons/information.svg",
                 "ui-icons/light.svg",
                 "ui-icons/screen.svg",
@@ -158,11 +159,16 @@ class IconSiteTests(Scratch):
     def test_the_only_icons_without_a_project_icon_are_the_frames_own(self):
         pages = self.built(self.project())
         for name, page in pages.items():
+            frame = re.sub(r'<a class="help-icon".*?</a>', "", page, flags=re.S)  # the help icons are links to the book, counted apart
             limit = (
-                8 if name == "settings.html" else 5
-            )  # search, back, edit order, about and the gear, and the figure; the settings page adds three modes
-            self.assertLessEqual(page.count("<svg"), limit, name)
-        self.assertEqual(pages["index.html"].count("<svg"), 4, "search, edit order, about and the gear in the rail")
+                9 if name == "settings.html" else 6
+            )  # search, help, back, edit order, about and the gear, and the figure; the settings page adds three modes
+            self.assertLessEqual(frame.count("<svg"), limit, name)
+        self.assertEqual(
+            re.sub(r'<a class="help-icon".*?</a>', "", pages["index.html"], flags=re.S).count("<svg"),
+            5,
+            "search, help, edit order, about and the gear in the rail",
+        )
 
     def test_a_named_icon_must_have_a_file(self):
         proj = self.project()

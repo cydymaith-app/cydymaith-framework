@@ -9,7 +9,7 @@ Plan: help is a book under About, `help-<chapter>.html#<feature>`, with hidden i
 - Features that depend on the edition (regional forms, colour schemes, accessibility levels, tile levels, related topics, the About page) appear only where the edition has them.
 - The old `how_to_*` messages are gone. Only `how_to`, `how_to_lede`, `how_to_col_keys`, `how_to_col_touch` and `help_chapters_label` remain.
 - The Welsh body exists (`content/cydymaith/packs/cy/help.json`), as first drafts, all logged in `docs/REVIEW.md`. It is unchecked by a fluent speaker.
-- **Still missing:** the in-context icons, the rail button, the sheet, the overlay and the report. Nothing on a screen yet links to a chapter; the only way in is About, then How to use the app.
+- **Built since:** the rail help button and a first set of hidden icons that link to the chapters. **Still missing:** the sheet (What's this? / Report a problem), the overlay and the report. Until then, an icon is a plain link to the chapter.
 
 ## Framework work for the help mechanism
 
@@ -23,8 +23,8 @@ Done:
 
 Still to do:
 
-- [ ] Rail button, in the **4th slot from the bottom** (decided 2026-10-23), directly above the edit-order spanner ([site.py](../phrasebook/site.py), the rail's lower group). It also carries the report-issue idea (`docs/TODO.md` 3.6 merged into 3.7).
-- [ ] Hidden in-context help icons on features and tiles, each with `data-help="<chapter>#<feature>"`. Decide which features and tiles get one (a control, a tile, a section; not every row).
+- [x] Rail button, in the **4th slot from the bottom**, directly above the edit-order spanner. Done 2026-10-23 (`#help-toggle`, `help.js`).
+- [x] Hidden in-context help icons, each marked `data-help="<chapter>#<feature>"` and a plain link to `help-<chapter>.html#<feature>`. First set done 2026-10-23: the trail, tile grids, jump links, section Order lines, the pager, the Related row, and six Settings choices. Still open: which other features and tiles get one.
 - [ ] Sheet on each icon: **What's this?** first, **Report a problem** second.
 - [ ] Overlay that loads the text of one feature from its chapter page (cached offline), not a copy. Look for `[data-feature="<anchor>"]`, since ids carry a language suffix in the second article. Dismiss by Escape, a close button and a tap outside; focus returns to the icon; inert background.
 - [ ] Without the script, each icon is an ordinary link to `help-<chapter>.html#<feature>`. They are hidden until the script runs, as the search button is.
@@ -45,7 +45,7 @@ Still to do:
 ### Thin, stale, one language, unreachable
 
 - [ ] **Welsh interface wording the help names but the screen does not show:** the search card's `Cau` (Close) and `Canlyniadau eraill` (Other results), and the section `Trefn:` (Order) line. Where: `content/cydymaith/packs/cy/pack.json` `ui` (`search_close`, `search_other`, `section_order`). Add them once the owner confirms the wording.
-- [ ] **Unreachable from a control.** The only door is About, then the link at the foot of the About page. The icons and the rail button fix this. Settings hints (`appearance_hint`, `access_hint`, `order_hint`) are labels, not help: link each to its chapter.
+- [x] **Unreachable from a control.** Fixed for the features that now have an icon (press the help button). Settings hints (`appearance_hint`, `access_hint`, `order_hint`) are labels, not help: link each to its chapter.
 - [ ] **Read the chapters in a browser**, on a phone and at width: the new styles (`.help-feature`, `.help-ways`, `.help-contents`), the Cy|En toggle on a chapter, the contents page, Previous and Next, and the `#feature` jump.
 - [ ] **A fluent speaker checks the Welsh** (see `docs/REVIEW.md`), in particular the terms for spanner, toggle, tile, and the control names the screen does not show yet.
 - [ ] **Verify two behaviours against a real browser** that the chapters state from reading the code: picking up a tile with Enter, and the install steps on Android, iPhone and a computer.
