@@ -22,6 +22,7 @@ from . import content, grading, screenshots
 from .content import ContentError
 from .channels import RELEASE, select as select_channel
 from .dictionary import index as dictionary_index
+from .help import Book
 from .messages import Messages
 from .site import Site
 from .tree import document as tree_document
@@ -187,10 +188,12 @@ def main(argv=None, projects_dir=None):
         raw = select_channel(content.read(project), channel)
         _, ed = content.pick_edition(raw, edition)
         cov = ", ".join(f"{c} {h}/{t}" for c, (h, t) in content.coverage(raw, ed).items())
+        helped = ", ".join(f"{c} {h}/{t}" for c, (h, t) in Book.load(raw["packs"]).coverage(ed["languages"]).items())
     except ContentError as err:
         sys.exit(f"content error: {err}")
     print(f"wrote {n} pages to {out} ({channel} channel)")
     print(f"coverage: {cov}")
+    print(f"help: {helped}")
     if shots:
         try:
             taken = take_screenshots(out, raw, ed, shots)

@@ -1,0 +1,76 @@
+{
+  "chapters": {
+    "finding-your-way": {
+      "title": "Finding your way",
+      "lede": "Moving around the app: tiles, the bar at the top, the bar at the side, and going back."
+    }
+  },
+  "features": {
+    "tiles": {
+      "title": "Tiles",
+      "body": [
+        "The home page shows groups of topics as large tiles. A group opens a page of topic tiles, and a topic opens its words and phrases.",
+        "Each tile is a link named in both languages, so a screen reader reads both."
+      ],
+      "keys": "Tab to a tile, then Enter. The Right arrow also opens the focused tile.",
+      "touch": "Tap a tile."
+    },
+    "trail": {
+      "title": "Where you are",
+      "body": [
+        "The bar across the top shows where you are, from the home page down to the page you are on. Each step before the last is a link. On wider screens the trail shows both languages."
+      ],
+      "keys": "Tab to a step, then Enter.",
+      "touch": "Tap a step."
+    },
+    "side-bar": {
+      "title": "The bar at the side",
+      "body": [
+        "A narrow bar at the side of every page holds the controls. At the top are Search and Back (the home page has no Back). At the bottom are Edit order, About and Settings.",
+        "Search and Edit order appear only once the page's script has loaded, and About only where the site has an About page."
+      ],
+      "keys": "Tab to a button, then Enter.",
+      "touch": "Tap a button."
+    },
+    "back": {
+      "title": "Going back",
+      "body": [
+        "Back goes up one level: from a topic to its group, and from a group to the home page. Settings and About go back to the home page. How to use the app and Sources go back to About."
+      ],
+      "keys": "Left arrow, or Backspace.",
+      "touch": "Press the Back arrow in the bar at the side."
+    },
+    "pager": {
+      "title": "Reading on",
+      "body": [
+        "At the foot of a topic, two links go to the previous and the next topic, so you can read on without going back up to the group."
+      ],
+      "keys": "Tab to the link, then Enter.",
+      "touch": "Tap the link."
+    },
+    "jump-links": {
+      "title": "Jumping to a section",
+      "body": [
+        "A topic with several sections lists them as links under its title. Choose one to go straight to that section."
+      ],
+      "keys": "Tab to a section name, then Enter.",
+      "touch": "Tap a section name."
+    },
+    "keys-and-touch": {
+      "title": "Moving between tiles",
+      "body": [
+        "On a page of tiles you can move from one to the next without a mouse. In a right-to-left language, Right and Left swap."
+      ],
+      "keys": "Down arrow and Up arrow move between tiles. Home and End jump to the first and last. Right opens a tile. Left or Backspace goes back.",
+      "touch": "Touch the tile you want."
+    },
+    "drag-back": {
+      "title": "Dragging to go back",
+      "body": [
+        "Drag the page towards the end of the line, to the right in a left-to-right language, and the page above it slides in beside it. Let go past about a third of the width, or flick quickly, to go back. Let go early and the page springs back.",
+        "A drag that starts at the very edge of the screen is left to your device, so its own back gesture still works. If your device asks for reduced motion, pages do not slide; they simply change."
+      ],
+      "touch": "Drag the page to the right and let go."
+    }
+  }
+}

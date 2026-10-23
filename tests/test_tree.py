@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import fixture  # noqa: E402
 import phrasebook  # noqa: E402
 from phrasebook import content, icons, tree  # noqa: E402
+from phrasebook.help import Book  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
 from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 
@@ -661,21 +662,21 @@ class HowToTests(Scratch):
         self.assertIn('<span aria-current="page">', page)
         self.assertNotIn('class="pager"', page)
 
-    def test_it_covers_the_moves_the_keys_the_swipes_and_the_buttons(self):
+    def test_it_is_the_contents_of_the_book_and_links_every_chapter_and_feature(self):
         page = self.pages["how-to.html"]
-        messages = json.loads((ENGINE / "messages" / "en.json").read_text(encoding="utf-8"))
-        for key in (
-            "how_to_keys_open",
-            "how_to_touch_open",
-            "how_to_keys_back",
-            "how_to_touch_back",
-            "how_to_keys_along",
-            "how_to_touch_along",
-            "how_to_keys_settings",
-            "how_to_touch_settings",
-        ):
-            self.assertIn(messages[key].split(".")[0], page, key)
-        self.assertIn("<table", page)
+        self.assertIn('href="help-finding-your-way.html"', page)
+        for anchor in Book.load(content.read(self.proj)["packs"]).anchors():
+            self.assertIn(f'href="help-finding-your-way.html#{anchor}"', page, anchor)
+
+    def test_the_chapter_covers_the_moves_the_keys_the_swipes_and_the_buttons(self):
+        page = self.pages["help-finding-your-way.html"]
+        book = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
+        for anchor in ("tiles", "back", "keys-and-touch", "drag-back", "side-bar"):
+            entry = book["features"][anchor]
+            self.assertIn(f'<section class="help-feature" id="{anchor}"', page, anchor)
+            for field in ("keys", "touch"):
+                if entry.get(field):
+                    self.assertIn(entry[field].split(".")[0], page, f"{anchor} {field}")
 
     def test_it_is_a_reserved_name_so_a_project_page_cannot_collide(self):
         proj = self.project()
@@ -874,6 +875,9 @@ class NoVisibleNumberingTests(unittest.TestCase):
             if key.startswith("how_to"):
                 self.assertIsNone(re.search(r"\d\.\d", text), key)
                 self.assertNotIn("numbered", text, key)
+        book = (ENGINE / "help" / "en.json").read_text(encoding="utf-8")
+        self.assertIsNone(re.search(r"\d\.\d", book))
+        self.assertNotIn("numbered", book)
 
     def test_the_address_stays_in_the_data_for_tests_and_linking(self):
         import tempfile

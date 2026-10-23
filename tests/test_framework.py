@@ -168,6 +168,7 @@ class FixtureBuildTests(Scratch):
                 "points.html",
                 "sources.html",
                 "how-to.html",
+                "help-finding-your-way.html",
                 "settings.html",
                 "about.html",
             },
@@ -399,7 +400,8 @@ class LocalisedInterfaceTests(Scratch):
         content.validate(self.raw)
 
     def test_no_english_interface_text_survives(self):
-        html_all = "\n".join(self.pages.values())
+        # The framework's own help is English text that names the controls in English; it is marked lang="en" and is not an interface message.
+        html_all = re.sub(r'<article class="about-text help-text".*?</article>', "", "\n".join(self.pages.values()), flags=re.S)
         leaks = []
         for key, template in EN.items():
             for text in forms(template):
@@ -1303,7 +1305,7 @@ class CommandLineTests(Scratch):
         out = self.tmp / "cli-out"
         code, stdout, _ = self.run_main(str(out), "--project", str(proj))
         self.assertEqual(code, 0)
-        self.assertIn("wrote 8 pages", stdout)
+        self.assertIn("wrote 9 pages", stdout)
         self.assertIn("coverage: qaa", stdout)
         self.assertTrue((out / "index.html").is_file())
 

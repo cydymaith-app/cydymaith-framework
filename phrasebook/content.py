@@ -5,6 +5,7 @@ A project is a folder:
     pages/<slug>.json               a page skeleton: sections and the ids of their concepts
     packs/<code>/pack.json          one language: name, interface words, group titles, sources, varieties
     packs/<code>/pages/<slug>.json  that language's titles, commentary and one text per concept
+    packs/<code>/help.json          optional: that language's text for the help book (see help.py)
     editions/<name>.json            which languages to publish, the default pair, branding and stylesheets
     icons/<name>.svg                line icons that groups and pages name with "icon" (see icons.py)
     palettes/<id>.json              colour palettes the visitor can choose, added to the framework's own (see palettes.py)
@@ -44,6 +45,7 @@ LICENCES = {
 DRAFT = "draft"  # allowed in a normal build, rejected by --strict
 RESERVED_SLUGS = ("index", "sources", "how-to", "settings", "about")
 GROUP_PAGE_PREFIX = "group-"  # generated pages, one per group, are group-<id>.html
+HELP_PAGE_PREFIX = "help-"  # generated pages, one per help chapter, are help-<id>.html (see help.py)
 GROUP_ID = re.compile(r"^[a-z][a-z0-9-]*$")
 
 # Invisible bidirectional controls. They can make text read differently from how it is stored, so content
@@ -73,6 +75,7 @@ def read(project_dir):
             raw["packs"][pdir.name] = {
                 "meta": read_json(pdir / "pack.json"),
                 "pages": {p.stem: read_json(p) for p in sorted(pages_dir.glob("*.json"))} if pages_dir.is_dir() else {},
+                "help": read_json(pdir / "help.json") if (pdir / "help.json").is_file() else {},
             }
     for f in sorted((d / "editions").glob("*.json")):
         raw["editions"][f.stem] = read_json(f)
@@ -127,7 +130,7 @@ def validate(raw):
     for slug in pages:
         if slug not in listed:
             raise ContentError(f"pages/{slug}.json is not listed in any group in structure.json")
-        if slug in RESERVED_SLUGS or slug.startswith(GROUP_PAGE_PREFIX):
+        if slug in RESERVED_SLUGS or slug.startswith((GROUP_PAGE_PREFIX, HELP_PAGE_PREFIX)):
             raise ContentError(f"'{slug}' is reserved for a generated page")
     for slug, p in pages.items():
         validate_skeleton(slug, p)
@@ -288,6 +291,7 @@ def validate_pack(code, pack, raw):
             raise ContentError(f"{where}/pack.json: missing group title for '{g['id']}'")
     source_ids = validate_sources(where, meta.get("sources"))
     validate_text(f"{where}/pack.json", meta)
+    validate_text(f"{where}/help.json", pack.get("help", {}))
     for slug, pp in pack["pages"].items():
         skel = raw["pages"].get(slug)
         if skel is None:

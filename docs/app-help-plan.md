@@ -16,6 +16,14 @@ Planned 2026-10-23. Covers the book itself. The in-context icons, sheet, overlay
 
 ## Phase 1: the skeleton (framework)
 
+**Done 2026-10-23** (commit 1 below): `help.py`, `help/en.json` with the `finding-your-way` chapter (8 features), rendering of the contents and chapter pages, `help-` reserved, coverage in the build output, and tests in `tests/test_help.py`. Differences from the plan:
+
+- A `side-bar` feature was added to the first chapter, because the old text about the bar at the side was stale.
+- The `pager` feature is titled "Reading on", so the English title does not trip the test that finds fallen-back interface words.
+- The English help text names controls in English, so the framework's leak test skips help articles (they are marked `lang="en"`).
+- Coverage is counted over every feature in the book, not only those the edition shows.
+- The old `how_to_*` messages were removed now (only `how_to`, `how_to_col_keys`, `how_to_col_touch` and the new `how_to_lede` and `help_chapters_label` remain), not in Phase 3.
+
 1. `help.py`
    - Ordered sections, each with ordered features. Each feature has an anchor id and an optional `requires` condition.
    - Conditions match how Settings decides what to show: the edition has an About page, regional varieties, more than one accessibility level, or tile levels that differ.

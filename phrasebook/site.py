@@ -18,6 +18,7 @@ import unicodedata
 from . import colour, grading, icons, palettes
 from .figures import FIGURE_CONCEPTS, FIGURES
 from .content import LICENCES, STORAGE_NAME
+from .help import PAGE_PREFIX as HELP_PREFIX, Book
 from .messages import Messages
 
 UI_ICONS = pathlib.Path(__file__).resolve().parent / "ui-icons"  # the framework's own chrome icons, apart from any project's
@@ -29,7 +30,7 @@ MARK = re.compile(r"\{\{(.+?)\}\}")
 class Site:
     """Renders one edition for one pair of languages: `frm` is shown first, `to` second."""
 
-    def __init__(self, raw, edition, pair=None, messages=None, built=None):
+    def __init__(self, raw, edition, pair=None, messages=None, built=None, help_book=None):
         self.raw = raw
         self.built = built  # when the site was built (an aware datetime), shown at the foot of the About page; None shows nothing
         self.edition = edition
@@ -41,6 +42,7 @@ class Site:
         self.packs = raw["packs"]
         self.levels = grading.levels(grading.grade(raw, edition))  # how demanding each group, page and section is
         self.messages = messages or Messages(raw["packs"])
+        self.book = help_book or Book.load(raw["packs"])  # the help book: its chapters and the words (see help.py)
         self.palettes = raw["palettes"]
         self.palette_ids = edition.get("palettes") or list(self.palettes)
         # Only pages with at least one row available in both languages are published for this pair.
@@ -521,6 +523,13 @@ class Site:
             steps.append((None, self.pair_spans(self.title(frm, current), self.title(to, current))))
         elif current in ("settings", "about"):
             steps.append((None, self.ui_pair(current)))
+        elif current.startswith(HELP_PREFIX):  # a help chapter sits under the contents page, which sits under About
+            under = "about" if self.edition.get("about_page") else "settings"
+            steps += [
+                (f"{under}.html", self.ui_pair(under)),
+                ("how-to.html", self.ui_pair("how_to")),
+                (None, self.help_pair("chapters", current[len(HELP_PREFIX) :])),
+            ]
         else:  # the how-to and sources pages sit under About, or under Settings where the edition has no About page
             under = "about" if self.edition.get("about_page") else "settings"
             steps += [
@@ -1058,35 +1067,109 @@ class Site:
             articles.append(f'<article class="about-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>')
         return f'<div class="about-page">{radios}{toggle}{"".join(articles)}</div>'
 
+    # -- the help book (see help.py)
+
+    def help_conditions(self):
+        """What the edition has that a help feature can ask for."""
+        return {name for name, on in (("about", bool(self.edition.get("about_page"))), ("varieties", self.has_varieties())) if on}
+
+    def help_chapters(self):
+        """The chapters this edition shows, each with only the features that apply to it."""
+        return self.book.visible(self.help_conditions())
+
+    def help_pair(self, kind, ident, field="title"):
+        """A chapter's or feature's title in each language of the pair, as spans: the language's own, else English, marked as such."""
+        spans, seen = [], []
+        for cls, code in (("l1", self.frm), ("l2", self.to)):
+            entry, lang = self.book.entry(code, kind, ident)
+            if (lang, entry[field]) in seen:  # both languages fall back to the same English: say it once
+                spans.append("")
+            else:
+                spans.append(f'<span class="{cls}"{self.la(lang)}>{e(entry[field])}</span>')
+            seen.append((lang, entry[field]))
+        return tuple(spans)
+
+    def help_title(self, ident):
+        """A chapter's title in the first language of the pair, as plain text."""
+        return self.book.entry(self.frm, "chapters", ident)[0]["title"]
+
     def how_to_page(self):
-        """How to move through the tree: keys, touch and buttons. Words only from the interface messages."""
-        h = self.h
-        moves = "".join(
-            f'<tr><th scope="row" class="l1">{h("how_to_move_" + m)}</th><td>{h("how_to_keys_" + m)}</td>'
-            f'<td>{h("how_to_touch_" + m)}</td></tr>'
-            for m in ("open", "back", "along", "settings")
-        )
+        """The contents of the help book: each chapter, with a link to each of its features."""
         second, lang2 = self.ui_text(self.to, "how_to")
         head = (
             "<header>"
             f'<h1>{self.ui_html(self.frm, "how_to")}</h1>'
             f'<p class="title-l2"{self.la(lang2)}>{e(second)}</p>'
-            f'<p class="lede">{h("how_to_lede")}</p></header>'
+            f'<p class="lede">{self.h("how_to_lede")}</p></header>'
         )
-        tree = f'<section id="tree"><h2>{h("how_to_tree_title")}</h2><p class="intro">{h("how_to_tree")}</p></section>'
-        table = (
-            f'<section id="moves"><h2>{h("how_to_moves_title")}</h2>'
-            f'<table class="terms"><thead><tr><th scope="col">{h("how_to_col_move")}</th>'
-            f'<th scope="col">{h("how_to_col_keys")}</th><th scope="col">{h("how_to_col_touch")}</th></tr></thead>'
-            f"<tbody>{moves}</tbody></table></section>"
+        chapters = []
+        for chapter in self.help_chapters():
+            first, second = self.help_pair("chapters", chapter["id"])
+            features = "".join(
+                f'<li><a href="{HELP_PREFIX}{chapter["id"]}.html#{feature["id"]}">{"".join(self.help_pair("features", feature["id"]))}</a></li>'
+                for feature in chapter["features"]
+            )
+            chapters.append(
+                f'<section><h2><a href="{HELP_PREFIX}{chapter["id"]}.html">{first}{second}</a></h2><ul class="links">{features}</ul></section>'
+            )
+        return head + f'<nav class="help-contents" aria-label="{e(self.plain("help_chapters_label"))}">{"".join(chapters)}</nav>'
+
+    def help_chapter_page(self, ident):
+        """One chapter: an article in each language that has help of its own (one shown at a time, as on the About page), and a
+        section for each feature, with the feature's anchor as its id. With help in neither language of the pair, English."""
+        chapter = next(c for c in self.help_chapters() if c["id"] == ident)
+        codes = [code for code in (self.frm, self.to) if self.book.has_text(code)] or ["en"]
+        radios = "".join(
+            f'<input type="radio" class="about-radio" name="about-lang" id="about-lang-{e(code)}" value="{e(code)}"'
+            f'{" checked" if i == 0 else ""}>'
+            for i, code in enumerate(codes)
         )
-        notes = "".join(f"<li>{h(key)}</li>" for key in ("how_to_note_edge", "how_to_note_reader", "how_to_note_offline"))
-        return (
-            head
-            + tree
-            + table
-            + f'<section id="notes"><h2>{h("how_to_notes_title")}</h2><ul class="notes">{notes}</ul></section>'
+        labels = "".join(
+            f'<label for="about-lang-{e(code)}">{self.inline(code, self.endonym(code) if code in self.packs else code)}</label>'
+            for code in codes
         )
+        toggle = ""
+        if len(codes) > 1:
+            toggle = f'<div class="about-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
+        articles = "".join(self.help_article(code, chapter) for code in codes)
+        return f'<div class="about-page">{radios}{toggle}{articles}{self.help_pager(ident)}</div>'
+
+    def help_article(self, code, chapter):
+        intro, intro_lang = self.book.entry(code, "chapters", chapter["id"])
+        parts = [f'<header><h1{self.la(intro_lang, code)}>{e(intro["title"])}</h1>']
+        if intro.get("lede"):
+            parts.append(f'<p class="lede"{self.la(intro_lang, code)}>{e(intro["lede"])}</p>')
+        parts.append("</header>")
+        for feature in chapter["features"]:
+            entry, lang = self.book.entry(code, "features", feature["id"])
+            body = "".join(self.about_block(lang, block) for block in entry.get("body", []))
+            ways = "".join(
+                f"<dt>{self.ui_html(lang, key)}</dt><dd>{e(entry[field])}</dd>"
+                for field, key in (("keys", "how_to_col_keys"), ("touch", "how_to_col_touch"))
+                if entry.get(field)
+            )
+            ways = f'<dl class="help-ways">{ways}</dl>' if ways else ""
+            parts.append(
+                f'<section class="help-feature" id="{e(feature["id"])}"{self.la(lang, code)}><h2>{e(entry["title"])}</h2>{body}{ways}</section>'
+            )
+        return f'<article class="about-text help-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>'
+
+    def help_pager(self, ident):
+        """Previous and next chapter, like a book. Nothing when the book has one chapter."""
+        ids = [c["id"] for c in self.help_chapters()]
+        i = ids.index(ident)
+
+        def link(other, cls, key):
+            first, second = self.help_pair("chapters", other)
+            first, second = first.replace('class="l1"', 'class="t"'), second.replace('class="l2"', 'class="c"')
+            return f'<a class="{cls}" href="{HELP_PREFIX}{other}.html"><small>{self.h(key)}</small>{first}{second}</a>'
+
+        parts = []
+        if i > 0:
+            parts.append(link(ids[i - 1], "prev", "previous"))
+        if i < len(ids) - 1:
+            parts.append(link(ids[i + 1], "next", "next"))
+        return f'<nav class="pager" aria-label="{e(self.plain("pager_label"))}">{"".join(parts)}</nav>' if parts else ""
 
     def storage_name(self):
         """The name this site keeps its saved choices under in the browser: the edition's `storage`, else its name as a slug."""
@@ -1191,6 +1274,13 @@ class Site:
                 "about",
                 self.plain("page_title", page=self.ui_text(self.frm, "about")[0], site=self.name),
                 self.about_page(),
+                with_pager=False,
+            )
+        for chapter in self.help_chapters():
+            out[f"{HELP_PREFIX}{chapter['id']}.html"] = page(
+                f"{HELP_PREFIX}{chapter['id']}",
+                self.plain("page_title", page=self.help_title(chapter["id"]), site=self.name),
+                self.help_chapter_page(chapter["id"]),
                 with_pager=False,
             )
         out["how-to.html"] = page(
