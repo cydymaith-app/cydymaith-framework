@@ -103,6 +103,7 @@ def make_project(root, interface="qaa", ui_extra=None):
             "languages": list(LANGS),
             "interface": interface,
             "default_pair": ["qaa", "qab"],
+            "contact": "reports@example.org",
             "about_page": {
                 code: {
                     "title": f"{code} about",

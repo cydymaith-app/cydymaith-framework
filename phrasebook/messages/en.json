@@ -100,5 +100,19 @@
   "how_to_lede": "Short answers about how the app works, a chapter at a time.",
   "help_chapters_label": "Chapters",
   "help_toggle": "Help",
-  "help_icon": "Help: {feature}"
+  "help_icon": "Help: {feature}",
+  "help_whats_this": "What's this?",
+  "help_report": "Report a problem",
+  "help_close": "Close",
+  "help_loading": "Loading…",
+  "help_failed": "The help could not be loaded. Use the link to read the chapter.",
+  "help_more": "Read the whole chapter",
+  "help_report_lede": "This is the email that will be written. The app sends nothing: you send it from your own mail app.",
+  "help_report_words": "What is wrong?",
+  "help_report_context": "Added by the app",
+  "help_open_email": "Open email",
+  "help_copy": "Copy",
+  "help_copied": "Copied.",
+  "help_copy_failed": "Could not copy. Select the text and copy it yourself.",
+  "help_subject": "{site}: problem report"
 }

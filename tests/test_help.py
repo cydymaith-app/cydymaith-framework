@@ -32,8 +32,6 @@ ANCHORS = [
     "offline", "install", "no-script", "share",
     "help-button", "help-icons", "report-a-problem",
 ]
-# Features that are written but not shown, because what they describe is not built yet (the "ask" condition).
-NOT_SHOWN = ["help-button", "help-icons", "report-a-problem"]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
 
@@ -311,12 +309,12 @@ class BuiltBookTests(Scratch):
 
     def test_there_is_a_page_for_every_chapter_and_the_contents(self):
         self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html", "help-reading-a-topic.html", "help-your-settings.html",
-                                         "help-arranging-tiles.html", "help-offline-and-install.html"})
+                                         "help-arranging-tiles.html", "help-offline-and-install.html", "help-using-help.html"})
 
     def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
         book_ids = [i for name, text in self.help_pages.items() if name.startswith("help-") for i in self.ids(text)]
         for anchor in ANCHORS:
-            self.assertEqual(book_ids.count(anchor), 0 if anchor in NOT_SHOWN else 1, anchor)
+            self.assertEqual(book_ids.count(anchor), 1, anchor)
             self.assertNotIn(anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them")
         for name, text in self.help_pages.items():
             ids = self.ids(text)
@@ -337,12 +335,15 @@ class BuiltBookTests(Scratch):
             if anchor:
                 self.assertIn(anchor, chapter_ids[page], f"{page}#{anchor}")
 
-    def test_a_chapter_about_what_is_not_built_is_written_but_not_shown(self):
-        self.assertNotIn("help-using-help.html", self.pages)
-        self.assertNotIn("help-using-help.html", self.pages["how-to.html"])
-        written = {f["id"] for c in helpbook.SECTIONS if c["id"] == "using-help" for f in c["features"]}
-        self.assertEqual(written, set(NOT_SHOWN))
-        self.assertEqual(set(EN["features"]) & written, written, "the English is ready for when the help button exists")
+    def test_the_report_needs_an_address_so_without_one_it_is_not_described_or_offered(self):
+        proj = self.project()
+        fixture.edit(next((proj / "editions").glob("*.json")), lambda d: d.pop("contact"))
+        pages = self.built(proj)
+        self.assertNotIn('id="report-a-problem"', pages["help-using-help.html"])
+        self.assertIn('id="help-icons"', pages["help-using-help.html"])
+        self.assertNotIn('data-act="report"', pages["index.html"])
+        self.assertNotIn('data-view="report"', pages["index.html"])
+        self.assertIn('data-act="help"', pages["index.html"], "What's this? is always there")
 
     def test_every_help_entry_is_well_formed(self):
         for ident, entry in EN["features"].items():
@@ -411,10 +412,16 @@ class HelpButtonTests(Scratch):
         self.assertLess(topic.index('id="help-toggle"'), topic.index('href="about.html" aria-label'))
         self.assertNotIn('id="arrange-button"', topic)
 
+    def test_the_pager_icon_is_outside_the_pager_whose_link_styles_would_show_it(self):
+        topic = self.pages["p1.html"]
+        pager = topic[topic.index('<nav class="pager"') : topic.index("</nav>", topic.index('<nav class="pager"'))]
+        self.assertNotIn("help-icon", pager)
+        self.assertIn('data-help="finding-your-way#pager"', topic)
+
     def test_the_icons_are_hidden_until_the_page_is_helping_so_without_the_script_they_never_show(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
-        self.assertIn(".help-icon{display:none", css)
-        self.assertIn("html[data-helping] .help-icon{display:inline-grid", css)
+        self.assertIn("a.help-icon{display:none", css)
+        self.assertIn("html[data-helping] a.help-icon{display:inline-grid", css)
         self.assertNotIn("data-helping", "".join(self.pages.values()), "only the script sets the mark")
         self.assertIn('<script src="help.js" defer></script>', self.pages["index.html"])
 
@@ -429,6 +436,45 @@ class HelpButtonTests(Scratch):
         for name in ("index.html", "settings.html", "p1.html"):
             frame_ids |= set(BuiltBookTests.ids(None, self.pages[name]))
         self.assertEqual(frame_ids & set(ANCHORS), set(), "an anchor is also an id in the frame")
+
+
+    def test_the_sheet_is_a_shut_dialog_with_whats_this_first_and_report_second(self):
+        page = self.pages["index.html"]
+        self.assertRegex(page, r'<div class="help-layer" hidden><div class="help-card" id="help-card" role="dialog" aria-modal="true" aria-labelledby="help-card-title" inert')
+        sheet = page[page.index('data-view="sheet"') : page.index('data-view="help"')]
+        self.assertLess(sheet.index('data-act="help"'), sheet.index('data-act="report"'))
+        self.assertIn('data-view="report" hidden', page)
+        self.assertIn("data-report-words", page)
+        self.assertIn("readonly data-report-added", page)
+
+    def test_the_address_is_in_two_pieces_and_never_whole_in_a_page(self):
+        for name, page in self.pages.items():
+            self.assertNotIn("reports@example.org", page, name)
+            self.assertNotIn("mailto:reports", page, name)
+        self.assertIn('data-contact-user="reports" data-contact-host="example.org"', self.pages["index.html"])
+
+    def test_the_card_is_a_direct_child_of_the_app_so_the_rest_can_be_made_inert(self):
+        page = self.pages["index.html"]
+        self.assertRegex(page, r'</div></div></div><div class="help-layer" hidden>')
+        self.assertLess(page.index('class="search-layer"'), page.index('class="help-layer"'))
+
+    def test_the_card_names_the_build_date_and_the_pair_and_the_subject(self):
+        page = self.pages["index.html"]
+        self.assertRegex(page, r'data-built="\d{4}-\d{2}-\d{2}"')
+        self.assertIn('data-pair="qaa&gt;qab"', page)
+        self.assertIn("Demo Book", re.search(r'data-subject="([^"]*)"', page).group(1))
+
+    def test_the_card_labels_are_in_both_languages_of_the_pair(self):
+        page = self.pages["index.html"]
+        card = page[page.index('class="help-card"') :]
+        self.assertRegex(card, r'<span class="l1"[^>]*>[^<]+</span><span class="l2"[^>]*>[^<]+</span>')
+
+    def test_the_stylesheet_gives_the_sheet_its_layer_and_a_phone_first_shape(self):
+        css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
+        for selector in (".help-layer{", ".help-layer[hidden]{display:none}", ".help-card{", ".help-label", ".help-actions"):
+            self.assertIn(selector, css)
+        self.assertIn("var(--inset-bottom)", css[css.index(".help-card{") : css.index(".help-head")])
+        self.assertIn("@media (min-width:40rem){.help-layer{align-items:center}", css)
 
     def test_a_feature_the_edition_does_not_show_has_no_icon_and_a_page_with_none_has_no_button(self):
         raw = content.read(self.proj)

@@ -5,11 +5,11 @@ Plan: help is a book under About, `help-<chapter>.html#<feature>`, with hidden i
 
 ## Where help stands today
 
-- **The book exists.** `how-to.html` is its contents. Six chapters are published, with 33 features in all, in English and in a Welsh draft: *Finding your way*, *Looking up words*, *Reading a topic*, *Your settings*, *Arranging tiles*, *Offline and on your device*. A seventh, *Using help* (3 features), is written and tested but not shown, because the help button it describes does not exist (the `ask` condition in `Site.help_conditions`).
+- **The book exists.** `how-to.html` is its contents. Six chapters are published, with 33 features in all, in English and in a Welsh draft: *Finding your way*, *Looking up words*, *Reading a topic*, *Your settings*, *Arranging tiles*, *Offline and on your device*. A seventh, *Using help* (3 features, the report one only where the edition has an address), describes the help button, icons, sheet and report, which now exist.
 - Features that depend on the edition (regional forms, colour schemes, accessibility levels, tile levels, related topics, the About page) appear only where the edition has them.
 - The old `how_to_*` messages are gone. Only `how_to`, `how_to_lede`, `how_to_col_keys`, `how_to_col_touch` and `help_chapters_label` remain.
 - The Welsh body exists (`content/cydymaith/packs/cy/help.json`), as first drafts, all logged in `docs/REVIEW.md`. It is unchecked by a fluent speaker.
-- **Built since:** the rail help button and a first set of hidden icons that link to the chapters. **Still missing:** the sheet (What's this? / Report a problem), the overlay and the report. Until then, an icon is a plain link to the chapter.
+- **Built since:** the rail help button, a first set of hidden icons, the sheet (What's this? / Report a problem), the overlay and the report. Chapter 7 is published. Checked in headless Edge on the home, a topic and the Settings page.
 
 ## Framework work for the help mechanism
 
@@ -25,19 +25,19 @@ Still to do:
 
 - [x] Rail button, in the **4th slot from the bottom**, directly above the edit-order spanner. Done 2026-10-23 (`#help-toggle`, `help.js`).
 - [x] Hidden in-context help icons, each marked `data-help="<chapter>#<feature>"` and a plain link to `help-<chapter>.html#<feature>`. First set done 2026-10-23: the trail, tile grids, jump links, section Order lines, the pager, the Related row, and six Settings choices. Still open: which other features and tiles get one.
-- [ ] Sheet on each icon: **What's this?** first, **Report a problem** second.
-- [ ] Overlay that loads the text of one feature from its chapter page (cached offline), not a copy. Look for `[data-feature="<anchor>"]`, since ids carry a language suffix in the second article. Dismiss by Escape, a close button and a tap outside; focus returns to the icon; inert background.
-- [ ] Without the script, each icon is an ordinary link to `help-<chapter>.html#<feature>`. They are hidden until the script runs, as the search button is.
-- [ ] Report a problem: context of at most 256 characters, a preview, *Open email* (`mailto:`) and *Copy*; no background sending.
-- [ ] Make `ask` true in `Site.help_conditions` when the above exists, and check chapter 7 against what was built.
-- [ ] Tests for the mechanism: every `data-help` resolves to an anchor; every anchor is linked from an icon; both languages present; an anchor's text stands alone.
-- [ ] The fragment problem: `help-<chapter>.html#tiles` always lands on the first language's article, even when the second is selected. Either accept it, or have the script open the right article from the address.
+- [x] Sheet on each icon: **What's this?** first, **Report a problem** second. Done 2026-10-23.
+- [x] Overlay that loads the text of one feature from its chapter page (cached offline). Done: it looks for `[data-feature="<anchor>"]`, so the second language's suffixed ids do not matter, and shows each language the chapter has. Dismissed by Escape, Close and a tap outside; focus returns to the icon; the page behind is inert.
+- [x] Without the script, each icon is a plain link to `help-<chapter>.html#<feature>`; with it, the icon opens the sheet. Icons and the button are hidden until the script runs.
+- [x] Report a problem: at most 256 characters of context, a preview, *Open email* (`mailto:`) and *Copy*; no background sending. The address is the edition's `contact`, kept in two pieces in the page.
+- [x] Chapter 7 is shown (the `ask` condition is gone). The report feature in it needs the edition's `contact`.
+- [x] Tests for the mechanism (`tests/test_help.py`, `tests/help.test.js`): every `data-help` resolves to an anchor; the button and card are on exactly the pages with icons; the pure moves (the 256 cap, the mail link, the section picker). Not every anchor is linked from an icon yet, by design: only the first set has icons.
+- [ ] The fragment problem (still open): `help-<chapter>.html#tiles` always lands on the first language's article, even when the second is selected. Either accept it, or have the script open the right article from the address.
 
 ## Gaps
 
 ### Missing
 
-- [ ] **Help itself** (chapter 7): written, not shown. Waits for the mechanism above.
+- [x] **Help itself** (chapter 7): shown since the mechanism exists.
 - [ ] **The compass rose and other drawings** on topic pages (`figure`): a labelled drawing with no explanation. Low priority; probably "no help needed", decide when icons exist.
 - [ ] **Language pair.** The site chooses the pair and Settings cannot change it (`docs/TODO.md`, "Choose the language pair"). The help says so in *Which language comes first*; update it when the control exists.
 - [ ] **The edit-order bar's spoken announcements** for a screen reader (`arrange_picked`, `arrange_moved`): not described. Probably enough as it is.

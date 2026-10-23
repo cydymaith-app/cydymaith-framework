@@ -226,8 +226,25 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .share[hidden]{display:none}
 .share-status{color:var(--muted);font-size:.9rem}
 .about-more{margin-top:1.75rem}
-.help-icon{display:none;vertical-align:middle;margin-inline-start:.4rem;border-radius:50%;color:var(--accent);text-decoration:none}
-html[data-helping] .help-icon{display:inline-grid;place-items:center;width:2.75rem;height:2.75rem}
+.help-layer{position:fixed;inset:0;z-index:6;display:grid;align-items:end;justify-items:center;background:rgba(0,0,0,.45)}
+.help-layer[hidden]{display:none}
+.help-card{box-sizing:border-box;width:min(100%,38rem);max-height:85vh;overflow:auto;padding:1rem 1rem calc(1rem + var(--inset-bottom));background:var(--bg);color:var(--ink);border:1px solid var(--rule-strong);border-radius:12px 12px 0 0}
+.help-head{display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+.help-head h2{margin:0;font-size:1.15rem}
+.help-close{min-height:2.75rem;padding:0 .75rem;border:0;border-radius:8px;background:transparent;color:var(--muted);font:600 .9rem/1.1 var(--font-ui);cursor:pointer}
+.help-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
+.help-actions button,.help-button{min-height:2.75rem;padding:.4rem 1rem;border:1px solid var(--rule-strong);border-radius:8px;background:var(--surface);color:var(--ink);font:600 1rem/1.2 var(--font-ui);text-align:start;text-decoration:none;cursor:pointer}
+.help-actions button:first-child,.help-button{background:var(--tile);color:var(--on-tile);border-color:transparent}
+.help-actions .l2,.help-close .l2{display:block;font-weight:400;font-size:.8em;opacity:.85}
+.help-label{display:block;margin-top:.9rem;font-weight:600}
+.help-label textarea{display:block;box-sizing:border-box;width:100%;margin-top:.3rem;padding:.5rem;border:1px solid var(--rule-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:400 .95rem/1.4 var(--font-ui)}
+.help-label textarea[readonly]{color:var(--muted)}
+.help-status{margin:.5rem 0 0;color:var(--muted)}
+.help-text{margin-top:.75rem}
+.help-text + .help-text{padding-top:.75rem;border-top:1px solid var(--rule)}
+@media (min-width:40rem){.help-layer{align-items:center}.help-card{border-radius:12px}}
+a.help-icon{display:none;vertical-align:middle;margin-inline-start:.4rem;border-radius:50%;color:var(--accent);text-decoration:none}
+html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75rem;height:2.75rem}
 .help-icon .icon{width:1.5rem;height:1.5rem}
 .help-icon:hover,.help-icon:focus-visible{background:var(--surface)}
 .help-slot{margin:0;text-align:end}

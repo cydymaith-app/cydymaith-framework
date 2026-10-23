@@ -333,7 +333,7 @@
     if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) the keys are its own
     var target = event.target;
     if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;  // arrows belong to the control
-    if (target && target.closest && target.closest("#search-card")) return;  // and so do the keys inside the search card
+    if (target && target.closest && target.closest("#search-card, #help-card")) return;  // and so do the keys inside the search card and the help sheet
     var move = keyMove(event.key, rtl());
     if (!move) return;
     var list = target && target.closest ? target.closest("[data-tiles]") : null;

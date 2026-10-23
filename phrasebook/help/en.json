@@ -305,7 +305,7 @@
     "help-icons": {
       "title": "Asking about a feature",
       "body": [
-        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second."
+        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second, where the site has an address for reports."
       ],
       "keys": "Tab to an icon, then Enter. Escape closes the window.",
       "touch": "Tap an icon, then What's this?. Tap Close, or outside the window, to dismiss it."
@@ -313,7 +313,7 @@
     "report-a-problem": {
       "title": "Reporting a problem",
       "body": [
-        "Report a problem shows you the email it would send before anything leaves your device: where you were, the app's version, and a box for what is wrong. Open email opens your own mail app with the text filled in, and Copy copies it. The app never sends anything itself."
+        "Report a problem shows you the email it would write before anything leaves your device: a box for what is wrong, and a few lines the app adds (the page you were on, the help topic, when the app was built and the languages), never more than 256 characters. Open email opens your own mail app with the text filled in, and Copy copies it. The app never sends anything itself."
       ],
       "keys": "Tab to Open email or Copy, then Enter.",
       "touch": "Tap Open email or Copy."

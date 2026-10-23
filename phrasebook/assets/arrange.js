@@ -304,7 +304,7 @@
   function onKey(event) {
     if (!state.arranging || event.altKey || event.ctrlKey || event.metaKey) return;
     var target = event.target;
-    if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || (target.closest && target.closest("#search-card")))) return;
+    if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || (target.closest && target.closest("#search-card, #help-card")))) return;
     if (event.key === "Escape" && state.picked) {
       event.preventDefault();
       cancel();
