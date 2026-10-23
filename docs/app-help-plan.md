@@ -56,6 +56,8 @@ Planned 2026-10-23. Covers the book itself. The in-context icons, sheet, overlay
 
 ## Phase 3: the words
 
+**Part 1 done 2026-10-23: chapter 1, Finding your way.** English in `phrasebook/help/en.json`; Welsh draft in `content/cydymaith/packs/cy/help.json` (with `how_to_col_keys` and `how_to_col_touch` in the pack's `ui`), logged in `docs/REVIEW.md`. Found on the way: two language articles gave every feature id twice, so only the first article now takes the plain anchor (`tiles`) and the others a language suffix (`tiles-en`); sections carry `data-feature`. Chapters 2 to 7 are still to do.
+
 1. **English, in the framework.** The seven chapters from `app-help-todo.md`:
    1. finding your way
    2. looking up words

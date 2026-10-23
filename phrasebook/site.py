@@ -1131,10 +1131,12 @@ class Site:
         toggle = ""
         if len(codes) > 1:
             toggle = f'<div class="about-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
-        articles = "".join(self.help_article(code, chapter) for code in codes)
+        articles = "".join(self.help_article(code, chapter, first=(i == 0)) for i, code in enumerate(codes))
         return f'<div class="about-page">{radios}{toggle}{articles}{self.help_pager(ident)}</div>'
 
-    def help_article(self, code, chapter):
+    def help_article(self, code, chapter, first=True):
+        """One language's article. Only the first article carries the plain anchors as ids, because an id may appear once on a page;
+        the others take the language as a suffix (`tiles-en`) and every section names its feature in `data-feature`."""
         intro, intro_lang = self.book.entry(code, "chapters", chapter["id"])
         parts = [f'<header><h1{self.la(intro_lang, code)}>{e(intro["title"])}</h1>']
         if intro.get("lede"):
@@ -1150,7 +1152,8 @@ class Site:
             )
             ways = f'<dl class="help-ways">{ways}</dl>' if ways else ""
             parts.append(
-                f'<section class="help-feature" id="{e(feature["id"])}"{self.la(lang, code)}><h2>{e(entry["title"])}</h2>{body}{ways}</section>'
+                f'<section class="help-feature" id="{e(feature["id"] if first else feature["id"] + "-" + code)}" data-feature="{e(feature["id"])}"'
+                f'{self.la(lang, code)}><h2>{e(entry["title"])}</h2>{body}{ways}</section>'
             )
         return f'<article class="about-text help-text" id="about-{e(code)}"{self.la(code)}>{"".join(parts)}</article>'
 

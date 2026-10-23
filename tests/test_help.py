@@ -145,7 +145,7 @@ class PageTests(Scratch):
     def test_each_feature_is_a_section_with_its_anchor_as_the_id(self):
         page = self.pages["help-one.html"]
         for anchor in ("a", "b"):
-            self.assertEqual(page.count(f'<section class="help-feature" id="{anchor}"'), 1, anchor)
+            self.assertEqual(page.count(f'<section class="help-feature" id="{anchor}" data-feature="{anchor}"'), 1, anchor)
         self.assertEqual(self.pages["help-two.html"].count('id="c"'), 1)
 
     def test_the_keys_and_touch_lines_are_shown_when_the_entry_has_them(self):
@@ -204,6 +204,9 @@ class PageTests(Scratch):
         article = page[page.index('id="about-qab"') : page.index('id="about-qac"')]
         self.assertIn("<h2>Ah</h2>", article)
         self.assertRegex(article, r'id="b"[^>]*lang="en"', "a missing entry is English, and says so")
+        ids = BuiltBookTests.ids(None, page)
+        self.assertEqual(len(ids), len(set(ids)), "an id appears once even with two articles")
+        self.assertIn('id="a-qac" data-feature="a"', page, "the second article's sections take the language as a suffix")
 
     def test_every_help_page_is_precached_so_it_works_offline(self):
         out = self.tmp / "offline"
