@@ -717,7 +717,7 @@ class SettingsPageTests(Scratch):
 
     def test_the_order_of_tiles_and_sections_is_a_choice_of_three_with_as_written_chosen(self):
         page = self.pages["settings.html"]
-        self.assertIn('<section class="card" aria-labelledby="h-order"><h2 id="h-order">', page)
+        self.assertIn('<details class="fold card" aria-labelledby="h-order"><summary><h2 id="h-order">', page)
         for value in ("written", "simple", "advanced"):
             self.assertIn(f'<input type="radio" name="order" value="{value}" data-pref="order"', page)
         self.assertIn('name="order" value="written" data-pref="order" checked', page)
@@ -731,7 +731,7 @@ class SettingsPageTests(Scratch):
     def test_the_order_choice_is_said_in_both_languages_of_the_pair_and_says_a_saved_order_wins(self):
         page = self.pages["settings.html"]
         section = page[
-            page.index('aria-labelledby="h-order"') : page.index("</section>", page.index('aria-labelledby="h-order"'))
+            page.index('aria-labelledby="h-order"') : page.index("</details>", page.index('aria-labelledby="h-order"'))
         ]
         self.assertIn("Simplest first", section)
         self.assertIn("Most advanced first", section)

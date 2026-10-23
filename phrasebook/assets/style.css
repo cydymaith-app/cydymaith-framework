@@ -373,4 +373,20 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 #prefs .seg label{display:flex}
 #prefs .seg-label{flex:1;min-height:3.5rem;padding-block:.3rem}  /* at least 3.5rem, more where a label wraps, and the segments stay one height */
 /* Appearance and Accessibility are the same height, so the two boxes read as one row of settings. */
-#prefs > .card[aria-labelledby="h-appearance"],#prefs > .card[aria-labelledby="h-access"]{min-height:15rem}
+#prefs > .card[open][aria-labelledby="h-appearance"],#prefs > .card[open][aria-labelledby="h-access"]{min-height:15rem}
+
+/* Accordions: a heading that opens and closes its section. A details element, so it works with no script and the keyboard and
+   screen readers already know it. The arrow is drawn with borders, so it takes the muted colour and needs no icon file. */
+.fold > summary{display:flex;align-items:center;justify-content:space-between;gap:.75rem;min-height:2.75rem;cursor:pointer;list-style:none}
+.fold > summary::-webkit-details-marker{display:none}
+.fold > summary::after{content:"";flex:none;width:.55rem;height:.55rem;margin-block-end:.3rem;border-inline-end:2px solid var(--muted);border-block-end:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.fold[open] > summary::after{margin-block:.3rem 0;transform:rotate(-135deg)}
+.fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.l10n-body .fold > summary > h2,.about-text .fold > summary > h2{margin:0}
+.fold-body{padding-block-start:.5rem}
+.l10n-body .card.fold{padding-block:.35rem 1rem}
+.l10n-body .card.fold:not([open]){padding-block-end:.35rem}
+.about-text .fold{border-block-start:1px solid var(--rule)}
+.about-text .fold:last-of-type{border-block-end:1px solid var(--rule)}
+.about-text .fold > summary{padding-block:.35rem}
+@media (forced-colors:active){.fold > summary:focus-visible{outline:2px solid Highlight}}

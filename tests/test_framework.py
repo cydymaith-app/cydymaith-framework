@@ -587,7 +587,8 @@ class AboutPageTests(Scratch):
     def test_the_sections_render_as_paragraphs_and_lists_and_link_to_the_sources(self):
         page = self.pages["about.html"]
         self.assertIn(
-            '<section><h2>qaa aims</h2><p>qaa first paragraph</p><ul class="notes"><li>qaa one</li><li>qaa two</li></ul></section>',
+            '<details class="fold" open><summary><h2>qaa aims</h2></summary><div class="fold-body"><p>qaa first paragraph</p>'
+            '<ul class="notes"><li>qaa one</li><li>qaa two</li></ul></div></details>',
             page,
         )
         self.assertEqual(page.count('<p class="about-more"><a href="sources.html">'), 2)
@@ -735,6 +736,66 @@ class AboutPageTests(Scratch):
         proj = self.project()
         fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("about_page"))
         self.assertNotIn('<a href="about.html">', self.built(proj)["index.html"])
+
+    def test_every_about_section_is_an_accordion_and_only_the_first_starts_open(self):
+        page = self.pages["about.html"]
+        article = page[
+            page.index('<article class="about-text" id="about-qaa"') : page.index('<article class="about-text" id="about-qab"')
+        ]
+        folds = re.findall(r'<details class="fold"( open)?><summary><h2>([^<]+)</h2></summary>', article)
+        self.assertEqual([title for _, title in folds], ["qaa aims", "qaa principle", "qaa more"])
+        self.assertEqual([bool(flag) for flag, _ in folds], [True, False, False])
+        self.assertNotIn("<section>", article)
+
+    def test_a_project_can_say_which_about_sections_start_open(self):
+        proj = self.project()
+        fixture.edit(
+            proj / "editions" / "demo.json",
+            lambda d: [
+                s.update(open=s["title"].endswith("principle"))
+                for code in ("qaa", "qab")
+                for s in d["about_page"][code]["sections"]
+            ],
+        )
+        page = self.built(proj)["about.html"]
+        article = page[
+            page.index('<article class="about-text" id="about-qaa"') : page.index('<article class="about-text" id="about-qab"')
+        ]
+        folds = re.findall(r'<details class="fold"( open)?><summary><h2>([^<]+)</h2>', article)
+        self.assertEqual(
+            [(bool(flag), title) for flag, title in folds], [(False, "qaa aims"), (True, "qaa principle"), (False, "qaa more")]
+        )
+
+    def test_open_must_be_true_or_false(self):
+        for bad in ("yes", 1, None, [True]):
+            proj = self.project()
+            fixture.edit(
+                proj / "editions" / "demo.json", lambda d, bad=bad: d["about_page"]["qaa"]["sections"][0].update(open=bad)
+            )
+            with self.assertRaises(ContentError, msg=repr(bad)):
+                content.validate(content.read(proj))
+
+    def test_the_settings_cards_are_accordions_with_only_appearance_open(self):
+        page = self.pages["settings.html"]
+        folds = re.findall(r'<details class="fold card"( aria-labelledby="[^"]+")?( id="about")?( open)?>', page)
+        self.assertGreaterEqual(len(folds), 4)
+        opened = [m for m in re.finditer(r'<details class="fold card"[^>]* open>', page)]
+        self.assertEqual(len(opened), 1)
+        self.assertIn('aria-labelledby="h-appearance" open>', opened[0].group(0))
+        self.assertNotIn('<section class="card"', page)
+
+    def test_a_shut_settings_card_still_holds_its_controls_so_the_choices_work(self):
+        page = self.pages["settings.html"]
+        shut = page[page.index('<details class="fold card" aria-labelledby="h-colours">') :]
+        shut = shut[: shut.index("</details>")]
+        self.assertIn('name="palette"', shut)
+        self.assertIn('data-pref="palette"', shut)
+
+    def test_each_fold_heading_is_a_summary_so_it_works_with_no_script(self):
+        for name, page in self.pages.items():
+            for fold in re.findall(r"<details class=\"fold[^>]*>(.*?)</details>", page, re.S):
+                self.assertTrue(fold.startswith("<summary>"), name)
+                self.assertIn("</summary>", fold, name)
 
     def test_about_is_a_reserved_page_name(self):
         proj = self.project()

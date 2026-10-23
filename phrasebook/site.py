@@ -265,6 +265,16 @@ class Site:
         bar = f'<div class="lang-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
         return radios, bar
 
+    def fold(self, heading_html, body_html, open_=False, card=False, labelled=None, attrs=""):
+        """A section that opens and closes: a details element whose summary is the heading. It works with no script, and
+        the controls inside stay in the page, with their state, while it is shut."""
+        cls = "fold card" if card else "fold"
+        label = f' aria-labelledby="{labelled}"' if labelled else ""
+        return (
+            f'<details class="{cls}"{label}{attrs}{" open" if open_ else ""}><summary>{heading_html}</summary>'
+            f'<div class="fold-body">{body_html}</div></details>'
+        )
+
     ICONS_FOR_APPEARANCE = {"light": "light", "dark": "asleep", "system": "screen"}
 
     def appearance_card(self):
@@ -275,10 +285,13 @@ class Site:
             f'{self.both("appearance_" + v)}</span></label>'
             for v in self.APPEARANCES
         )
-        return (
-            f'<section class="card" aria-labelledby="h-appearance"><h2 id="h-appearance">{self.both("appearance")}</h2>'
+        return self.fold(
+            f'<h2 id="h-appearance">{self.both("appearance")}</h2>',
             f'<p class="hint">{self.both("appearance_hint")}</p>'
-            f'<div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div></section>'
+            f'<div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div>',
+            open_=True,
+            card=True,
+            labelled="h-appearance",
         )
 
     def palette_levels(self):
@@ -294,10 +307,12 @@ class Site:
             for level in levels
         )
         hints = "".join(f'<p class="hint" data-hint="{level}">{self.both("access_" + level + "_hint")}</p>' for level in levels)
-        return (
-            f'<section class="card" aria-labelledby="h-access"><h2 id="h-access">{self.both("accessibility")}</h2>'
+        return self.fold(
+            f'<h2 id="h-access">{self.both("accessibility")}</h2>',
             f'<p class="hint">{self.both("access_hint")}</p>'
-            f'<div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}</section>'
+            f'<div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}',
+            card=True,
+            labelled="h-access",
         )
 
     def colours_card(self):
@@ -311,11 +326,13 @@ class Site:
             f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
             for pid in self.palette_ids
         )
-        return (
-            f'<section class="card" aria-labelledby="h-colours"><h2 id="h-colours">{self.both("colours")}</h2>'
+        return self.fold(
+            f'<h2 id="h-colours">{self.both("colours")}</h2>',
             f'<p class="hint">{self.both("colours_hint")}</p>'
             f'<div class="swatches" role="radiogroup" aria-labelledby="h-colours">{cards}</div>'
-            f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p></section>'
+            f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p>',
+            card=True,
+            labelled="h-colours",
         )
 
     def theme_controls(self):
@@ -343,8 +360,12 @@ class Site:
             )
             legend = self.both_named("regional_forms", code)
             fields.append(
-                f'<section class="card" aria-labelledby="h-var-{e(code)}"><h2 id="h-var-{e(code)}">{legend}</h2>'
-                f'<div class="seg" role="radiogroup" aria-labelledby="h-var-{e(code)}">{radios}</div></section>'
+                self.fold(
+                    f'<h2 id="h-var-{e(code)}">{legend}</h2>',
+                    f'<div class="seg" role="radiogroup" aria-labelledby="h-var-{e(code)}">{radios}</div>',
+                    card=True,
+                    labelled=f"h-var-{e(code)}",
+                )
             )
         return "".join(fields)
 
@@ -366,10 +387,12 @@ class Site:
             f'<span class="seg-label">{self.both("order_" + v)}</span></label>'
             for v in self.ORDERS
         )
-        return (
-            f'<section class="card" aria-labelledby="h-order"><h2 id="h-order">{self.both("order_title")}</h2>'
+        return self.fold(
+            f'<h2 id="h-order">{self.both("order_title")}</h2>',
             f'<p class="hint">{self.both("order_hint")}</p>'
-            f'<div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div></section>'
+            f'<div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div>',
+            card=True,
+            labelled="h-order",
         )
 
     def prefs_controls(self):
@@ -889,7 +912,7 @@ class Site:
                 ("sources.html", "sources"),
             )
         )
-        about = f'<section class="card" id="about"><h2>{self.both("about_app")}</h2><ul class="links">{links}</ul></section>'
+        about = self.fold(f'<h2>{self.both("about_app")}</h2>', f'<ul class="links">{links}</ul>', card=True, attrs=' id="about"')
         # Every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices.
         reset_orders = (
             f'<div class="reset-orders" data-reset-orders hidden><h2>{self.h("reset_orders_title")}</h2>'
@@ -950,9 +973,12 @@ class Site:
             if page.get("lede"):
                 parts.append(f'<p class="lede">{e(page["lede"])}</p>')
             parts.append("</header>")
-            for section in page["sections"]:
+            sections = page["sections"]
+            chosen = any("open" in s for s in sections)  # a project that says which sections are open decides for all of them
+            for n, section in enumerate(sections):
                 body = "".join(self.about_block(code, block) for block in section["body"])
-                parts.append(f'<section><h2>{e(section["title"])}</h2>{body}</section>')
+                is_open = bool(section["open"]) if "open" in section else (n == 0 and not chosen)
+                parts.append(self.fold(f'<h2>{e(section["title"])}</h2>', body, open_=is_open))
             parts.append(f'<p class="about-more"><a href="sources.html">{self.ui_html(code, "sources")}</a></p>')
             if self.built:
                 # The label is in the article's language; the time is written the same in all of them, in UTC, so no month names.

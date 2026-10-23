@@ -402,6 +402,8 @@ def validate_about(where, about, langs):
             if not isinstance(section, dict) or not section.get("title") or not section.get("body"):
                 raise ContentError(f"{here}: each section needs a 'title' and a 'body'")
             check_status(f"{here}: section {section['title']!r}", section)
+            if "open" in section and not isinstance(section["open"], bool):
+                raise ContentError(f"{here}: section {section['title']!r}: 'open' must be true or false")
             for block in section["body"]:
                 validate_about_block(here, block)
 
