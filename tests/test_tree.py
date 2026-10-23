@@ -649,6 +649,7 @@ class HowToTests(Scratch):
     def setUpClass(cls):
         super().setUpClass()
         cls.proj = cls.project()
+        fixture.edit(cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))  # so the Related topics feature applies
         cls.out = cls.tmp / "howto-out"
         quiet_build(cls.out, project_dir=cls.proj)
         cls.pages = {f.name: f.read_text(encoding="utf-8") for f in cls.out.glob("*.html")}

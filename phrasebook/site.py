@@ -1071,7 +1071,16 @@ class Site:
 
     def help_conditions(self):
         """What the edition has that a help feature can ask for."""
-        return {name for name, on in (("about", bool(self.edition.get("about_page"))), ("varieties", self.has_varieties())) if on}
+        many = len(self.palette_ids) > 1
+        found = (
+            ("about", bool(self.edition.get("about_page"))),
+            ("varieties", self.has_varieties()),
+            ("palettes", many),
+            ("access", many and len(self.palette_levels()) > 1),
+            ("levels", self.has_levels()),
+            ("related", any(page.get("related") for page in self.skel.values())),
+        )
+        return {name for name, on in found if on}
 
     def help_chapters(self):
         """The chapters this edition shows, each with only the features that apply to it."""

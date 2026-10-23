@@ -26,6 +26,8 @@ from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 ANCHORS = [
     "tiles", "trail", "side-bar", "back", "pager", "jump-links", "keys-and-touch", "drag-back",
     "search", "search-keys", "search-this-page-first", "listen-first-rows", "also-heard", "regional-forms", "sources-notes",
+    "sections-order", "levels", "related-topics",
+    "settings-groups", "language-toggle", "view-mode", "accessibility", "colour-schemes", "order-setting", "reset-tile-layouts", "what-is-saved",
 ]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
@@ -216,6 +218,20 @@ class PageTests(Scratch):
         self.assertEqual(len(ids), len(set(ids)), "an id appears once even with two articles")
         self.assertIn('id="a-qac" data-feature="a"', page, "the second article's sections take the language as a suffix")
 
+    def test_the_conditions_a_site_can_answer_are_the_ones_the_book_may_ask_for(self):
+        site = site_for(self.proj, book())
+        self.assertLessEqual(site.help_conditions(), set(helpbook.CONDITIONS))
+        self.assertNotIn("related", site.help_conditions())
+        raw = content.read(self.proj)
+        fixture.edit(self.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))
+        related = phrasebook.Site(content.read(self.proj), content.pick_edition(raw)[1], help_book=book())
+        self.assertIn("related", related.help_conditions())
+        fixture.edit(self.proj / "pages" / "p1.json", lambda d: d.pop("related"))
+
+    def test_every_condition_the_real_book_asks_for_exists(self):
+        asked = {f.get("requires") for c in helpbook.SECTIONS for f in c["features"]} - {None}
+        self.assertLessEqual(asked, set(helpbook.CONDITIONS))
+
     def test_every_help_page_is_precached_so_it_works_offline(self):
         out = self.tmp / "offline"
         quiet_build(out, project_dir=self.proj)
@@ -273,7 +289,9 @@ class BuiltBookTests(Scratch):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.pages = cls.built(cls.project())
+        proj = cls.project()
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))  # so the Related topics feature applies
+        cls.pages = cls.built(proj)
         cls.help_pages = {n: t for n, t in cls.pages.items() if n.startswith("help-") or n == "how-to.html"}
 
     def ids(self, text):
@@ -287,7 +305,7 @@ class BuiltBookTests(Scratch):
         return found
 
     def test_there_is_a_page_for_every_chapter_and_the_contents(self):
-        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html"})
+        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html", "help-reading-a-topic.html", "help-your-settings.html"})
 
     def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
         book_ids = [i for name, text in self.help_pages.items() if name.startswith("help-") for i in self.ids(text)]

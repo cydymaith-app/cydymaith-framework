@@ -7,6 +7,14 @@
     "looking-up-words": {
       "title": "Looking up words",
       "lede": "Finding a word you have just heard: search, which language comes first, other forms, and where the words come from."
+    },
+    "reading-a-topic": {
+      "title": "Reading a topic",
+      "lede": "How a topic page is laid out, how its parts are graded, and how to go from one topic to a related one."
+    },
+    "your-settings": {
+      "title": "Your settings",
+      "lede": "Changing how the app looks and behaves, and what it keeps on your device."
     }
   },
   "features": {
@@ -126,6 +134,91 @@
       "body": [
         "A small note under a phrase, in lighter type, explains how it is used. Some topics also have a short introduction or a box about a point of grammar, such as a change to the first letter of a word.",
         "The Sources page, linked from About, lists where the phrases come from, the licence each is used under, and how many entries come from each. An entry from an unreviewed draft has not yet been checked against a source."
+      ]
+    },
+    "sections-order": {
+      "title": "How a section is ordered",
+      "body": [
+        "A topic is made of sections, each a card of rows. Under a section's heading, a line beginning Order says how its rows are arranged, for example from lightest to heaviest. Not every section has one."
+      ]
+    },
+    "levels": {
+      "title": "Simple to advanced",
+      "body": [
+        "Tiles and sections are graded from beginner to advanced by what they hold: those with shorter entries are simpler. Nothing is marked on the screen. The grades are used only for the Order choice in Settings, which can put the simplest first or the most advanced first. A screen whose tiles you have arranged yourself keeps your order."
+      ]
+    },
+    "related-topics": {
+      "title": "Linked topics",
+      "body": [
+        "Some topics end with a row of tiles for related topics, so you can go from one to another without going back up. Open one and Back returns you to the topic you came from."
+      ],
+      "keys": "Tab to a tile, then Enter, or use the Right arrow.",
+      "touch": "Tap a tile."
+    },
+    "settings-groups": {
+      "title": "How the settings page is arranged",
+      "body": [
+        "Settings are in groups that open and close when you choose their headings. Only the first group, Accessibility and appearance, starts open.",
+        "Settings need scripts to be switched on in your browser. Without them the app follows your device's light or dark setting and uses the default colours."
+      ],
+      "keys": "Tab to a heading, then Enter or Space.",
+      "touch": "Tap a heading."
+    },
+    "language-toggle": {
+      "title": "Choosing a language",
+      "body": [
+        "Settings, About and the help pages show one language at a time. A toggle at the top right switches between the two. Without the script the first language shows; with it, your last choice is remembered."
+      ],
+      "keys": "Tab to the toggle and use the arrow keys.",
+      "touch": "Tap a language name."
+    },
+    "view-mode": {
+      "title": "Choosing light or dark",
+      "body": [
+        "View mode has three choices: Same as device, Light and Dark. Same as device follows your device's own light or dark setting."
+      ],
+      "keys": "Tab to the choices and use the arrow keys.",
+      "touch": "Tap a tile."
+    },
+    "accessibility": {
+      "title": "Easier-to-see colour schemes",
+      "body": [
+        "Accessibility chooses which colour schemes are offered below it. Standard shows the usual schemes. Safe colours shows schemes that stay easy to tell apart with colour-blind vision. High contrast shows schemes with stronger text and borders.",
+        "Choosing a level switches to the scheme you last picked at that level, or the first it lists."
+      ],
+      "keys": "Tab to the choices and use the arrow keys.",
+      "touch": "Tap a level."
+    },
+    "colour-schemes": {
+      "title": "Choosing a colour scheme",
+      "body": [
+        "Each colour scheme is shown as a small picture of itself, drawn in its own colours as it would look in the current view mode. Choose one to use it straight away. A level with only one scheme says so."
+      ],
+      "keys": "Tab to the schemes and use the arrow keys.",
+      "touch": "Tap a scheme."
+    },
+    "order-setting": {
+      "title": "Putting tiles in order",
+      "body": [
+        "Order puts tiles and sections in order: as they are written (Default), the simplest first, or the most advanced first. It applies to the pages you open next. A screen whose tiles you have arranged yourself keeps your own order."
+      ],
+      "keys": "Tab to the choices and use the arrow keys.",
+      "touch": "Tap a choice."
+    },
+    "reset-tile-layouts": {
+      "title": "Putting tiles back",
+      "body": [
+        "Reset tile layouts puts every tile on every page back in its default order. Your appearance and colour choices are kept. The button appears only once the page's script has loaded."
+      ],
+      "keys": "Tab to the button, then Enter.",
+      "touch": "Tap the button."
+    },
+    "what-is-saved": {
+      "title": "What the app remembers",
+      "body": [
+        "Your choices stay on this device and are never sent anywhere. The app remembers your view mode, colour scheme, order, language, regional forms and any tile order you save.",
+        "To forget them, clear this site's data in your browser. Reset tile layouts puts only the tiles back."
       ]
     }
   }
