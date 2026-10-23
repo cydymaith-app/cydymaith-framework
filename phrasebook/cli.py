@@ -5,6 +5,8 @@ python3 build.py [OUTDIR] --project DIR      choose the project (default: the on
 python3 build.py [OUTDIR] --edition NAME     choose an edition when the project holds several
 python3 build.py [OUTDIR] --strict           also fail while any included source is still an unreviewed draft
 python3 build.py [OUTDIR] --channel NAME     release (default) leaves out held-back sections; development keeps them
+python3 build.py --grades                    print how demanding each group, page and section is, from beginner to advanced
+                                             (builds nothing; takes --project, --edition and --channel)
 python3 build.py [OUTDIR] --screenshots [DIR]  also screenshot every theme (palette, light and dark) on one example
                                              page into DIR (default docs/screenshots); needs Chrome, Chromium or Edge
 """
@@ -16,7 +18,7 @@ import pathlib
 import shutil
 import sys
 
-from . import content, screenshots
+from . import content, grading, screenshots
 from .content import ContentError
 from .channels import RELEASE, select as select_channel
 from .dictionary import index as dictionary_index
@@ -163,9 +165,22 @@ def main(argv=None, projects_dir=None):
         return None
 
     edition, project, channel = option("--edition"), option("--project"), option("--channel") or RELEASE
+    show_grades = "--grades" in argv
+    if show_grades:
+        argv.remove("--grades")
     strict = "--strict" in argv
     args = [a for a in argv if not a.startswith("--")]
     out = args[0] if args else "dist"
+    if show_grades:  # the grades, for checking by eye; nothing is built
+        try:
+            raw = content.read(pathlib.Path(project) if project else find_project(projects_dir))
+            content.validate(raw)
+            view = select_channel(raw, channel)
+            _, ed = content.pick_edition(view, edition)
+            print(grading.report(grading.grade(view, ed)))
+        except ContentError as err:
+            sys.exit(f"content error: {err}")
+        return
     try:
         project = pathlib.Path(project) if project else find_project(projects_dir)
         n = build(out, project_dir=project, strict=strict, edition=edition, channel=channel)

@@ -18,7 +18,7 @@ import pathlib
 import re
 import unicodedata
 
-from . import icons, palettes
+from . import grading, icons, palettes
 from .errors import ContentError
 from .figures import FIGURE_CONCEPTS
 from .channels import check_status
@@ -123,6 +123,7 @@ def validate(raw):
                 raise ContentError(f"structure.json: group {g['id']!r} both lists and links '{slug}'; list it once")
         if len(set(linked)) != len(linked):
             raise ContentError(f"structure.json: group {g['id']!r} links a page more than once")
+        check_level(f"structure.json group {g['id']!r}", g)
     for slug in pages:
         if slug not in listed:
             raise ContentError(f"pages/{slug}.json is not listed in any group in structure.json")
@@ -143,6 +144,14 @@ def validate(raw):
     for name, ed in raw["editions"].items():
         validate_edition(name, ed, packs, raw["palettes"])
     Messages(packs).validate()
+
+
+def check_level(where, holder):
+    """An optional "level" (how demanding a group, page or section is) must be a whole number from 1 to 3."""
+    try:
+        grading.validate_level(where, holder)
+    except ValueError as err:
+        raise ContentError(str(err)) from None
 
 
 def check_icon(where, name, available):
@@ -187,10 +196,12 @@ def validate_skeleton(slug, p):
         if not s.get("concepts"):
             raise ContentError(f"pages/{slug}.json/{sid}: needs at least one concept")
         check_status(f"pages/{slug}.json/{sid}", s)
+        check_level(f"pages/{slug}.json/{sid}", s)
         for cid in s["concepts"]:
             if cid in seen_concepts:
                 raise ContentError(f"pages/{slug}.json/{sid}: concept id repeated on the page: {cid!r}")
             seen_concepts.add(cid)
+    check_level(f"pages/{slug}.json", p)
     fig = p.get("figure")
     if fig:
         if fig not in FIGURE_CONCEPTS:
@@ -326,6 +337,10 @@ def validate_edition(name, ed, packs, available_palettes):
     pair = ed.get("default_pair") or []
     if len(pair) != 2 or pair[0] == pair[1] or any(c not in langs for c in pair):
         raise ContentError(f"{where}: 'default_pair' needs two different languages from the edition")
+    try:
+        grading.validate_settings(where, ed)
+    except ValueError as err:
+        raise ContentError(str(err)) from None
     for code in pair:
         if not ed.get("home", {}).get("headline", {}).get(code):
             raise ContentError(f"{where}: home.headline needs a text for {code!r}")

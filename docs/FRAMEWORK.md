@@ -31,6 +31,7 @@ python3 build.py dist --edition NAME        # when a project holds several editi
 python3 build.py dist --strict              # fail while any source is still an unreviewed draft
 python3 build.py dist --screenshots         # also screenshot every theme into docs/screenshots (needs a browser)
 python3 build.py dist --screenshots DIR     # ...or into DIR
+python3 build.py --grades                   # print how demanding each group, page and section is (builds nothing)
 ```
 
 **Theme screenshots.** `--screenshots` takes one phone-sized picture of every offered palette in its light and its dark variant, each of one example page: the first topic that has a drawing, since it shows the most of the colours (the accent, the star, text and rules). That is 8 pictures for the English and Welsh project, and takes about a minute and a half, so it is a step of its own, not part of every build. The site is copied with the theme set the way the settings page sets it and the page's scripts taken out, and `docs/screenshots/README.md` is written as a gallery. The folder is generated, so git ignores it. A headless Chrome, Chromium or Edge is needed for this step only: it is found from the `PHRASEBOOK_BROWSER` environment variable (a path or a name), then the usual names on the `PATH`, then the usual install places, and the build says so if there is none. Run it again after changing a palette or the layout.
@@ -39,11 +40,11 @@ python3 build.py dist --screenshots DIR     # ...or into DIR
 
 | File | What it holds |
 |---|---|
-| `structure.json` | Navigation groups and page order. A group may name an `icon`. Language neutral. |
-| `pages/<slug>.json` | A page skeleton: sections and the ids of their **concepts**. No words. May name a `figure` and an `icon`. |
+| `structure.json` | Navigation groups and page order. A group may name an `icon` and a `level`. Language neutral. |
+| `pages/<slug>.json` | A page skeleton: sections and the ids of their **concepts**. No words. May name a `figure`, an `icon` and a `level`; a section may name a `level` too (see *Grading*). |
 | `packs/<code>/pack.json` | One language: `code`, `name`, `names`, `dir`, `ui`, `groups`, `sources`, `varieties`, `commentary_lang`. |
 | `packs/<code>/pages/<slug>.json` | That language's title, lede, default `source`, and per section a title, optional `intro` and `box` commentary, and one entry per concept. |
-| `editions/<name>.json` | `name`, `languages`, `interface`, `default_pair`, `home` copy, `fonts`, `stylesheets`. |
+| `editions/<name>.json` | `name`, `languages`, `interface`, `default_pair`, `home` copy, `fonts`, `stylesheets`, and optionally `grading`. |
 | `palettes/<id>.json` | Optional. A colour palette added to the framework's own, or one with a framework id that replaces it. See *Themes and palettes*. |
 | `icons/<name>.svg` | Optional line icons. A group in `structure.json` or a page skeleton names one with `"icon": "<name>"`. See *Navigation*. |
 | `static/` | Files copied to the site as they are. They may add to the framework's files or replace them. |
@@ -82,6 +83,7 @@ A concept is `{ "text": "...", "note": "...", "source": "id" }` or `{ "forms": [
 - `languages`: every pack to publish. `interface`: the language the interface is in, one of them. `default_pair`: the two languages shown first.
 - `home.headline` needs a text for each language of the default pair. `home.lede` and `home.about` are optional, per language.
 - `palettes`: optional list of palette ids to offer, which must include `default`. Omit it to offer every palette available (the framework's and the project's).
+- `grading`: optional `{"language", "bounds"}` for how tiles and sections are graded from beginner to advanced; see *Grading*.
 - `storage`: optional name under which the browser keeps this site's saved choices (default: the edition name as a slug). Two sites on one origin must not share it.
 - `fonts`: stylesheet URLs linked before the framework stylesheet (the English–Welsh project lists none, since it serves its fonts itself). `stylesheets`: stylesheets of the project (files in `static/`) linked after it. Both accept `https://` URLs or `.css` files only. The framework itself links nothing external, so a project that lists no URL makes no third-party request.
 
@@ -118,6 +120,45 @@ The order is kept under `<site>:order` in localStorage, separate from the prefer
 **Search and the lookup card** (`search.js`, `Site.search_card`, `dictionary.py`). Every page holds a shut, hidden card (`#search-card`, `inert`) after the page, with its messages and the language pair in `data-` attributes, so a language never appears in the script. The search button in the rail is hidden until the script loads and then reveals the card's layer. Opening slides the card out from behind the rail (a clipping layer, `visibility` and a transform, mirrored in right-to-left with `--slide`), reads `dictionary.json` once, focuses the field and lists results as the person types. Each result is a word with its translation (every regional form, joined with `/`), linking to the word's row on its first page (`slug.html#section.concept`, the `id` of the row), and under it a sub-item link for every topic it is in. Topics whose title matches are listed beneath under a heading. Words found on the page being browsed (a topic, or all the pages of a group on a group page) are listed first, each page-first so its link lands on that page's row, then a separator headed "Other results" (the message `search_other`) and the rest; the page lists its pages in the card's `data-scope`, empty on the home, settings and other pages, where there is no separator. Within each part, ranking: the whole text, the start of the text, the start of a word, then anywhere, and every match that had to ignore marks after those. The card is dismissed by Escape, the Close button, a tap outside it, or following a link (which closes it at once, so the page that leaves has no card on it); `/` opens it from the keyboard, Down and Up move through the results, and Enter follows the first. The keys inside the card are left alone by `nav.js`. Results are built with `textContent`, never `innerHTML`. A target row gets the surface colour (`:target`). The matching functions need no page and are tested under Node (`tests/search.test.js`).
 
 **Icons** (`icons.py`) are the project's, in `icons/<name>.svg`, named with `"icon"` on a group or a page. The framework ships only three interface icons, `ui-icons/search.svg`, `ui-icons/arrow--left.svg` and `ui-icons/settings.svg`. Every file is checked as a **safe subset of SVG** (shapes and groups with geometry and presentation attributes; no scripts, styles, links, event handlers or `url()` references, no DOCTYPE), then rewritten as one line of markup that takes the text colour, is hidden from screen readers (the label beside it says the same thing) and is **inlined**, so a page makes no request for an icon and the icon follows the palette. A build fails naming the file for an unsafe icon or an `icon` with no file. Record each icon set and its licence in `ASSETS.md`.
+
+## Grading: how demanding a tile or section is
+
+Each group, page and section has a **level** from 1 (beginner) to 3 (advanced), so that tiles and sections can be put in order from simple to advanced, or the other way round. The level is **worked out from what the group, page or section holds**, and can be set by hand where the rule is plainly wrong. Nothing in the pages shows it yet; the build can report it (below), and putting tiles in order by it is on the list of what is not done yet.
+
+**The rule.** A learner finds a single word easier than a short phrase, and a short phrase easier than a sentence. So the level follows the size of a *typical* entry: the **median number of words** in the language being heard (the first language of the edition's `default_pair`, or `grading.language`). The median and not the mean, so one stray single word in a section of sentences does not pull it down, nor one long entry in a section of words push it up.
+
+| Level | The median entry is | Under | Looks like |
+|---|---|---|---|
+| 1 | words | 1.5 words | *north*, *sunny*, *drizzle* |
+| 2 | short phrases | 2.5 words | *in Wales*, *light rain*, *yellow warning* |
+| 3 | sentences, or longer phrases | any more | *in the north*, *it will be sunny tomorrow* |
+
+A **word** is a piece of text between white space that holds a letter or a digit, so `north-east` is one word, a lone dash is none, and the `{{ }}` marks that show a stretch of the pack's own language are not counted. An entry that has only regional `forms` is counted by its first form. A concept the pack does not have is left out, not counted as empty. A section is graded from its own entries, a page from every entry on it, and a group from every entry on the pages it lists (not the pages it only links to), so a page's level is not the average of its sections' levels. With nothing to measure, the level is 1.
+
+**Setting a level by hand.** Add `"level": 1`, `2` or `3` to a group in `structure.json`, or to a page or one of its sections in `pages/<slug>.json`. It wins over the rule for that group, page or section only; it does not change the level of what holds it. Do it where the rule is plainly wrong and say why in a comment in the project's tests (see below), and keep such overrides few: if many are needed, change the rule's `grading` settings instead. The usual case is an item that is written as several words but is one thing to learn, such as a day of the week in a language that writes *Day Monday*.
+
+**The edition's `grading` block** is optional:
+
+```json
+"grading": { "language": "cy", "bounds": [1.5, 2.5] }
+```
+
+`language` is the language whose words are counted (default: the first language of `default_pair`; it must be one of the edition's languages). `bounds` are the two medians at which level 1 gives way to level 2, and level 2 to level 3: two rising positive numbers. The build fails, naming the file, for anything else. The framework counts words by white space and knows no language, so for a language written without spaces between words (Chinese, Japanese, Thai) the count is not a good measure: set `bounds` to suit, or set the levels by hand.
+
+**Checking the grades.** `python3 build.py --grades [--project DIR] [--edition NAME] [--channel NAME]` prints every group, page and section with its level, its median and how many entries it was worked out from, and builds nothing. It grades what the channel publishes (held-back sections are left out unless `--channel development`). A level set by hand has a star, and a note says what the rule would have given:
+
+```
+weather-forecast                   level 2   median  1.5  over 120 entries
+  sky                              level 1   median  1.0  over  19 entries
+  where
+    points                         level 1   median  1.0  over   8 entries
+    directions                     level 3   median  3.0  over   5 entries
+    days                           level 1*  median  2.0  over   7 entries  (the rule says 2)
+```
+
+**Reviewing them.** A level is a judgement about difficulty, so it wants a fluent speaker's review like the rest of the content. Read the report as a learner would: the simple things should come first and the complex ones follow. Where one looks wrong, first ask whether the rule is the problem (a different `bounds` might suit the language), and only then set the level by hand. A project should test the grades it cares about, as the English and Welsh project does in `tests/test_project.py`: that single words come below the phrases built on them, that sentence patterns are level 3, and how many levels are set by hand.
+
+The rule is `grading.py` and has no language in it; `tests/test_grading.py` covers counting, the median, the levels and their bounds, the language heard, regional forms, overrides, the validation messages and the report.
 
 ## Themes and palettes
 
@@ -198,6 +239,7 @@ To localise the interface for a language, add the keys to its pack's `ui`. To sh
 
 Be aware of these before relying on the framework for a language that needs them.
 
+- **Putting tiles and sections in order by level.** Levels are worked out and can be reported (see *Grading*), but the pages do not carry them yet, and there is no setting to order simple first or advanced first. A person's own saved order of a screen is meant to win over it.
 - **Number formatting.** Counts are written as plain Western digits, with no grouping separators and no locale digit shapes (Arabic-Indic, Devanagari). Counts in a phrasebook stay small, so this is harmless today.
 - **Plural rules** exist for the languages listed in `plural.py` and cover whole numbers only. Add a row to support another language. The build says so when a message needs rules that are missing.
 - **Collation and search.** Entries are in curated order, so nothing is sorted. Search compares in normal form C and folds case with each term's own language (`toLocaleLowerCase(lang)`, never ASCII lower-casing), then again with combining marks removed, so a regional form finds its concept and a query typed without accents still finds a word that has them, ranked after the exact matches. See section 3 of the app's `docs/TODO.md` (the cydymaith repository).
