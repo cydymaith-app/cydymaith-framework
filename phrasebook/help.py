@@ -41,6 +41,18 @@ SECTIONS = [
             {"id": "drag-back"},
         ],
     },
+    {
+        "id": "looking-up-words",
+        "features": [
+            {"id": "search"},
+            {"id": "search-keys"},
+            {"id": "search-this-page-first"},
+            {"id": "listen-first-rows"},
+            {"id": "also-heard"},
+            {"id": "regional-forms", "requires": "varieties"},
+            {"id": "sources-notes"},
+        ],
+    },
 ]
 
 

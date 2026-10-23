@@ -23,7 +23,10 @@ from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 
 # The anchors in the book today. A test fails when one is renamed or dropped, because every link that names it would break.
 # Add to this list when a feature is added; never edit an entry.
-ANCHORS = ["tiles", "trail", "side-bar", "back", "pager", "jump-links", "keys-and-touch", "drag-back"]
+ANCHORS = [
+    "tiles", "trail", "side-bar", "back", "pager", "jump-links", "keys-and-touch", "drag-back",
+    "search", "search-keys", "search-this-page-first", "listen-first-rows", "also-heard", "regional-forms", "sources-notes",
+]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
 
@@ -186,7 +189,12 @@ class PageTests(Scratch):
         self.assertNotIn('class="next"', self.pages["help-two.html"])
 
     def test_a_book_of_one_chapter_has_no_pager(self):
-        pages = site_for(self.proj, helpbook.Book.load({})).render_all()
+        one = helpbook.SECTIONS[:1]
+        keep = {f["id"] for f in one[0]["features"]}
+        texts = copy.deepcopy(helpbook.Book.load({}).texts)
+        texts["en"]["features"] = {k: v for k, v in texts["en"]["features"].items() if k in keep}
+        texts["en"]["chapters"] = {k: v for k, v in texts["en"]["chapters"].items() if k == one[0]["id"]}
+        pages = site_for(self.proj, helpbook.Book(one, texts)).render_all()
         self.assertNotIn('class="pager"', pages["help-finding-your-way.html"])
 
     def test_english_text_in_an_interface_that_is_not_english_is_marked_as_english(self):
@@ -279,12 +287,12 @@ class BuiltBookTests(Scratch):
         return found
 
     def test_there_is_a_page_for_every_chapter_and_the_contents(self):
-        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html"})
+        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html"})
 
     def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
-        chapter = self.ids(self.pages["help-finding-your-way.html"])
+        book_ids = [i for name, text in self.help_pages.items() if name.startswith("help-") for i in self.ids(text)]
         for anchor in ANCHORS:
-            self.assertEqual(chapter.count(anchor), 1, anchor)
+            self.assertEqual(book_ids.count(anchor), 1, anchor)
             self.assertNotIn(anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them")
         for name, text in self.help_pages.items():
             ids = self.ids(text)

@@ -3,6 +3,10 @@
     "finding-your-way": {
       "title": "Finding your way",
       "lede": "Moving around the app: tiles, the bar at the top, the bar at the side, and going back."
+    },
+    "looking-up-words": {
+      "title": "Looking up words",
+      "lede": "Finding a word you have just heard: search, which language comes first, other forms, and where the words come from."
     }
   },
   "features": {
@@ -71,6 +75,58 @@
         "A drag that starts at the very edge of the screen is left to your device, so its own back gesture still works. If your device asks for reduced motion, pages do not slide; they simply change."
       ],
       "touch": "Drag the page to the right and let go."
+    },
+    "search": {
+      "title": "Looking up a word",
+      "body": [
+        "Search finds a word or phrase in either language. Type any part of it, in the language you heard or in the other one. Capital letters and accents do not matter: typing without them still finds the word, though a match that keeps them comes first.",
+        "Each result shows the word and its translation, with the regional forms side by side, and a link to its row on the page. Under it are links to every topic it appears in. Topics whose title matches what you typed are listed under the words.",
+        "The Search button appears only once the page's script has loaded."
+      ],
+      "keys": "Press / to open search, or Tab to the Search button and press Enter.",
+      "touch": "Tap the magnifying glass in the bar at the side."
+    },
+    "search-keys": {
+      "title": "Moving through results and closing",
+      "body": [
+        "Search stays open while you type. Choose a result to go to it; the card closes as the page changes."
+      ],
+      "keys": "Down arrow and Up arrow move through the results. Enter follows the first result when the cursor is in the field. Escape closes search.",
+      "touch": "Tap a result to go to it. Tap Close, or anywhere outside the card, to shut search."
+    },
+    "search-this-page-first": {
+      "title": "Results from the page you are on",
+      "body": [
+        "When you open search on a topic, the words found on that page come first. A line headed Other results separates them from the rest. On a group page, the words on all the pages of that group come first. On the home page and other pages there is no such line."
+      ]
+    },
+    "listen-first-rows": {
+      "title": "Which language comes first",
+      "body": [
+        "Each row shows the first language of the pair at the start of the row in large, strong type, and the second language at the end of the same row, in a lighter colour. The first language is the one you hear, so you can scan it quickly. The site chooses the pair."
+      ]
+    },
+    "also-heard": {
+      "title": "Other forms you may hear",
+      "body": [
+        "Under some words a line with a headphones icon lists other forms the word is heard as, such as a changed beginning or a plural. Search finds the word from any of them."
+      ]
+    },
+    "regional-forms": {
+      "title": "Regional forms",
+      "body": [
+        "Some words have different forms in different places. A small tag after a form, such as N or S, shows which region it belongs to; on a computer, pointing at it shows the full name.",
+        "In Settings, Regional forms lets you choose a region for a language. Forms that do not belong to it are shown smaller and fainter, and nothing is hidden. The choice is kept on this device."
+      ],
+      "keys": "In Settings, Tab to the choice and use the arrow keys.",
+      "touch": "In Settings, tap a region."
+    },
+    "sources-notes": {
+      "title": "Notes and sources",
+      "body": [
+        "A small note under a phrase, in lighter type, explains how it is used. Some topics also have a short introduction or a box about a point of grammar, such as a change to the first letter of a word.",
+        "The Sources page, linked from About, lists where the phrases come from, the licence each is used under, and how many entries come from each. An entry from an unreviewed draft has not yet been checked against a source."
+      ]
     }
   }
 }
