@@ -177,8 +177,6 @@ h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;m
 li.is-picked .tile{outline:3px solid var(--accent);outline-offset:3px}
 li.is-dragging{position:relative;z-index:1}
 li.is-dragging .tile{transform:scale(1.06)}
-.reset-orders{margin-top:2rem}
-.reset-orders h2{margin-bottom:.4rem}
 
 .jump{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:1.5rem 0 0;padding:0}
 .jump a{display:block;padding:.3rem .75rem;border:1px solid var(--rule-strong);border-radius:999px;font-size:.85rem;text-decoration:none}
@@ -366,14 +364,16 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
   .rose .star,.rose .ring,.rose .tick{stroke:CanvasText}
 }
 
-/* Settings cards keep one size whatever the text does: the hints reserve two lines, and the tiles and segmented labels reserve
-   room for a two-line label, so Appearance, Accessibility and Colour schemes line up as the level or language changes. */
+/* Settings keep one size whatever the text does: the hints reserve two lines, and the tiles and segmented labels reserve room
+   for a two-line label, so View mode, Accessibility and Colour schemes keep their places as the level or language changes. */
 #prefs .hint{min-height:2lh}
 #prefs .mode-box{height:6.25rem;min-height:0;justify-content:center}
 #prefs .seg label{display:flex}
 #prefs .seg-label{flex:1;min-height:3.5rem;padding-block:.3rem}  /* at least 3.5rem, more where a label wraps, and the segments stay one height */
-/* Appearance and Accessibility are the same height, so the two boxes read as one row of settings. */
-#prefs > .card[open][aria-labelledby="h-appearance"],#prefs > .card[open][aria-labelledby="h-access"]{min-height:15rem}
+/* A fold that groups choices holds each as a sub-section with its own heading, set apart by a rule. */
+.subsection{margin-top:0}  /* not the page-wide gap between sections */
+.subsection + .subsection{margin-block-start:1.25rem;padding-block-start:1rem;border-block-start:1px solid var(--rule)}
+.l10n-body .subsection > h3{margin:0 0 .15rem;font:600 1.05rem/1.3 var(--font-ui)}
 
 /* Accordions: a heading that opens and closes its section. A details element, so it works with no script and the keyboard and
    screen readers already know it. The arrow is drawn with borders, so it takes the muted colour and needs no icon file. */

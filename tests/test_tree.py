@@ -723,7 +723,7 @@ class SettingsPageTests(Scratch):
 
     def test_the_order_of_tiles_and_sections_is_a_choice_of_three_with_as_written_chosen(self):
         page = self.pages["settings.html"]
-        self.assertIn('<details class="fold card" aria-labelledby="h-order"><summary><h2 id="h-order">', page)
+        self.assertIn('<section class="subsection" aria-labelledby="h-order"><h3 id="h-order">', page)
         for value in ("written", "simple", "advanced"):
             self.assertIn(f'<input type="radio" name="order" value="{value}" data-pref="order"', page)
         self.assertIn('name="order" value="written" data-pref="order" checked', page)
@@ -734,10 +734,66 @@ class SettingsPageTests(Scratch):
             if name != "settings.html":
                 self.assertNotIn('data-pref="order"', other, name)
 
+    def group(self, ident):
+        """One top-level fold of the Settings page, from its opening tag to its closing one."""
+        page = self.pages["settings.html"]
+        start = page.index(f'<details class="fold card" aria-labelledby="{ident}"')
+        return page[start : page.index("</details>", start) + len("</details>")]
+
+    def test_view_mode_accessibility_and_colour_schemes_are_one_group_in_that_order(self):
+        look = self.group("h-look")
+        self.assertIn("Accessibility and appearance", look.split("</summary>")[0])
+        parts = re.findall(r'<section class="subsection" aria-labelledby="(h-[a-z]+)"><h3', look)
+        self.assertEqual(parts, ["h-appearance", "h-access", "h-colours"])
+        self.assertIn("View mode", look)
+        self.assertNotIn(">Appearance<", look, "the light and dark choice is called View mode")
+        for name in ("appearance", "access", "palette"):
+            self.assertIn(f'name="{name}"', look, name)
+        self.assertIn(" open>", look.split(">")[0] + ">", "the group opens first")
+
+    def test_order_and_tile_layout_are_one_group_in_that_order(self):
+        order = self.group("h-order-group")
+        self.assertIn("Order and tile layout", order.split("</summary>")[0])
+        parts = re.findall(r'<section class="subsection[^"]*"[^>]*aria-labelledby="(h-[a-z]+)"><h3', order)
+        self.assertEqual(parts, ["h-order", "h-layout"])
+        self.assertIn('name="order"', order)
+        self.assertIn("data-reset-orders", order)
+        self.assertIn("Tile layout", order)
+        self.assertNotIn(" open>", order.split(">")[0] + ">", "shut until it is opened")
+
+    def test_a_group_has_its_name_as_the_heading_and_each_choice_in_it_a_heading_beneath(self):
+        for ident in ("h-look", "h-order-group"):
+            group = self.group(ident)
+            self.assertTrue(group.split("<summary>")[1].startswith("<h2"), ident)
+            self.assertNotIn("<h2", group.split("</summary>")[1], f"{ident}: choices are headed with h3, under the group's h2")
+            self.assertIn("<h3", group)
+
+    def test_the_regional_forms_stay_a_group_of_their_own_after_the_others(self):
+        page = self.pages["settings.html"]
+        self.assertLess(page.index('aria-labelledby="h-order-group"'), page.index('aria-labelledby="h-var-qab"'))
+        self.assertNotIn("h-var-qab", self.group("h-look") + self.group("h-order-group"))
+
+    def test_every_control_stays_inside_the_panel_the_script_reveals(self):
+        page = self.pages["settings.html"]
+        panel = page[page.index('<div class="prefs" id="prefs" hidden>') : page.index("<noscript>")]
+        self.assertEqual(panel.count('data-pref="'), page.count('data-pref="'), "every preference radio is in the panel")
+        self.assertIn("data-reset-orders", panel)
+        self.assertIn('data-variety-lang="qab"', panel)
+
+    def test_the_tile_layout_is_still_offered_when_there_is_no_order_to_choose(self):
+        proj = self.project()
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(level=2))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        fixture.edit(proj / "pages" / "points.json", lambda d: (d.update(level=2), [s.update(level=2) for s in d["sections"]]))
+        page = self.built(proj)["settings.html"]
+        self.assertIn('aria-labelledby="h-order-group"', page)
+        self.assertNotIn('id="h-order"', page)
+        self.assertIn('id="h-layout"', page)
+
     def test_the_order_choice_is_said_in_both_languages_of_the_pair_and_says_a_saved_order_wins(self):
         page = self.pages["settings.html"]
         section = page[
-            page.index('aria-labelledby="h-order"') : page.index("</details>", page.index('aria-labelledby="h-order"'))
+            page.index('aria-labelledby="h-order"') : page.index("</section>", page.index('aria-labelledby="h-order"'))
         ]
         self.assertIn("Simplest first", section)
         self.assertIn("Most advanced first", section)
@@ -873,7 +929,7 @@ class ArrangeTests(Scratch):
 
     def test_the_settings_page_has_a_reset_of_every_screen_hidden_until_the_script_runs(self):
         settings = self.pages["settings.html"]
-        self.assertIn('<div class="reset-orders" data-reset-orders hidden>', settings)
+        self.assertIn('<section class="subsection reset-orders" data-reset-orders hidden aria-labelledby="h-layout">', settings)
         self.assertIn('data-done="Every tile is back in its default order."', settings)
         self.assertIn('data-failed="The order could not be saved on this device."', settings)
 

@@ -275,23 +275,26 @@ class Site:
             f'<div class="fold-body">{body_html}</div></details>'
         )
 
+    def subsection(self, ident, heading_html, body_html, attrs="", cls=""):
+        """A headed part of a fold: an h3 and its controls. A fold groups the choices that belong together (Accessibility and
+        appearance; Order and tile layout), and each choice in it is one of these."""
+        classes = f"subsection {cls}" if cls else "subsection"
+        return f'<section class="{classes}"{attrs} aria-labelledby="{ident}"><h3 id="{ident}">{heading_html}</h3>{body_html}</section>'
+
     ICONS_FOR_APPEARANCE = {"light": "light", "dark": "asleep", "system": "screen"}
 
-    def appearance_card(self):
-        """Light, dark or the device's own, as three large icon tiles."""
+    def view_mode_section(self):
+        """View mode: light, dark or the device's own, as three large icon tiles."""
         tiles = "".join(
             f'<label class="mode"><input type="radio" name="appearance" value="{v}" data-pref="appearance"'
             f'{" checked" if v == "system" else ""}><span class="mode-box">{self.ui_icons[self.ICONS_FOR_APPEARANCE[v]]}'
             f'{self.both("appearance_" + v)}</span></label>'
             for v in self.APPEARANCES
         )
-        return self.fold(
-            f'<h2 id="h-appearance">{self.both("appearance")}</h2>',
-            f'<p class="hint">{self.both("appearance_hint")}</p>'
-            f'<div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div>',
-            open_=True,
-            card=True,
-            labelled="h-appearance",
+        return self.subsection(
+            "h-appearance",
+            self.both("view_mode"),
+            f'<p class="hint">{self.both("appearance_hint")}</p><div class="modes" role="radiogroup" aria-labelledby="h-appearance">{tiles}</div>',
         )
 
     def palette_levels(self):
@@ -299,7 +302,7 @@ class Site:
         used = {palettes.access_level(self.palettes[pid]) for pid in self.palette_ids}
         return [level for level in palettes.ACCESS_LEVELS if level in used]
 
-    def accessibility_card(self, levels, first):
+    def accessibility_section(self, levels, first):
         """Standard, safe colours or high contrast: chooses which colour schemes are listed. It changes no scheme."""
         radios = "".join(
             f'<label><input type="radio" name="access" value="{level}" data-pref="access"{" checked" if level == first else ""}>'
@@ -307,15 +310,13 @@ class Site:
             for level in levels
         )
         hints = "".join(f'<p class="hint" data-hint="{level}">{self.both("access_" + level + "_hint")}</p>' for level in levels)
-        return self.fold(
-            f'<h2 id="h-access">{self.both("accessibility")}</h2>',
-            f'<p class="hint">{self.both("access_hint")}</p>'
-            f'<div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}',
-            card=True,
-            labelled="h-access",
+        return self.subsection(
+            "h-access",
+            self.both("accessibility"),
+            f'<p class="hint">{self.both("access_hint")}</p><div class="seg" role="radiogroup" aria-labelledby="h-access">{radios}</div>{hints}',
         )
 
-    def colours_card(self):
+    def colours_section(self):
         """Each offered colour scheme as a small picture of itself, drawn from its own colours (see palettes.css)."""
         cards = "".join(
             f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
@@ -326,24 +327,24 @@ class Site:
             f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
             for pid in self.palette_ids
         )
-        return self.fold(
-            f'<h2 id="h-colours">{self.both("colours")}</h2>',
+        return self.subsection(
+            "h-colours",
+            self.both("colours"),
             f'<p class="hint">{self.both("colours_hint")}</p>'
             f'<div class="swatches" role="radiogroup" aria-labelledby="h-colours">{cards}</div>'
             f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p>',
-            card=True,
-            labelled="h-colours",
         )
 
-    def theme_controls(self):
-        """Light or dark, the accessibility level and the colour schemes. The last two appear only when the edition offers a choice."""
-        out = self.appearance_card()
+    def look_group(self):
+        """Accessibility and appearance, one fold, open to begin with: the view mode (light, dark or the device's own), the accessibility
+        level and the colour schemes. The last two appear only when the edition offers a choice."""
+        parts = self.view_mode_section()
         if len(self.palette_ids) > 1:
             levels = self.palette_levels()
             if len(levels) > 1:
-                out += self.accessibility_card(levels, palettes.access_level(self.palettes[palettes.DEFAULT]))
-            out += self.colours_card()
-        return out
+                parts += self.accessibility_section(levels, palettes.access_level(self.palettes[palettes.DEFAULT]))
+            parts += self.colours_section()
+        return self.fold(f'<h2 id="h-look">{self.both("group_look")}</h2>', parts, open_=True, card=True, labelled="h-look")
 
     def variety_fields(self):
         """A choice per displayed language that has varieties."""
@@ -376,7 +377,7 @@ class Site:
         found = {level for table in self.levels.values() for level in table.values()}
         return len(found) > 1
 
-    def order_card(self):
+    def order_section(self):
         """Put tiles and sections in order from simple to advanced, or the other way round, or leave them as written. Only offered
         when the levels differ somewhere, so it is never a control that does nothing. A screen the visitor has arranged keeps their order.
         """
@@ -387,17 +388,39 @@ class Site:
             f'<span class="seg-label">{self.both("order_" + v)}</span></label>'
             for v in self.ORDERS
         )
+        return self.subsection(
+            "h-order",
+            self.both("order_title"),
+            f'<p class="hint">{self.both("order_hint")}</p><div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div>',
+        )
+
+    def tile_layout_section(self):
+        """Tile layout: every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices."""
+        return self.subsection(
+            "h-layout",
+            self.both("reset_orders_title"),
+            f'<p class="hint">{self.both("reset_orders_lede")}</p>'
+            f'<p><button type="button">{self.h("reset_orders")}</button></p>'
+            f'<p class="arrange-status" role="status" data-reset-status '
+            f'data-done="{e(self.plain("reset_orders_done"))}" data-failed="{e(self.plain("arrange_failed"))}"></p>',
+            attrs=" data-reset-orders hidden",
+            cls="reset-orders",
+        )
+
+    def order_group(self):
+        """Order and tile layout, one fold: the order of tiles and sections from simple to advanced (offered only where the levels
+        differ) and putting every tile back where it started."""
         return self.fold(
-            f'<h2 id="h-order">{self.both("order_title")}</h2>',
-            f'<p class="hint">{self.both("order_hint")}</p>'
-            f'<div class="seg" role="radiogroup" aria-labelledby="h-order">{radios}</div>',
+            f'<h2 id="h-order-group">{self.both("group_order")}</h2>',
+            self.order_section() + self.tile_layout_section(),
             card=True,
-            labelled="h-order",
+            labelled="h-order-group",
         )
 
     def prefs_controls(self):
-        """Every choice the visitor can make. Hidden until app.js runs, so it is never a dead control."""
-        return f'<div class="prefs" id="prefs" hidden>{self.theme_controls()}{self.order_card()}{self.variety_fields()}</div>'
+        """Every choice the visitor can make, in folds that group what belongs together. Hidden until app.js runs, so it is never a
+        dead control."""
+        return f'<div class="prefs" id="prefs" hidden>{self.look_group()}{self.order_group()}{self.variety_fields()}</div>'
 
     def palettes_css(self):
         return palettes.css(self.palettes, self.palette_ids)
@@ -899,7 +922,7 @@ class Site:
         return m
 
     def settings_page(self):
-        """The visitor's choices (appearance, accessibility, colours, regional forms), on a page of their own. A toggle at the top
+        """The visitor's choices, in groups (accessibility and appearance; order and tile layout; regional forms), on a page of their own. A toggle at the top
         right shows the page in one language of the pair at a time, with no script. Words only from messages."""
         radios, bar = self.language_toggle("settings-lang", [self.frm, self.to])
         head = (
@@ -915,17 +938,9 @@ class Site:
             about = self.fold(
                 f'<h2>{self.both("about_app")}</h2>', f'<ul class="links">{links}</ul>', card=True, attrs=' id="about"'
             )
-        # Every screen's tile order back to the default at once. Hidden until arrange.js runs, like the other choices.
-        reset_orders = (
-            f'<div class="reset-orders" data-reset-orders hidden><h2>{self.h("reset_orders_title")}</h2>'
-            f'<p class="intro">{self.h("reset_orders_lede")}</p>'
-            f'<p><button type="button">{self.h("reset_orders")}</button></p>'
-            f'<p class="arrange-status" role="status" data-reset-status '
-            f'data-done="{e(self.plain("reset_orders_done"))}" data-failed="{e(self.plain("arrange_failed"))}"></p></div>'
-        )
         body = (
             head
-            + f'<section id="settings">{self.prefs_controls()}{reset_orders}'
+            + f'<section id="settings">{self.prefs_controls()}'
             + f'<noscript><p class="intro">{self.h("settings_no_script")}</p></noscript></section>'
             + about
         )

@@ -807,21 +807,26 @@ class AboutPageTests(Scratch):
             with self.assertRaises(ContentError, msg=repr(bad)):
                 content.validate(content.read(proj))
 
-    def test_the_settings_cards_are_accordions_with_only_appearance_open(self):
+    def test_the_settings_are_accordions_by_function_with_only_accessibility_and_appearance_open(self):
         page = self.pages["settings.html"]
-        folds = re.findall(r'<details class="fold card"( aria-labelledby="[^"]+")?( id="about")?( open)?>', page)
-        self.assertGreaterEqual(len(folds), 4)
+        folds = re.findall(r'<details class="fold card"[^>]*aria-labelledby="([^"]+)"', page)
+        self.assertEqual(folds[:2], ["h-look", "h-order-group"], "the groups, in this order")
+        self.assertTrue(all(f.startswith("h-var-") for f in folds[2:]), folds)
+        self.assertGreaterEqual(len(folds), 3)
         opened = [m for m in re.finditer(r'<details class="fold card"[^>]* open>', page)]
         self.assertEqual(len(opened), 1)
-        self.assertIn('aria-labelledby="h-appearance" open>', opened[0].group(0))
+        self.assertIn('aria-labelledby="h-look" open>', opened[0].group(0))
         self.assertNotIn('<section class="card"', page)
+        for gone in ("h-appearance", "h-access", "h-colours", "h-order"):
+            self.assertNotIn(f'<details class="fold card" aria-labelledby="{gone}"', page, f"{gone} is a part of a group now")
 
     def test_a_shut_settings_card_still_holds_its_controls_so_the_choices_work(self):
         page = self.pages["settings.html"]
-        shut = page[page.index('<details class="fold card" aria-labelledby="h-colours">') :]
+        shut = page[page.index('<details class="fold card" aria-labelledby="h-order-group">') :]
         shut = shut[: shut.index("</details>")]
-        self.assertIn('name="palette"', shut)
-        self.assertIn('data-pref="palette"', shut)
+        self.assertIn('name="order"', shut)
+        self.assertIn('data-pref="order"', shut)
+        self.assertIn("data-reset-orders", shut)
 
     def test_each_fold_heading_is_a_summary_so_it_works_with_no_script(self):
         for name, page in self.pages.items():
@@ -1114,7 +1119,9 @@ class PaletteSiteTests(Scratch):
         }
         page = self.built(self.project(ui_extra={code: pseudo_ui for code in fixture.LANGS}))["settings.html"]
         for key in (
-            "appearance",
+            "group_look",
+            "group_order",
+            "view_mode",
             "appearance_system",
             "appearance_light",
             "appearance_dark",
