@@ -15,6 +15,18 @@
     "your-settings": {
       "title": "Your settings",
       "lede": "Changing how the app looks and behaves, and what it keeps on your device."
+    },
+    "arranging-tiles": {
+      "title": "Arranging tiles",
+      "lede": "Putting the tiles on the home page and on group pages in your own order."
+    },
+    "offline-and-install": {
+      "title": "Offline and on your device",
+      "lede": "Using the app without a connection, keeping it on your device, and what still works when scripts are off."
+    },
+    "using-help": {
+      "title": "Using help",
+      "lede": "Getting an explanation of a control, and reporting a problem, from the screen itself."
     }
   },
   "features": {
@@ -220,6 +232,91 @@
         "Your choices stay on this device and are never sent anywhere. The app remembers your view mode, colour scheme, order, language, regional forms and any tile order you save.",
         "To forget them, clear this site's data in your browser. Reset tile layouts puts only the tiles back."
       ]
+    },
+    "edit-order": {
+      "title": "Rearranging the tiles",
+      "body": [
+        "On the home page and on a group page you can put the tiles in your own order. Turn edit order on with the spanner in the bar at the side. The tiles show only their icons on a different background shade, and a bar tells you what to do.",
+        "The spanner appears only once the page's script has loaded, and only on pages of tiles."
+      ],
+      "keys": "Tab to the spanner in the bar at the side, then Enter.",
+      "touch": "Tap the spanner in the bar at the side."
+    },
+    "moving-tiles": {
+      "title": "Moving a tile",
+      "body": [
+        "Drag a tile over another to move it, or tap a tile to pick it up and tap where it should go."
+      ],
+      "keys": "Use the arrow keys to move between tiles and press Enter to pick one up. Then the arrow keys move it along, and Enter puts it down. Escape puts it back where it was.",
+      "touch": "Drag a tile, or tap it and tap where it goes."
+    },
+    "saving-order": {
+      "title": "Keeping or undoing the order",
+      "body": [
+        "Save order keeps the new order on this device, as does turning the spanner off. Leaving the page without saving drops the changes. Reset puts this screen back in its default order. Reset tile layouts in Settings does the same for every screen at once.",
+        "A tile added in a later version goes at the end. If the order cannot be saved, the bar says so."
+      ],
+      "keys": "Tab to Save order or Reset, then Enter.",
+      "touch": "Tap Save order or Reset."
+    },
+    "offline": {
+      "title": "Using the app without a connection",
+      "body": [
+        "Once the app has loaded with a connection, its pages are kept on your device and open without one. Search, the settings and every topic still work.",
+        "When you are online again, the app quietly checks for a new version and uses it the next time you open it."
+      ]
+    },
+    "install": {
+      "title": "Keeping it on your device",
+      "body": [
+        "You can add the app to your device like any other app, with no app store.",
+        {
+          "list": [
+            "Android, in Chrome: open the menu, then choose Install app or Add to Home screen.",
+            "iPhone and iPad, in Safari: tap Share, then Add to Home Screen.",
+            "A computer, in Chrome or Edge: use the install icon in the address bar."
+          ]
+        }
+      ]
+    },
+    "no-script": {
+      "title": "If scripts are off",
+      "body": [
+        "The pages still open and read. Search, the settings, edit order and the Share button need scripts, so they do not appear or work.",
+        "The language toggle still switches, but your choice is not remembered, and the app follows your device's light or dark setting."
+      ]
+    },
+    "share": {
+      "title": "Sharing the address",
+      "body": [
+        "The About page has the address of the app with a Share button, which appears only where your browser can share or copy. It makes no request: it hands the address to your device's share options, or copies it."
+      ],
+      "keys": "Tab to Share, then Enter.",
+      "touch": "Tap Share on the About page."
+    },
+    "help-button": {
+      "title": "The help button",
+      "body": [
+        "A question-mark button in the bar at the side turns help on and off. When it is on, small question-mark icons appear next to the features and tiles on the page. When it is off, the page is plain."
+      ],
+      "keys": "Tab to the question-mark button, then Enter.",
+      "touch": "Tap the question-mark button in the bar at the side."
+    },
+    "help-icons": {
+      "title": "Asking about a feature",
+      "body": [
+        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second."
+      ],
+      "keys": "Tab to an icon, then Enter. Escape closes the window.",
+      "touch": "Tap an icon, then What's this?. Tap Close, or outside the window, to dismiss it."
+    },
+    "report-a-problem": {
+      "title": "Reporting a problem",
+      "body": [
+        "Report a problem shows you the email it would send before anything leaves your device: where you were, the app's version, and a box for what is wrong. Open email opens your own mail app with the text filled in, and Copy copies it. The app never sends anything itself."
+      ],
+      "keys": "Tab to Open email or Copy, then Enter.",
+      "touch": "Tap Open email or Copy."
     }
   }
 }

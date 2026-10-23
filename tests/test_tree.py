@@ -666,8 +666,13 @@ class HowToTests(Scratch):
     def test_it_is_the_contents_of_the_book_and_links_every_chapter_and_feature(self):
         page = self.pages["how-to.html"]
         for chapter in Book.load(content.read(self.proj)["packs"]).sections:
+            if all(f.get("requires") == "ask" for f in chapter["features"]):
+                self.assertNotIn(f'href="help-{chapter["id"]}.html"', page, "written, but not shown until it is built")
+                continue
             self.assertIn(f'href="help-{chapter["id"]}.html"', page)
-            for feature in chapter["features"]:  # the fixture has regional forms, so every feature is shown
+            for feature in chapter["features"]:  # the fixture has regional forms, so every feature is shown, bar those not built yet
+                if feature.get("requires") == "ask":
+                    continue
                 self.assertIn(f'href="help-{chapter["id"]}.html#{feature["id"]}"', page, feature["id"])
 
     def test_the_chapter_covers_the_moves_the_keys_the_swipes_and_the_buttons(self):

@@ -28,7 +28,12 @@ ANCHORS = [
     "search", "search-keys", "search-this-page-first", "listen-first-rows", "also-heard", "regional-forms", "sources-notes",
     "sections-order", "levels", "related-topics",
     "settings-groups", "language-toggle", "view-mode", "accessibility", "colour-schemes", "order-setting", "reset-tile-layouts", "what-is-saved",
+    "edit-order", "moving-tiles", "saving-order",
+    "offline", "install", "no-script", "share",
+    "help-button", "help-icons", "report-a-problem",
 ]
+# Features that are written but not shown, because what they describe is not built yet (the "ask" condition).
+NOT_SHOWN = ["help-button", "help-icons", "report-a-problem"]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
 
@@ -305,12 +310,13 @@ class BuiltBookTests(Scratch):
         return found
 
     def test_there_is_a_page_for_every_chapter_and_the_contents(self):
-        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html", "help-reading-a-topic.html", "help-your-settings.html"})
+        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html", "help-reading-a-topic.html", "help-your-settings.html",
+                                         "help-arranging-tiles.html", "help-offline-and-install.html"})
 
     def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
         book_ids = [i for name, text in self.help_pages.items() if name.startswith("help-") for i in self.ids(text)]
         for anchor in ANCHORS:
-            self.assertEqual(book_ids.count(anchor), 1, anchor)
+            self.assertEqual(book_ids.count(anchor), 0 if anchor in NOT_SHOWN else 1, anchor)
             self.assertNotIn(anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them")
         for name, text in self.help_pages.items():
             ids = self.ids(text)
@@ -330,6 +336,13 @@ class BuiltBookTests(Scratch):
             self.assertIn(page, self.pages, page)
             if anchor:
                 self.assertIn(anchor, chapter_ids[page], f"{page}#{anchor}")
+
+    def test_a_chapter_about_what_is_not_built_is_written_but_not_shown(self):
+        self.assertNotIn("help-using-help.html", self.pages)
+        self.assertNotIn("help-using-help.html", self.pages["how-to.html"])
+        written = {f["id"] for c in helpbook.SECTIONS if c["id"] == "using-help" for f in c["features"]}
+        self.assertEqual(written, set(NOT_SHOWN))
+        self.assertEqual(set(EN["features"]) & written, written, "the English is ready for when the help button exists")
 
     def test_every_help_entry_is_well_formed(self):
         for ident, entry in EN["features"].items():

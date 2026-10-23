@@ -24,8 +24,9 @@ HELP_DIR = pathlib.Path(__file__).resolve().parent / "help"
 ANCHOR = re.compile(r"^[a-z][a-z0-9-]*$")
 PAGE_PREFIX = "help-"  # generated chapter pages are help-<id>.html
 # What a feature can ask of the edition before it is shown: "about" (an About page), "varieties" (a language has regional forms), "palettes" (more than one
-# colour scheme), "access" (schemes at more than one accessibility level), "levels" (tiles or sections of more than one level), "related" (a topic links to others).
-CONDITIONS = ("about", "varieties", "palettes", "access", "levels", "related")
+# colour scheme), "access" (schemes at more than one accessibility level), "levels" (tiles or sections of more than one level), "related" (a topic links to others), "ask" (the rail help button, its icons and the report exist: not built yet,
+# so the chapter that describes them is written but not shown).
+CONDITIONS = ("about", "varieties", "palettes", "access", "levels", "related", "ask")
 
 # The book, in reading order. Add a chapter here only with its English text; the build refuses a feature with none.
 SECTIONS = [
@@ -73,6 +74,31 @@ SECTIONS = [
             {"id": "order-setting", "requires": "levels"},
             {"id": "reset-tile-layouts"},
             {"id": "what-is-saved"},
+        ],
+    },
+    {
+        "id": "arranging-tiles",
+        "features": [
+            {"id": "edit-order"},
+            {"id": "moving-tiles"},
+            {"id": "saving-order"},
+        ],
+    },
+    {
+        "id": "offline-and-install",
+        "features": [
+            {"id": "offline"},
+            {"id": "install"},
+            {"id": "no-script"},
+            {"id": "share", "requires": "about"},
+        ],
+    },
+    {
+        "id": "using-help",
+        "features": [
+            {"id": "help-button", "requires": "ask"},
+            {"id": "help-icons", "requires": "ask"},
+            {"id": "report-a-problem", "requires": "ask"},
         ],
     },
 ]

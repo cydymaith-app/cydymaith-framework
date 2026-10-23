@@ -172,6 +172,8 @@ class FixtureBuildTests(Scratch):
                 "help-looking-up-words.html",
                 "help-reading-a-topic.html",
                 "help-your-settings.html",
+                "help-arranging-tiles.html",
+                "help-offline-and-install.html",
                 "settings.html",
                 "about.html",
             },
@@ -1308,7 +1310,7 @@ class CommandLineTests(Scratch):
         out = self.tmp / "cli-out"
         code, stdout, _ = self.run_main(str(out), "--project", str(proj))
         self.assertEqual(code, 0)
-        self.assertIn("wrote 12 pages", stdout)
+        self.assertIn("wrote 14 pages", stdout)
         self.assertIn("coverage: qaa", stdout)
         self.assertTrue((out / "index.html").is_file())
 

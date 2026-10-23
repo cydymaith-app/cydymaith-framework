@@ -1079,6 +1079,7 @@ class Site:
             ("access", many and len(self.palette_levels()) > 1),
             ("levels", self.has_levels()),
             ("related", any(page.get("related") for page in self.skel.values())),
+            ("ask", False),  # the help button, icons and report are not built yet; make this true when they are
         )
         return {name for name, on in found if on}
 
