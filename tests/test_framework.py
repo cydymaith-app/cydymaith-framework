@@ -384,6 +384,7 @@ class LocalisedInterfaceTests(Scratch):
             k: ({c: fixture.pseudo(t) for c, t in v.items()} if isinstance(v, dict) else fixture.pseudo(v)) for k, v in EN.items()
         }
         cls.proj = cls.project(ui_extra={code: pseudo_ui for code in fixture.LANGS})
+        fixture.edit(cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))  # so the Related row is rendered
         cls.raw = content.read(cls.proj)
         cls.ed = content.pick_edition(cls.raw)[1]
         cls.messages = Messages(cls.raw["packs"])
@@ -418,7 +419,11 @@ class LocalisedInterfaceTests(Scratch):
 
     def test_attributes_are_localised_too(self):
         everything = "".join(self.pages.values())
-        for key in ("pager_label", "on_this_page", "trail_label", "topics_label"):
+        label = fixture.pseudo(EN["on_this_page"])
+        self.assertIn(
+            f'aria-label="{label} / {label}"', everything, "the list of sections is named in both languages of the pair"
+        )
+        for key in ("pager_label", "trail_label", "topics_label"):
             self.assertIn(f'aria-label="{fixture.pseudo(EN[key])}"', everything, key)
 
     def test_a_pack_without_translations_falls_back_visibly_to_english(self):

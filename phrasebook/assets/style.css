@@ -370,6 +370,8 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 #prefs .mode-box{height:6.25rem;min-height:0;justify-content:center}
 #prefs .seg label{display:flex}
 #prefs .seg-label{flex:1;min-height:3.5rem;padding-block:.3rem}  /* at least 3.5rem, more where a label wraps, and the segments stay one height */
+/* A section a link lands on (a related topic opened at its section) sits just under the title bar, not behind it. */
+section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 /* A fold that groups choices holds each as a sub-section with its own heading, set apart by a rule. */
 .subsection{margin-top:0}  /* not the page-wide gap between sections */
 .subsection + .subsection{margin-block-start:1.25rem;padding-block-start:1rem;border-block-start:1px solid var(--rule)}

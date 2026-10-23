@@ -557,15 +557,16 @@ class Site:
     # they stay as written. It is written without a closing brace pair, which the project's check for unrendered templates rejects.
     ORDER_HOOK = '<script>(function(d){var v=new Event("phrasebook:order");v.page=d.currentScript.parentNode;d.dispatchEvent(v)})(document)</script>'
 
-    def tile(self, href, first, second, icon, ident, level=None):
+    def tile(self, href, first, second, icon, ident, level=None, related=False):
         """A large touch target: the icon on a tile, with the name in both languages beneath. No icon, the name goes in the tile.
         `ident` names the tile for a saved order (data-tile), so the order is kept whatever the tile's label says. `level` is how
         demanding it is, from 1 to 3 (data-level), for putting the tiles in order from simple to advanced."""
         l1, l2 = self.pair_spans(first, second)
         inner = self.icon_html(icon) or f'<span class="tile-text" aria-hidden="true">{e(first)}</span>'
         graded = f' data-level="{level}"' if level else ""
+        followed = " data-related" if related else ""  # Back returns to the topic this was followed from (see nav.js)
         return (
-            f'<li data-tile="{e(ident)}"{graded}><a class="tile-link" href="{href}"><span class="tile">{inner}</span>'
+            f'<li data-tile="{e(ident)}"{graded}><a class="tile-link" href="{href}"{followed}><span class="tile">{inner}</span>'
             f'<span class="tile-name">{l1}{l2}</span></a></li>'
         )
 
@@ -754,6 +755,44 @@ class Site:
             "</div>"
         )
 
+    def related_tiles(self, slug):
+        """The Related row of a topic: a tile for each topic it names that is published, after its sections. A tile opens the page, at
+        the section if one is named, and is named for that section in both languages (else for the page). The list is a list of
+        tiles that slide in and take the arrow keys, but it names no saved order, so it is never arranged or put in order."""
+        frm, to = self.frm, self.to
+        tiles = []
+        for entry in self.skel[slug].get("related", []):
+            page, _, sid = entry.partition("#")
+            if page not in self.slugs:  # held back from this release, or with nothing to show in this pair
+                continue
+            if sid and sid not in {s["id"] for s in self.sections(page)}:
+                sid = ""  # the section is not published: the page is still worth a tile
+            titles = [self.pack_section(code, page, sid).get("title") for code in (frm, to)] if sid else []
+            if not titles or not all(titles):
+                titles = [self.title(frm, page), self.title(to, page)]
+            level = self.levels["sections"].get((page, sid)) if sid else self.levels["pages"].get(page)
+            tiles.append(
+                self.tile(
+                    f"{page}.html#{sid}" if sid else f"{page}.html",
+                    titles[0],
+                    titles[1],
+                    self.skel[page].get("icon"),
+                    f"{page}-{sid}" if sid else page,
+                    level,
+                    related=True,
+                )
+            )
+        if not tiles:
+            return ""
+        (first, first_lang), (second, second_lang) = self.ui_text(frm, "related"), self.ui_text(to, "related")
+        heading = (
+            f'<h2 id="h-related">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span></h2>'
+        )
+        return (
+            f'<section class="related" aria-labelledby="h-related">{heading}'
+            f'<ul class="tiles" data-tiles aria-label="{e(self.plain("related"))}">{"".join(tiles)}</ul></section>'
+        )
+
     def content_page(self, slug):
         frm, to = self.frm, self.to
         fig = self.skel[slug].get("figure")
@@ -764,8 +803,10 @@ class Site:
                 figure = f'<section id="{hidden["id"]}" class="figure">{figure}</section>'
         jump = ""
         if len(sections) >= 3:
+            # The list has no visible heading, so its name for a screen reader is given in both languages of the pair.
+            label = " / ".join(self.ui_text(code, "on_this_page")[0] for code in (frm, to))
             jump = (
-                f'<ul class="jump" aria-label="{e(self.plain("on_this_page"))}">'
+                f'<ul class="jump" aria-label="{e(label)}">'
                 + "".join(
                     f'<li><a href="#{s["id"]}">{self.inline(frm, self.pack_section(frm, slug, s["id"])["title"])}</a></li>'
                     for s in sections
@@ -779,7 +820,14 @@ class Site:
             f'<p class="title-l2"{self.la(to)}>{e(self.title(to, slug))}</p>'
             f"{lede_html}</header>"
         )
-        return head + figure + jump + "".join(self.render_section(slug, s) for s in sections) + self.ORDER_HOOK
+        return (
+            head
+            + figure
+            + jump
+            + "".join(self.render_section(slug, s) for s in sections)
+            + self.ORDER_HOOK
+            + self.related_tiles(slug)
+        )
 
     def home_page(self):
         frm, to = self.frm, self.to
@@ -1063,16 +1111,21 @@ class Site:
             storage += f' data-parent="{e(parent)}"'
         # nav.js moves between pages by sliding the two together, and carries the way it went in the address: #slide=none when
         # the page that arrives is already where the move ended, #slide=forward or #slide=back when it could not set the other
-        # page beside this one and the new page has to slide in itself. This head script reads that mark before the first paint,
-        # takes it out of the address, and either tells the browser's own move to stand down (none) or, where the browser cannot
-        # move pages itself, slides this page in from the matching side. A page reached any other way plays nothing. It does
-        # not depend on the referrer, and it stores nothing.
+        # page beside this one and the new page has to slide in itself. After it may come ;from=<page>, for a related topic, the
+        # topic it was followed from (which this script keeps in the history entry, where the page's Back finds it, and which
+        # survives a reload), and ;at=<id>, the section the address named, which is scrolled to once the page is there. This head
+        # script reads the mark before the first paint, takes it out of the address, and either tells the browser's own move to
+        # stand down (none) or, where the browser cannot move pages itself, slides this page in from the matching side. A page
+        # reached any other way plays nothing. It does not depend on the referrer, and it stores nothing.
         slide = (
-            "<script>(function(d,w){var m=/^#slide=(forward|back|none)$/.exec(w.location.hash);"
+            "<script>(function(d,w){var m=/^#slide=(forward|back|none)((?:;(?:from|at)=[A-Za-z0-9._-]+)*)$/.exec(w.location.hash);"
             "if(!m)return;"
-            'try{w.history.replaceState(null,"",w.location.pathname+w.location.search)}catch(err){};'
+            "var f=/;from=([a-z0-9-]+\\.html)(?:;|$)/.exec(m[2]),a=/;at=([A-Za-z0-9._-]+)(?:;|$)/.exec(m[2]);"
+            'try{w.history.replaceState(f?{from:f[1]}:null,"",w.location.pathname+w.location.search+(a?"#"+a[1]:""))}catch(err){};'
             'if(m[1]==="none")d.documentElement.setAttribute("data-slide","none");'
-            'else if(!w.PageRevealEvent)d.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in")})(document,window)</script>\n'
+            'else if(!w.PageRevealEvent)d.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in");'
+            'if(a)d.addEventListener("DOMContentLoaded",function(){var t=d.getElementById(a[1]);if(t)t.scrollIntoView()})'
+            "})(document,window)</script>\n"
         )
         # Where the browser animates moves between pages itself (cross-document view transitions), say which way the page
         # moves: in from the end when this page's parent is the page we came from, in from the start when we came from

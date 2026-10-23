@@ -526,8 +526,9 @@ class FrameTests(Scratch):
 
     def test_the_head_script_reads_the_way_the_page_goes_from_the_address_and_never_the_referrer(self):
         page = self.pages["p1.html"]
-        self.assertIn("/^#slide=(forward|back|none)$/.exec(w.location.hash)", page)
-        self.assertIn('w.history.replaceState(null,"",w.location.pathname+w.location.search)', page)
+        self.assertIn("/^#slide=(forward|back|none)((?:;(?:from|at)=[A-Za-z0-9._-]+)*)$/.exec(w.location.hash)", page)
+        self.assertIn("w.history.replaceState(", page)
+        self.assertIn('w.location.pathname+w.location.search+(a?"#"+a[1]:"")', page)
         self.assertNotIn("referrer", page.split("<body>")[0])
 
     def test_every_page_says_which_way_it_moves_so_the_browser_can_slide_pages_side_by_side(self):
@@ -985,6 +986,147 @@ class ArrangeTests(Scratch):
         self.assertIn("reorder(fallback.slice(), true)", script)
         self.assertNotIn("reorder(defaults.slice(), true)", script)
         self.assertNotIn("phrasebook:peek", script, "the copy of a page is ordered by order.js")
+
+
+class RelatedTopicsTests(Scratch):
+    """An end topic can link to related topics as a row of tiles, after its sections, so a reader can go from one to another
+    without going back up the tree. A tile opens the page, at a section if one is named."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.proj = cls.project()
+        fixture.edit(cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))
+        fixture.edit(cls.proj / "pages" / "points.json", lambda d: d.update(related=["p1#s2"]))
+        cls.pages = cls.built(cls.proj)
+
+    def row(self, name):
+        page = self.pages[name]
+        return page[
+            page.index('<section class="related"') : page.index("</section>", page.index('<section class="related"')) + 10
+        ]
+
+    def test_the_row_follows_the_sections_and_comes_before_the_pager(self):
+        page = self.pages["p1.html"]
+        self.assertLess(
+            page.rindex("</section>", 0, page.index('<section class="related"')), page.index('<section class="related"')
+        )
+        self.assertLess(
+            page.index('new Event("phrasebook:order")'),
+            page.index('<section class="related"'),
+            "after the sections' ordering hook",
+        )
+        self.assertLess(page.index('<section class="related"'), page.index('class="pager"'))
+
+    def test_it_has_a_heading_in_both_languages_and_is_a_list_of_tiles_that_is_never_arranged_or_put_in_order(self):
+        row = self.row("p1.html")
+        self.assertIn('id="h-related"', row)
+        self.assertIn("Related topics", row)
+        self.assertIn('<ul class="tiles" data-tiles aria-label="Related topics">', row)
+        self.assertNotIn("data-order", row, "no saved order is named, so arrange.js and order.js leave it be")
+
+    def test_a_tile_opens_the_page_and_is_named_for_it_in_both_languages(self):
+        row = self.row("p1.html")
+        self.assertIn('<a class="tile-link" href="points.html" data-related>', row)
+        self.assertIn('<span class="l1">qaa points</span>', row)
+        self.assertIn('lang="qab">qab points</span>', row)
+        self.assertIn('<li data-tile="points" data-level="1">', row)
+
+    def test_a_tile_that_names_a_section_opens_it_there_and_is_named_for_the_section(self):
+        row = self.row("points.html")
+        self.assertIn('<a class="tile-link" href="p1.html#s2" data-related>', row)
+        self.assertIn('<span class="l1">qaa section s2</span>', row)
+        self.assertIn('lang="qab">qab section s2</span>', row)
+        self.assertIn('<li data-tile="p1-s2" data-level="2">', row)
+
+    def test_a_topic_with_no_related_list_has_no_row(self):
+        self.assertNotIn('class="related"', self.pages["group-g1.html"])
+        proj = self.project()
+        self.assertNotIn('class="related"', self.built(proj)["p1.html"])
+
+    def test_the_tiles_carry_the_marker_that_makes_back_return_to_the_topic_they_were_followed_from(self):
+        for name, page in self.pages.items():
+            for link in re.findall(r'<a class="tile-link" href="[^"]+"[^>]*>', page):
+                in_row = link in self.row(name) if 'class="related"' in page else False
+                self.assertEqual("data-related" in link, in_row, f"{name}: {link}")
+
+    def test_a_target_held_back_from_the_release_is_left_out_and_comes_back_with_it(self):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "points.json", lambda d: d.update(related=["p1"]))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: [sec.update(status="development") for sec in d["sections"]])
+        self.assertNotIn('class="related"', self.built(proj)["points.html"])
+        self.assertIn('href="p1.html" data-related', self.built(proj, channel="development")["points.html"])
+
+    def test_a_section_that_is_not_published_still_leaves_the_page_worth_a_tile(self):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "points.json", lambda d: d.update(related=["p1#s2"]))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d["sections"][1].update(status="development"))
+        row = self.built(proj)["points.html"]
+        row = row[row.index('<section class="related"') :]
+        self.assertIn('<a class="tile-link" href="p1.html" data-related>', row, "the page, with no section to land on")
+        self.assertIn('<span class="l1">qaa page</span>', row, "named for the page")
+
+    def test_a_figure_section_can_be_linked_to_since_it_keeps_its_address(self):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points#dirs"]))
+        page = self.built(proj)["p1.html"]
+        self.assertIn('href="points.html#dirs" data-related', page)
+
+    def invalid(self, related, fragment, **extra):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=related, **extra))
+        with self.assertRaises(ContentError) as caught:
+            content.validate(content.read(proj))
+        self.assertIn(fragment, str(caught.exception))
+        self.assertIn("pages/p1.json", str(caught.exception))
+
+    def test_a_related_list_is_checked_naming_the_file(self):
+        self.invalid("points", "must be a list")
+        self.invalid([], "must be a list")
+        self.invalid([3], "must be a list")
+        self.invalid([None], "must be a list")
+        self.invalid(["p1"], "this page itself")
+        self.invalid(["p1#s2"], "this page itself")
+        self.invalid(["nowhere"], "does not exist")
+        self.invalid(["points#nowhere"], "section that page does not have")
+        self.invalid(["points#"], "no section after it")
+        self.invalid(["points", "points"], "more than once")
+        self.invalid(
+            ["points", "points#dirs"],
+            "more than once",
+        )
+
+    def test_a_section_id_that_cannot_travel_in_an_address_cannot_be_linked_to(self):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "points.json", lambda d: d["sections"][0].update(id="a b"))
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points#a b"]))
+        with self.assertRaises(ContentError):
+            content.validate(content.read(proj))
+
+    def test_a_valid_list_is_accepted(self):
+        proj = self.project()
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points#dirs"]))
+        content.validate(content.read(proj))
+
+    def test_the_head_script_reads_the_topic_followed_from_and_the_section_and_keeps_both_out_of_the_address(self):
+        head = self.pages["p1.html"].split("<body>")[0]
+        self.assertIn("(?:;(?:from|at)=[A-Za-z0-9._-]+)*", head)
+        self.assertIn(
+            "f?{from:f[1]}:null", head, "the topic goes in the history entry, where Back finds it and a reload keeps it"
+        )
+        self.assertIn(
+            'w.location.pathname+w.location.search+(a?"#"+a[1]:"")', head, "the address is left with the section and nothing else"
+        )
+        self.assertIn("t.scrollIntoView()", head)
+        self.assertNotIn("}}", head)
+
+    def test_a_page_a_link_lands_on_keeps_clear_of_the_title_bar(self):
+        css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
+        self.assertIn("section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}", css)
+
+    def test_the_heading_is_a_message_so_it_can_be_translated(self):
+        messages = json.loads((ENGINE / "messages" / "en.json").read_text(encoding="utf-8"))
+        self.assertEqual(messages["related"], "Related topics")
 
 
 if __name__ == "__main__":

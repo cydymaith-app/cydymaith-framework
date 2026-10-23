@@ -12,7 +12,7 @@ const SOURCE = fs.readFileSync(path.join(__dirname, "..", "phrasebook", "assets"
 // Run in this realm, not a sandbox, so objects it returns compare equal to the ones written here.
 const exported = { exports: {} };
 vm.runInThisContext(`(function (module) {${SOURCE}\n})`)(exported);
-const { keyMove, step, lock, offset, shouldDismiss, places } = exported.exports;
+const { keyMove, step, lock, offset, shouldDismiss, places, marked, anchorOf, cameFrom } = exported.exports;
 
 test("keys: Right opens the focused tile and Left goes back, mirrored in right-to-left", () => {
   assert.equal(keyMove("ArrowRight", false), "open");
@@ -136,6 +136,57 @@ test("the other page arrives exactly in place when the move is done, and waits a
     assert.equal(Math.abs(places(0, 400, forward, false).arriving), 400);
     assert.equal(Math.abs(places(0, 400, forward, false).leaving), 0);
   }
+});
+
+// ---- related topics: the address a related tile opens, and where Back goes
+
+test("the address says the way the page goes, and the topic a related tile was followed from, and the section to open at", () => {
+  assert.equal(marked("where.html", "forward", null), "where.html#slide=forward");
+  assert.equal(marked("where.html", "none", null), "where.html#slide=none");
+  assert.equal(marked("where.html#landscape", "none", null), "where.html#slide=none;at=landscape");
+  assert.equal(marked("where.html", "none", "rain.html"), "where.html#slide=none;from=rain.html");
+  assert.equal(marked("where.html#landscape", "none", "rain.html"), "where.html#slide=none;from=rain.html;at=landscape");
+});
+
+test("a section that cannot travel in an address is dropped from it, not passed on", () => {
+  for (const bad of ["a b", "a;b", "a=b", "a/b", "<x>", "é", "a#b"]) {
+    assert.equal(marked(`where.html#${bad}`, "none", null), "where.html#slide=none", JSON.stringify(bad));
+    assert.equal(anchorOf(`where.html#${bad}`), null, JSON.stringify(bad));
+  }
+  assert.equal(anchorOf("where.html#s1.c2"), "s1.c2", "a row of a section is an address too");
+  assert.equal(anchorOf("where.html"), null);
+  assert.equal(anchorOf("where.html#"), null);
+});
+
+test("Back returns to the topic a related tile was followed from only if the history entry names a page of this site", () => {
+  assert.equal(cameFrom({ from: "rain.html" }), "rain.html");
+  assert.equal(cameFrom({ from: "group-weather-forecast.html" }), "group-weather-forecast.html");
+  for (const bad of [null, undefined, {}, { from: "" }, { from: 3 }, { from: ["rain.html"] }, { from: "../rain.html" },
+                     { from: "https://example.org/x.html" }, { from: "//example.org/x.html" }, { from: "rain.html?x=1" },
+                     { from: "Rain.html" }, { from: "rain" }, { from: "javascript:alert(1)" }, "rain.html", 7, true]) {
+    assert.equal(cameFrom(bad), null, JSON.stringify(bad));
+  }
+});
+
+test("a related tile opens with its marks even where the browser slides the pages itself, and an ordinary tile does not", () => {
+  assert.ok(SOURCE.includes('link.hasAttribute("data-related") ? thisPage() : null'), "only a related tile says where it came from");
+  assert.ok(SOURCE.includes('if (native && !from && anchorOf(href) === null) return href;'));
+  assert.ok(SOURCE.includes('marked(href, native ? "none" : direction, from)'), "the browser's own move stands down when a mark must go in the address");
+});
+
+test("Back is pointed at the topic named by the history entry, before the Back link is used for anything", () => {
+  const at = SOURCE.indexOf("var came = cameFrom(window.history.state);");
+  assert.ok(at !== -1, "the entry is read");
+  assert.ok(SOURCE.indexOf('backLink().setAttribute("href", came)') > at);
+  assert.ok(at < SOURCE.indexOf('document.addEventListener("keydown", onKey);'), "before the keys and the click are wired");
+  assert.ok(at < SOURCE.indexOf("neighbour(back.getAttribute"), "before the page above is asked for");
+  assert.ok(SOURCE.includes("came !== thisPage()"), "never a Back to itself");
+});
+
+test("the copy of the page a tile opens at a section is scrolled to it, as far as the page is long enough", () => {
+  assert.ok(SOURCE.includes('copy.querySelector("[data-at]")'));
+  assert.ok(SOURCE.includes("copy.offsetHeight - layer.clientHeight"), "it goes no further than the real page can");
+  assert.ok(SOURCE.includes('target.setAttribute("data-at", "")'), "the section is marked before the ids go from the copy");
 });
 
 test("only dragging back is a gesture: the page never acts on a drag the other way", () => {

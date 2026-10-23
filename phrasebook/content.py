@@ -131,6 +131,8 @@ def validate(raw):
             raise ContentError(f"'{slug}' is reserved for a generated page")
     for slug, p in pages.items():
         validate_skeleton(slug, p)
+    for slug, p in pages.items():
+        check_related(slug, p, pages)
     icons.validate(raw["icons"])
     for g in structure["groups"]:
         check_icon(f"structure.json group {g['id']!r}", g.get("icon"), raw["icons"])
@@ -144,6 +146,38 @@ def validate(raw):
     for name, ed in raw["editions"].items():
         validate_edition(name, ed, packs, raw["palettes"])
     Messages(packs).validate()
+
+
+ANCHOR = re.compile(r"^[A-Za-z0-9._-]+$")  # what a section id may hold to be linked to: it travels in the address
+
+
+def check_related(slug, p, pages):
+    """An optional "related" lists the topics a topic links to, as tiles: each a "page" or a "page#section", naming a page and a
+    section that exist. One tile per page, and a page does not relate to itself."""
+    if "related" not in p:
+        return
+    where = f"pages/{slug}.json"
+    related = p["related"]
+    if not isinstance(related, list) or not related or any(not isinstance(entry, str) for entry in related):
+        raise ContentError(f'{where}: \'related\' must be a list of "page" or "page#section" names')
+    seen = set()
+    for entry in related:
+        page, hash_, section = entry.partition("#")
+        if page == slug:
+            raise ContentError(f"{where}: related {entry!r} is this page itself")
+        if page not in pages:
+            raise ContentError(f"{where}: related {entry!r} names a page that does not exist")
+        if hash_ and not section:
+            raise ContentError(f"{where}: related {entry!r} has a # and no section after it")
+        if section and section not in [s["id"] for s in pages[page]["sections"]]:
+            raise ContentError(f"{where}: related {entry!r} names a section that page does not have")
+        if section and not ANCHOR.match(section):
+            raise ContentError(
+                f"{where}: related {entry!r}: a section id used in a link may hold only letters, digits, dots, hyphens and underscores"
+            )
+        if page in seen:
+            raise ContentError(f"{where}: related names the page {page!r} more than once; one tile each")
+        seen.add(page)
 
 
 def check_level(where, holder):

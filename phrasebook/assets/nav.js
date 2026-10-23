@@ -5,7 +5,8 @@
    one it goes to sit edge to edge and slide together, following the finger in a drag, and the real page takes its place when
    they have landed (the tap, the keys, the Back button and the drag all end the same way). To show the other page it reads that
    page of this site once, from the service worker's cache when there is one; that is its only request, it goes to no other
-   site, and it sets no cookies and stores nothing. Where it cannot, the page that is reached from its parent still slides in:
+   site, and it sets no cookies and stores nothing. A tile that is a related topic (data-related) tells the page it opens which
+   topic it was followed from, so that Back returns there. Where it cannot, the page that is reached from its parent still slides in:
    that is decided in the head by a few lines of Site.document. Without this script every link still works. */
 (function () {
   "use strict";
@@ -21,6 +22,8 @@
   var SPRING_MS = 180;      // how long a drag that is let go too soon takes to spring back
   var WAIT_MS = 300;        // how long a tap waits for the other page before going there the plain way
   var EASE = "cubic-bezier(.2,.8,.2,1)";
+  var PAGE = /^[a-z0-9-]+\.html$/;       // a page of this site, as a related topic names the one it came from
+  var ANCHOR = /^[A-Za-z0-9._-]+$/;      // a section id that can travel in the address
 
   // ---- the moves, with no page in sight so they can be tested on their own
 
@@ -78,7 +81,30 @@
     return { leaving: out * x, arriving: out * (x - width) };
   }
 
-  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places };
+  // The address with the way the page goes (see Site.document, which reads it and takes it out again): #slide=<direction>, then
+  // ;from=<page> for a related topic, the topic Back returns to, and ;at=<id> for the section the address named, which it would
+  // otherwise have used itself.
+  function marked(href, direction, from) {
+    var cut = href.indexOf("#");
+    var base = cut === -1 ? href : href.slice(0, cut);
+    var at = cut === -1 ? "" : href.slice(cut + 1);
+    return base + "#slide=" + direction + (from ? ";from=" + from : "") + (at && ANCHOR.test(at) ? ";at=" + at : "");
+  }
+
+  // The section an address names, if it is one that can be linked to; otherwise null.
+  function anchorOf(href) {
+    var at = href.indexOf("#") === -1 ? "" : href.slice(href.indexOf("#") + 1);
+    return at && ANCHOR.test(at) ? at : null;
+  }
+
+  // The topic this page was opened from as a related topic, as the head left it in the history entry; null if it was not (or
+  // the entry says something that is not a page of this site). Its Back goes there.
+  function cameFrom(state) {
+    var from = state && typeof state === "object" ? state.from : null;
+    return typeof from === "string" && PAGE.test(from) ? from : null;
+  }
+
+  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places, marked: marked, anchorOf: anchorOf, cameFrom: cameFrom };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -100,9 +126,12 @@
   // The way the page goes, carried in the address for the next page, for when the other page could not be set beside this
   // one: its head slides it in from the same side (see Site.document) and takes the mark out again. Only where the browser
   // does not move the pages itself; otherwise its own move does it, and the address is left alone.
-  function toward(href, direction) {
-    if ("PageRevealEvent" in window) return href;
-    return href + "#slide=" + direction;
+  function toward(href, direction, from) {
+    var native = "PageRevealEvent" in window;
+    if (native && !from && anchorOf(href) === null) return href;
+    // Where the browser slides the pages itself, a mark that has to go in the address (the topic Back returns to, a section)
+    // says "none", so its own move stands down rather than racing the head's clean-up of the address.
+    return marked(href, native ? "none" : direction, from);
   }
 
   // ---- the other page
@@ -147,11 +176,13 @@
   // Put a copy of the other page's main in a layer that covers the page area and clips it, waiting where it will come in from.
   // The copy is only for the eye: it has no ids or radio names to clash with this page's, and it is inert and hidden from
   // screen readers.
-  function stageBeside(other, forward) {
+  function stageBeside(other, forward, at) {
     var copy = other.cloneNode(true);
     var each = function (selector, name) {
       Array.prototype.forEach.call(copy.querySelectorAll(selector), function (node) { node.removeAttribute(name); });
     };
+    var target = at && ANCHOR.test(at) ? copy.querySelector('[id="' + at + '"]') : null;
+    if (target) target.setAttribute("data-at", "");  // marked before the ids go, so the copy can be scrolled to it below
     copy.removeAttribute("id");
     each("[id]", "id");
     each("[name]", "name");
@@ -167,6 +198,15 @@
     document.body.appendChild(layer);
     root.classList.add("is-sliding");
     stage = { layer: layer, page: copy, forward: forward, width: layer.getBoundingClientRect().width };
+    // Where the address names a section, the real page will be scrolled to it a little under the title bar (the stylesheet's
+    // scroll-margin-top), as far as the page is long enough to go. The copy is put there now, so the handover shows no jump.
+    var landing = copy.querySelector("[data-at]");
+    if (landing) {
+      var gap = parseFloat(window.getComputedStyle(root).fontSize) || 16;
+      var down = landing.getBoundingClientRect().top - copy.getBoundingClientRect().top - gap;
+      var most = Math.max(0, copy.offsetHeight - layer.clientHeight);
+      copy.style.top = -Math.min(Math.max(0, down), most) + "px";
+    }
     place(along);
     void layer.offsetWidth;  // settle the first place, so that the next one is animated from it
   }
@@ -215,27 +255,39 @@
   // Go to `href` by moving there: the other page comes in beside this one as they slide together, then the real page takes
   // its place with no move of its own (its head is told so by #slide=none). If the other page is not at hand in a moment, or
   // the browser cannot show it, go the plain way, which slides the new page in after this one has left, or lets the browser do it.
-  function travel(href, forward) {
+  // `from` is the page a related topic is followed from, which the page it opens makes the place Back returns to.
+  function travel(href, forward, from) {
     leaving = true;
     if (!main || reducedMotion()) {
-      window.location.href = href;
+      window.location.href = from || anchorOf(href) !== null ? marked(href, "none", from) : href;
       return;
     }
     ready(href).then(function (other) {
       if (!other && !stage) {
-        window.location.href = toward(href, forward ? "forward" : "back");
+        window.location.href = toward(href, forward ? "forward" : "back", from);
         return;
       }
-      if (!stage) stageBeside(other, forward);
+      if (!stage) stageBeside(other, forward, anchorOf(href));
       var width = stage.width;
       glide(width, Math.max(MIN_MS, Math.round(SLIDE_MS * (1 - along / width))), function () {
-        window.location.href = href + "#slide=none";
+        window.location.href = marked(href, "none", from);
       });
     });
   }
 
-  function open(href) {
-    if (!leaving) travel(href, true);
+  function open(href, from) {
+    if (!leaving) travel(href, true, from);
+  }
+
+  // The name of this page's file, for a related topic to say where it was followed from.
+  function thisPage() {
+    var name = window.location.pathname.split("/").pop();
+    return name && PAGE.test(name) ? name : "index.html";
+  }
+
+  // Open a tile's topic. A related one says which topic it came from; an ordinary tile does not, and Back goes up the tree.
+  function openTile(link) {
+    open(link.getAttribute("href"), link.hasAttribute("data-related") ? thisPage() : null);
   }
 
   // Take the page out of view in the reading direction, then go back. With no Back link (the home page) nothing happens.
@@ -272,7 +324,7 @@
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (root.hasAttribute("data-arranging")) return;  // while tiles are being arranged (arrange.js) a tap is its own
       event.preventDefault();
-      open(link.getAttribute("href"));
+      openTile(link);
     });
   }
 
@@ -293,7 +345,7 @@
     } else if (list && at !== -1) {
       event.preventDefault();
       if (move === "open") {
-        open(links[at].getAttribute("href"));
+        openTile(links[at]);
       } else {
         links[step(at, links.length, move)].focus();
       }
@@ -352,6 +404,11 @@
     main.addEventListener("touchend", function () { release(false); }, { passive: true });
     main.addEventListener("touchcancel", function () { release(true); }, { passive: true });
   }
+
+  // A page opened from a related tile was told in its history entry which topic that was, and its Back returns there; the
+  // address and the trail stay as the page's own. Opened any other way, Back goes up the tree.
+  var came = cameFrom(window.history.state);
+  if (came && came !== thisPage() && backLink()) backLink().setAttribute("href", came);
 
   document.addEventListener("keydown", onKey);
   // A plain click on Back leaves the same way a drag does. Modified clicks stay ordinary links.

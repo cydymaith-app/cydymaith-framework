@@ -31,6 +31,10 @@ Every group, page and section has a **level** from 1 (beginner) to 3 (advanced),
 
 The reference, with the rules for what counts as a word, how a group and a page are graded, and the errors the build gives, is in [docs/FRAMEWORK.md](docs/FRAMEWORK.md#grading-how-demanding-a-tile-or-section-is).
 
+## Related topics
+
+An end topic can link to other topics as a row of tiles, so a reader jumps from one to another without going back up the tree. Add `"related": ["where#landscape", "patterns"]` to a page in `pages/<slug>.json`: each is a page, or a page and one of its sections (`page#section`), and a tile opens the page there and is named for the section. It is one way, so a topic that should link back says so itself. The build checks the names. Back returns to the topic the tile was followed from. The reference is in [docs/FRAMEWORK.md](docs/FRAMEWORK.md). Translate the `related` message in each language's pack.
+
 ## The promises
 
 No sign-up, no accounts, no ads, no tracking, no payments, no addictive features, and no request to any other site. Tests fail if a build breaks them.
