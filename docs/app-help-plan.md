@@ -73,6 +73,8 @@ Planned 2026-10-23. Covers the book itself. The in-context icons, sheet, overlay
 3. Remove the old `how_to_*` message keys once nothing uses them.
 4. Re-run the `app-help` skill. The "missing" list should shrink to the mechanism items.
 
+**Phase 3 complete 2026-10-23** (part 1: the words; part 2: the old `how_to_*` messages removed, `app-help` audit re-run and `app-help-todo.md` brought up to date, the older to-do items ticked, docs corrected). What is left is the mechanism (Phase 4 and `docs/TODO.md` 3.7), a read-through in a browser, and the Welsh check.
+
 ## Phase 4: left ready for the icons
 
 - One anchor per feature, so an icon's `data-help="<section>#<feature>"` maps to `help-<section>.html#<feature>`.
