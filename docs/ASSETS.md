@@ -43,10 +43,12 @@ The paths are unmodified. The only change is a one-line comment added at the top
 | `tools` | Edit order, on the home page and a group page |
 | `headphones` | The "Also heard as" label above alternative forms |
 | `help` | The help button in the side rail, and the help icons it reveals |
-| `close` | The x that closes the help sheet |
+| `close` | The x that closes the help sheet and the search card |
+| `backspace` | Clears the search field (drawn for this site, see below) |
 
 - Apache-2.0 needs the licence text kept with copies, and changes stated. The `LICENSE` file is in the icons folder, and a test fails if it goes missing. The licence does not cover IBM's names or trademarks.
-- **The framework ships eleven interface icons** in `phrasebook/ui-icons/`, with the licence beside them. They are chrome, not content, so they live in the framework and a project does not need to supply them. A test fails if anything else appears there.
+- **Drawn for this site:** `backspace`, the delete symbol at the end of the search field, which clears it. Carbon has no backspace key. It is a 32px-grid, 2px round-stroke outline, so it is a different style from the filled Carbon icons and may need redrawing to match. It is the framework's own work, released under the same MIT licence as the code, and carries a comment saying so.
+- **The framework ships twelve interface icons** in `phrasebook/ui-icons/`, with the licence beside them. They are chrome, not content, so they live in the framework and a project does not need to supply them. A test fails if anything else appears there (eleven from Carbon and the one above).
 - A project's own icons go in its `icons/` folder and are named with `icon` on a group or a page. Each file is checked as a safe SVG subset at build time (shapes only; no scripts, styles, links or references), then inlined, so a page makes no request for an icon.
 - Icons are decorative beside their labels, so they are hidden from screen readers.
 - **Not yet checked: BBC GEL icon sets.** The BBC's Global Experience Language ([BBC GEL iconography](https://www.bbc.co.uk/gel/features/iconography#licensing)) has alternative icon sets that are free for non-commercial use only. Under the policy above, a non-commercial licence is not accepted, so none of them may be used unless the BBC grants other terms. The page could not be fetched while writing this note, so the wording was not verified.

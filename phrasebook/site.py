@@ -704,17 +704,20 @@ class Site:
         pair = json.dumps([[self.frm, self.dir_of(self.frm)], [self.to, self.dir_of(self.to)]])
         hint = self.plain("search_hint", first=self.endonym(self.frm), second=self.endonym(self.to))
         name = e(self.plain("search"))
+        clear_name, close_name = e(self.plain("search_clear")), e(self.plain("search_close"))
         return (
             '<div class="search-layer" hidden>'
             f'<div class="search-card" id="search-card" role="search" aria-label="{name}" inert '
             f'data-dictionary="dictionary.json" data-pair="{e(pair)}" data-hint="{e(hint)}" '
             f'data-none="{e(self.plain("search_none"))}" data-error="{e(self.plain("search_error"))}" '
             f'data-other="{e(self.plain("search_other"))}" data-scope="{e(json.dumps(self.search_scope(current)))}">'
-            '<div class="search-head"><label class="search-field">'
+            '<div class="search-head"><div class="search-box"><label class="search-field">'
             f'<span class="sr-only">{name}</span>'
             f'<input id="search-input" type="search" placeholder="{e(self.plain("search_placeholder"))}" autocomplete="off" '
             'autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label>'
-            f'<button type="button" class="search-close">{e(self.plain("search_close"))}</button></div>'
+            # Actions are symbols, not words (see "Form actions are symbols" in FRAMEWORK.md): delete the text, and close the card.
+            f'<button type="button" class="search-clear" hidden aria-label="{clear_name}" title="{clear_name}">{self.ui_icons["backspace"]}</button></div>'
+            f'<button type="button" class="search-close" aria-label="{close_name}" title="{close_name}">{self.ui_icons["close"]}</button></div>'
             '<p class="search-status" id="search-status" role="status"></p>'
             '<div class="search-body"><ul class="search-results" id="search-results"></ul>'
             f'<h2 class="search-topics" hidden>{e(self.plain("search_topics"))}</h2>'

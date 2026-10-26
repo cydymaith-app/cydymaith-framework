@@ -155,6 +155,7 @@
   var layer = card.parentNode;
   var heading = card.querySelector(".search-topics");
   var closer = card.querySelector(".search-close");
+  var clearer = card.querySelector(".search-clear");
 
   var pair;
   try {
@@ -246,6 +247,7 @@
     clear(topicList);
     heading.hidden = true;
     var query = input.value;
+    if (clearer) clearer.hidden = !query;
     if (failed) {
       status.textContent = text("error");
       return;
@@ -321,6 +323,7 @@
     if (isOpen) close(true, false); else open();
   });
   closer.addEventListener("click", function () { close(true, false); });
+  if (clearer) clearer.addEventListener("click", function () { input.value = ""; render(); input.focus(); });
   input.addEventListener("input", render);
 
   // A plain click on a result leaves for that page, with the card gone at once.

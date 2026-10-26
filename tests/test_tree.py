@@ -112,6 +112,7 @@ class IconParsingTests(unittest.TestCase):
             [
                 "ui-icons/arrow--left.svg",
                 "ui-icons/asleep.svg",
+                "ui-icons/backspace.svg",
                 "ui-icons/close.svg",
                 "ui-icons/headphones.svg",
                 "ui-icons/help.svg",
@@ -162,13 +163,13 @@ class IconSiteTests(Scratch):
         for name, page in pages.items():
             frame = re.sub(r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>', "", page, flags=re.S)  # the help icons and the sheet's x, counted apart
             limit = (
-                9 if name == "settings.html" else 6
-            )  # search, help, back, edit order, about and the gear, and the figure; the settings page adds three modes
+                11 if name == "settings.html" else 8
+            )  # search, help, back, edit order, about and the gear, and the figure, and the search card's x and delete symbol; the settings page adds three modes
             self.assertLessEqual(frame.count("<svg"), limit, name)
         self.assertEqual(
             re.sub(r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>', "", pages["index.html"], flags=re.S).count("<svg"),
-            5,
-            "search, help, edit order, about and the gear in the rail",
+            7,
+            "search, help, edit order, about and the gear in the rail, and the search card's x and delete symbol",
         )
 
     def test_a_named_icon_must_have_a_file(self):
@@ -455,6 +456,18 @@ class FrameTests(Scratch):
             self.assertIn('data-other="Other results"', card, name)
             self.assertIn('id="search-pages"', card, name)
 
+    def test_the_search_card_actions_are_symbols_with_names_for_a_screen_reader(self):
+        for name, page in self.pages.items():
+            card = page[page.index('<div class="search-card"') : page.index('<p class="search-status"')]
+            clear = re.search(r'<button type="button" class="search-clear" hidden aria-label="Clear" title="Clear">(.*?)</button>', card, re.S)
+            close = re.search(r'<button type="button" class="search-close" aria-label="Close" title="Close">(.*?)</button>', card, re.S)
+            self.assertTrue(clear and "<svg" in clear.group(1), f"{name}: a delete symbol clears the field")
+            self.assertTrue(close and "<svg" in close.group(1), f"{name}: an x closes the card")
+            for button in (clear, close):
+                self.assertNotRegex(re.sub(r"<svg.*?</svg>", "", button.group(1), flags=re.S).strip(), r"\w", f"{name}: no words on the button")
+            self.assertLess(card.index('class="search-field"'), card.index('class="search-clear"'), name)
+            self.assertNotIn("<label", card[card.index('class="search-clear"') :], name)
+
     def test_the_card_names_the_pages_being_browsed_so_search_can_list_them_first(self):
         def scope(name):
             card = self.pages[name][self.pages[name].index('<div class="search-card"') :]
@@ -610,6 +623,9 @@ class MobileFirstTests(unittest.TestCase):
             for side in ("old", "new"):
                 self.assertIn(f':root[data-slide="{direction}"]::view-transition-{side}(page)', self.CSS)
         self.assertIn(':root[dir="rtl"]{--slide:-100%}', self.CSS)
+
+    def test_the_browsers_own_clear_button_is_hidden_so_there_is_only_one(self):
+        self.assertIn("-webkit-search-cancel-button", self.CSS)
 
     def test_the_search_card_slides_out_from_behind_the_rail_inside_a_layer_that_clips_it(self):
         layer = self.CSS[self.CSS.index(".search-layer{") : self.CSS.index("}", self.CSS.index(".search-layer{"))]

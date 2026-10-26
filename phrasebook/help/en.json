@@ -112,7 +112,7 @@
         "Search stays open while you type. Choose a result to go to it; the card closes as the page changes."
       ],
       "keys": "Down arrow and Up arrow move through the results. Enter follows the first result when the cursor is in the field. Escape closes search.",
-      "touch": "Tap a result to go to it. Tap Close, or anywhere outside the card, to shut search."
+      "touch": "Tap a result to go to it. Tap the x, or anywhere outside the card, to shut search. Tap the delete symbol in the field to clear what you typed."
     },
     "search-this-page-first": {
       "title": "Results from the page you are on",

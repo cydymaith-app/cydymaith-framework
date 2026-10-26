@@ -77,6 +77,7 @@
   "about_app": "About this app",
   "search": "Search",
   "search_placeholder": "Search words and phrases",
+  "search_clear": "Clear",
   "search_close": "Close",
   "search_hint": "Type a word or phrase in {first} or {second}.",
   "search_none": "Nothing found.",
