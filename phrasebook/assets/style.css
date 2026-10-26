@@ -445,4 +445,7 @@ section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 .topic-name .l2{font:500 .95rem/1.3 var(--font-l2);color:var(--muted)}
 .fold.topic > .fold-body{padding-block:0 1.25rem}
 .fold.topic > .fold-body > .lede{margin-block-start:0}
+.fold.topic{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
+.fold.topic section > h3,.fold.topic .related > h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.05rem/1.3 var(--font-ui)}
+.fold.topic section > h3 .l2,.fold.topic .related > h3 .l2{font:500 1rem/1.3 var(--font-l2);color:var(--muted)}
 @media (forced-colors:active){.fold > summary:focus-visible{outline:2px solid Highlight}}
