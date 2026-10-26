@@ -183,6 +183,7 @@
     };
     var target = at && ANCHOR.test(at) ? copy.querySelector('[id="' + at + '"]') : null;
     if (target) target.setAttribute("data-at", "");  // marked before the ids go, so the copy can be scrolled to it below
+    for (var shut = target; shut; shut = shut.parentElement) if (shut.tagName === "DETAILS") shut.open = true;  // as reveal() will
     copy.removeAttribute("id");
     each("[id]", "id");
     each("[name]", "name");
@@ -424,6 +425,22 @@
   }
   if (main) onDrag();
   onTile();
+  // On a one-page group each topic is an accordion. An address that names one, or a place inside one, opens it, so the page
+  // lands on something it can show: on arrival, and when a link on the page (a search result) changes the address.
+  function reveal() {
+    var id = window.location.hash.slice(1);
+    var target = id && ANCHOR.test(id) ? document.getElementById(id) : null;
+    var opened = false;
+    for (var p = target; p; p = p.parentElement) {
+      if (p.tagName === "DETAILS" && !p.open) {
+        p.open = true;
+        opened = true;
+      }
+    }
+    if (opened) target.scrollIntoView();
+  }
+  reveal();
+  window.addEventListener("hashchange", reveal);
   // Coming back to this page from the browser's own cache must not leave it slid away.
   window.addEventListener("pageshow", function () {
     leaving = false;

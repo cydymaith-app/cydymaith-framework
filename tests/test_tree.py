@@ -1204,3 +1204,95 @@ class RelatedTopicsTests(Scratch):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OnePageGroupTests(Scratch):
+    """A group with "layout": "one-page" is one page: each of its topics is an accordion, shut until opened, whose summary is the
+    topic's tile and whose body is the topic. The topics have no pages of their own, so every address of one points into the
+    group's page, and Settings' order puts the accordions in order there."""
+
+    @classmethod
+    def one_page(cls, proj):
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(layout="one-page"))
+        return proj
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.proj = cls.one_page(cls.project())
+        cls.pages = cls.built(cls.proj)
+        cls.page = cls.pages["group-g1.html"]
+
+    def test_the_group_page_holds_each_topic_as_a_shut_accordion_named_as_its_tile(self):
+        folds = re.findall(r'<details class="fold topic"[^>]*>', self.page)
+        self.assertEqual(len(folds), 2)
+        self.assertIn('<details class="fold topic" aria-labelledby="h-topic-p1" id="topic-p1" data-level="', self.page)
+        self.assertTrue(all(" open" not in f for f in folds), "shut by default")
+        self.assertIn('<summary><h2 id="h-topic-p1"><span class="topic-name"><span class="l1">qaa page</span>', self.page)
+        self.assertIn('<span class="l2" lang="qab">qab page</span></span></h2></summary>', self.page)
+
+    def test_the_topics_have_no_pages_of_their_own(self):
+        self.assertNotIn("p1.html", self.pages)
+        self.assertNotIn("points.html", self.pages)
+        self.assertNotIn('href="p1.html', self.page)
+
+    def test_inside_an_accordion_the_sections_are_a_level_down_and_carry_no_level(self):
+        body = self.page[self.page.index('id="topic-p1"') : self.page.index('id="topic-points"')]
+        self.assertIn("qaa lede", body)
+        self.assertIn('<section id="s2"><h3>', body)
+        self.assertNotRegex(body, r"<section[^>]*data-level", "the accordions are put in order, not the sections")
+        self.assertIn('<tr id="s1.c1">', body)
+
+    def test_settings_order_puts_the_accordions_in_order_on_the_page(self):
+        self.assertLess(self.page.rindex("</details>"), self.page.index('new Event("phrasebook:order")'))
+        script = (ENGINE / "assets" / "order.js").read_text(encoding="utf-8")
+        self.assertIn('el.tagName === "DETAILS"', script)
+
+    def test_the_page_is_read_like_a_topic_in_the_pagers_run(self):
+        self.assertIn('class="pager"', self.page)
+        self.assertIn('<a class="prev" href="index.html">', self.page)
+        self.assertNotIn('class="tiles" data-tiles data-order', self.page, "no grid of tiles to arrange")
+
+    def test_search_points_into_the_accordions(self):
+        out = self.tmp / "dict-out"
+        quiet_build(out, project_dir=self.proj)
+        entries = json.loads((out / "dictionary.json").read_text(encoding="utf-8"))["entries"]
+        c1 = next(e for e in entries if e["concept"] == "c1")
+        self.assertEqual(c1["pages"][0]["href"], "group-g1.html#s1.c1")
+        self.assertEqual(c1["pages"][0]["topic"], "group-g1.html#topic-p1")
+        scope = json.loads(html.unescape(re.search(r'data-scope="([^"]*)"', self.page).group(1)))
+        self.assertEqual(scope, ["group-g1.html"])
+        self.assertIn("item.page.topic", (ENGINE / "assets" / "search.js").read_text(encoding="utf-8"))
+
+    def test_an_address_inside_a_shut_accordion_opens_it(self):
+        self.assertIn('p.tagName==="DETAILS")p.open=true', self.page, "the head script, for an address carried by nav.js")
+        script = (ENGINE / "assets" / "nav.js").read_text(encoding="utf-8")
+        self.assertIn('window.addEventListener("hashchange", reveal)', script)
+
+    def test_a_related_tile_from_another_group_lands_on_the_accordion_or_its_section(self):
+        proj = self.project()
+
+        def two_groups(d):
+            d["groups"] = [{"id": "g1", "layout": "one-page", "pages": ["p1"]}, {"id": "g2", "pages": ["points"], "links": ["p1"]}]
+
+        fixture.edit(proj / "structure.json", two_groups)
+        for code in fixture.LANGS:
+            fixture.edit(proj / "packs" / code / "pack.json", lambda d, code=code: d["groups"].update(g2=f"{code} second"))
+        fixture.edit(proj / "pages" / "points.json", lambda d: d.update(related=["p1#s2"]))
+        pages = self.built(proj)
+        self.assertIn('href="group-g1.html#s2" data-related', pages["points.html"])
+        self.assertIn('href="group-g1.html#topic-p1"', pages["group-g2.html"], "a group's link to a one-page topic")
+
+    def test_the_layout_is_checked_naming_the_group(self):
+        for fn, fragment in (
+            (lambda d: d["groups"][0].update(layout="cards"), "'layout' must be one of"),
+            (lambda d: d["groups"][0].update(layout="one-page"), "holds section 's1' twice"),
+        ):
+            proj = self.project()
+            fixture.edit(proj / "structure.json", fn)
+            if "twice" in fragment:
+                fixture.edit(proj / "pages" / "points.json", lambda d: d["sections"][0].update(id="s1"))
+            with self.assertRaises(ContentError) as caught:
+                content.validate(content.read(proj))
+            self.assertIn(fragment, str(caught.exception))
+            self.assertIn("group 'g1'", str(caught.exception))

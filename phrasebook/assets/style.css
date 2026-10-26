@@ -434,4 +434,15 @@ section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 .about-text .fold{border-block-start:1px solid var(--rule)}
 .about-text .fold:last-of-type{border-block-end:1px solid var(--rule)}
 .about-text .fold > summary{padding-block:.35rem}
+/* A one-page group: each topic is an accordion whose summary is its tile, the icon and the name in both languages. */
+.topics{margin-block-start:1.25rem;border-block-start:1px solid var(--rule)}
+.fold.topic{border-block-end:1px solid var(--rule)}
+.fold.topic > summary{min-height:3.5rem;padding-block:.5rem}
+.fold.topic > summary > h2{display:flex;align-items:center;gap:.85rem;margin:0;font-size:inherit}
+.fold.topic > summary .icon{width:2rem;height:2rem;color:var(--accent)}
+.topic-name{display:flex;flex-direction:column}
+.topic-name .l1{font:600 1.15rem/1.25 var(--font-ui)}
+.topic-name .l2{font:500 .95rem/1.3 var(--font-l2);color:var(--muted)}
+.fold.topic > .fold-body{padding-block:0 1.25rem}
+.fold.topic > .fold-body > .lede{margin-block-start:0}
 @media (forced-colors:active){.fold > summary:focus-visible{outline:2px solid Highlight}}

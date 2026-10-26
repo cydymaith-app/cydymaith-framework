@@ -74,3 +74,4 @@ Still to do:
 
 - `FRAMEWORK.md` said `how-to.html` "explains all of this" and described the rail without About or Edit order. Both are fixed (the contents page and the book are described; the rail is covered in the book's *The bar at the side*).
 - `FRAMEWORK.md` still says on *Settings page*, under accessibility, that the choice "changes no scheme". `app.js` switches to the scheme last picked at the chosen level. The book says what the code does; correct `FRAMEWORK.md`.
+- [ ] **One-page groups:** a topic shown as an accordion on its group's page (open and close, how an address or a search result opens it, the order setting now ordering the accordions). Where: a feature in `phrasebook/help.py` with `requires`, its text in `phrasebook/help/en.json`, and the Welsh in the project's `help.json`.

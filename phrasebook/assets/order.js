@@ -1,5 +1,5 @@
 /* Phrasebook framework: puts tiles and sections in order before they are shown.
-   A list of tiles (the home page, a group page) and the sections of a topic can be put in order from the simplest to the most
+   A list of tiles (the home page, a group page) and the sections of a topic (or the topics of a one-page group) can be put in order from the simplest to the most
    advanced, or the other way round, by the level each one carries (data-level, 1 to 3, worked out by the build from what it holds).
    The choice is a preference (Settings: Default, Simplest first, Most advanced first). Default leaves everything as written.
    A screen whose tiles the person has arranged themselves (arrange.js) keeps their order and ignores the setting.
@@ -150,7 +150,8 @@
     var jump = null;
     walk(container, function (el) {
       if (attr(el, "data-tiles") !== null && attr(el, "data-order") !== null) lists.push(el);
-      else if (el.tagName === "SECTION" && attr(el, "data-level") !== null) found.push(el);
+      // A topic's sections, or on a one-page group the topics' accordions (whose sections carry no level, so stay as written).
+      else if ((el.tagName === "SECTION" || el.tagName === "DETAILS") && attr(el, "data-level") !== null) found.push(el);
       else if (el.tagName === "UL" && (attr(el, "class") || "").split(" ").indexOf("jump") !== -1) jump = el;
     });
     lists.forEach(function (list) { tiles(list, direction, saved); });

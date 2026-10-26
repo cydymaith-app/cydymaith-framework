@@ -128,6 +128,7 @@ def validate(raw):
         if len(set(linked)) != len(linked):
             raise ContentError(f"structure.json: group {g['id']!r} links a page more than once")
         check_level(f"structure.json group {g['id']!r}", g)
+        check_layout(g, pages)
     for slug in pages:
         if slug not in listed:
             raise ContentError(f"pages/{slug}.json is not listed in any group in structure.json")
@@ -153,6 +154,44 @@ def validate(raw):
 
 
 ANCHOR = re.compile(r"^[A-Za-z0-9._-]+$")  # what a section id may hold to be linked to: it travels in the address
+
+LAYOUTS = ("tiles", "one-page")
+TOPIC_PREFIX = "topic-"  # the id of a topic's accordion on a one-page group: topic-<slug>
+
+
+def check_layout(g, pages):
+    """A group's optional "layout": "tiles" (the default: a tile for each page, each page its own) or "one-page" (one page,
+    the group's, with each of its pages as an accordion). On one page every section id has to be unique, since it is an id
+    there, and none may look like an accordion's."""
+    where = f"structure.json group {g['id']!r}"
+    layout = g.get("layout", "tiles")
+    if layout not in LAYOUTS:
+        raise ContentError(f"{where}: 'layout' must be one of {', '.join(LAYOUTS)}, not {layout!r}")
+    if layout != "one-page":
+        return
+    seen = {}
+    for slug in g.get("pages", []):
+        for section in pages[slug].get("sections", []):
+            sid = section.get("id")
+            if sid in seen:
+                raise ContentError(f"{where}: one page holds section {sid!r} twice, in pages/{seen[sid]}.json and pages/{slug}.json")
+            if isinstance(sid, str) and sid.startswith(TOPIC_PREFIX):
+                raise ContentError(f"{where}: section {sid!r} in pages/{slug}.json may not start with {TOPIC_PREFIX!r} on one page")
+            seen[sid] = slug
+
+
+def one_page_homes(structure):
+    """{page slug: id of its one-page group} for every page that is shown inside its group's page, not on its own."""
+    return {slug: g["id"] for g in structure["groups"] if g.get("layout") == "one-page" for slug in g.get("pages", [])}
+
+
+def address(structure, slug, anchor=None):
+    """Where a page is read: its own file, or for a page in a one-page group the group's page at its accordion. With `anchor`
+    (a section id, or a row's section.concept) the address is that place instead, which on one page is an id of the group page."""
+    gid = one_page_homes(structure).get(slug)
+    if gid:
+        return f"{GROUP_PAGE_PREFIX}{gid}.html#{anchor or TOPIC_PREFIX + slug}"
+    return f"{slug}.html#{anchor}" if anchor else f"{slug}.html"
 
 
 def check_related(slug, p, pages):

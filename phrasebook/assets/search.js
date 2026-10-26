@@ -232,7 +232,7 @@
   function renderTopic(item) {
     var li = make("li", "search-result");
     var link = make("a", "search-term");
-    link.href = pageOf(item.page.href);
+    link.href = item.page.topic || pageOf(item.page.href);  // a topic shown inside a one-page group names its accordion
     pairInto(link, item.page.title[langs[0]], item.page.title[langs[1]]);
     li.appendChild(link);
     return li;

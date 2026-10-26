@@ -11,12 +11,13 @@ no separate step. Nothing is hand-edited; the packs and page skeletons are the o
                              "title": {"aa": "Types of weather", "bb": "Mathau o dywydd"}}]}]}
 
 Each page lists where the word is: href is the page with the id of the word's row (section id, a dot, the concept), so a
-link lands on the word. Entries follow the order of the pages in structure.json. Braces that mark the language's own text in notes
+link lands on the word. A page shown inside a one-page group's page links there instead (group-<id>.html#section.concept),
+and adds "topic", the address of its accordion, for the list of topics. Entries follow the order of the pages in structure.json. Braces that mark the language's own text in notes
 are removed, so a term is the plain word or phrase. "also" holds the other forms a word is heard as (a changed beginning, a
 plural), by language. Search matches them but shows only the terms, so a person who heard "law" finds "glaw".
 """
 
-from .content import pages_in_order
+from .content import address, one_page_homes, pages_in_order
 
 BRACES = ("{{", "}}")
 
@@ -36,6 +37,8 @@ def index(raw, edition):
     """Build the dictionary for an edition. Returns a dict ready to write as JSON."""
     languages = list(edition["languages"])
     entries = {}
+    structure = raw["structure"]
+    homes = one_page_homes(structure)
     for slug in pages_in_order(raw):
         page = raw["pages"][slug]
         titles = {code: raw["packs"][code]["pages"][slug]["title"] for code in languages if slug in raw["packs"][code]["pages"]}
@@ -50,5 +53,8 @@ def index(raw, edition):
                         if concept.get("also"):
                             entry.setdefault("also", {})[code] = [_plain(a) for a in concept["also"]]
                 if not any(p["slug"] == slug for p in entry["pages"]):
-                    entry["pages"].append({"slug": slug, "href": f"{slug}.html#{section['id']}.{cid}", "title": titles})
+                    found = {"slug": slug, "href": address(structure, slug, f"{section['id']}.{cid}"), "title": titles}
+                    if slug in homes:  # on a one-page group the topic is an accordion of the group's page, not a page of its own
+                        found["topic"] = address(structure, slug)
+                    entry["pages"].append(found)
     return {"languages": languages, "entries": list(entries.values())}

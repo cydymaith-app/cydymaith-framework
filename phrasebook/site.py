@@ -17,7 +17,7 @@ import unicodedata
 
 from . import colour, grading, icons, palettes
 from .figures import FIGURE_CONCEPTS, FIGURES
-from .content import LICENCES, STORAGE_NAME
+from .content import LICENCES, STORAGE_NAME, TOPIC_PREFIX
 from .help import PAGE_PREFIX as HELP_PREFIX, Book
 from .messages import Messages
 
@@ -55,10 +55,13 @@ class Site:
                 "icon": g.get("icon"),
                 "pages": [s for s in g["pages"] if s in self.slugs],
                 "links": [s for s in g.get("links", []) if s in self.slugs],
+                "layout": g.get("layout", "tiles"),
             }
             for g in raw["structure"]["groups"]
         ]
         self.groups = [g for g in self.groups if g["pages"]]
+        # A page of a one-page group has no file of its own: it is an accordion on the group's page (see one_page).
+        self.homes = {s: g["id"] for g in self.groups if g["layout"] == "one-page" for s in g["pages"]}
 
     # -- lookups
 
@@ -267,10 +270,10 @@ class Site:
         bar = f'<div class="lang-bar" role="group" aria-label="{e(self.plain("about_language"))}">{labels}</div>'
         return radios, bar
 
-    def fold(self, heading_html, body_html, open_=False, card=False, labelled=None, attrs=""):
+    def fold(self, heading_html, body_html, open_=False, card=False, labelled=None, attrs="", cls=""):
         """A section that opens and closes: a details element whose summary is the heading. It works with no script, and
-        the controls inside stay in the page, with their state, while it is shut."""
-        cls = "fold card" if card else "fold"
+        the controls inside stay in the page, with their state, while it is shut. `cls` adds a class (a topic's accordion)."""
+        cls = " ".join(filter(None, ["fold", "card" if card else "", cls]))
         label = f' aria-labelledby="{labelled}"' if labelled else ""
         return (
             f'<details class="{cls}"{label}{attrs}{" open" if open_ else ""}><summary>{heading_html}</summary>'
@@ -462,6 +465,21 @@ class Site:
     def sequence(self):
         return ["index"] + [s for g in self.groups for s in g["pages"]]
 
+    def run(self):
+        """The pages Previous and Next go through: the home page, then each topic, where a one-page group is its one page."""
+        seq = ["index"]
+        for g in self.groups:
+            seq += [f"group-{g['id']}"] if g["layout"] == "one-page" else g["pages"]
+        return seq
+
+    def href(self, slug, anchor=None):
+        """The address of a topic, or of a place in it (`anchor`, a section id or a row's section.concept): its own page, or on a
+        one-page group the group's page, at the topic's accordion or at the place."""
+        gid = self.homes.get(slug)
+        if gid:
+            return f"group-{gid}.html#{anchor or TOPIC_PREFIX + slug}"
+        return f"{slug}.html#{anchor}" if anchor else f"{slug}.html"
+
     def prose(self, getter):
         """First (code, text) from the pair, then the rest of the edition, where getter returns something."""
         for code in [self.frm, self.to] + [c for c in self.langs if c not in (self.frm, self.to)]:
@@ -478,7 +496,7 @@ class Site:
     # -- navigation
 
     def pager(self, current):
-        seq = self.sequence()
+        seq = self.run()
         i = seq.index(current)
 
         def link(slug, cls, key):
@@ -487,6 +505,10 @@ class Site:
                 c = self.ui_text(self.to, "main_menu")
                 first = f'<span class="t"{self.la(t[1])}>{e(t[0])}</span>'
                 second = f'<span class="c"{self.la(c[1])}>{e(c[0])}</span>'
+            elif slug.startswith("group-"):  # a one-page group
+                gid = slug[len("group-") :]
+                first = f'<span class="t"{self.la(self.frm)}>{e(self.group_title(self.frm, gid))}</span>'
+                second = f'<span class="c"{self.la(self.to)}>{e(self.group_title(self.to, gid))}</span>'
             else:
                 first = f'<span class="t"{self.la(self.frm)}>{e(self.title(self.frm, slug))}</span>'
                 second = f'<span class="c"{self.la(self.to)}>{e(self.title(self.to, slug))}</span>'
@@ -625,8 +647,12 @@ class Site:
         covered = set(FIGURE_CONCEPTS.get(self.skel[slug].get("figure"), ())) if figure else set()
         return [s for s in self.sections(slug) if not set(s["concepts"]) <= covered]
 
-    def render_section(self, slug, section):
+    def render_section(self, slug, section, nested=False):
+        """One section: its heading, order line, intro, the table of rows, and its box. `nested` is a section inside a topic's
+        accordion on a one-page group: its heading goes a level down, and it carries no level, since there the accordions are
+        what is put in order, not the sections."""
         frm, to, sid = self.frm, self.to, section["id"]
+        hx, bx = ("h3", "h4") if nested else ("h2", "h3")
         rows = []
         for cid in self.rows(slug, section):
             cf, ct = self.concept(frm, slug, sid, cid), self.concept(to, slug, sid, cid)
@@ -670,7 +696,7 @@ class Site:
             if sec.get("intro")
         )
         box = "".join(
-            f'<div class="box"><h3>{self.commentary(code, sec["box"]["title"])}</h3><p>{self.markup(code, sec["box"]["body"])}</p></div>'
+            f'<div class="box"><{bx}>{self.commentary(code, sec["box"]["title"])}</{bx}><p>{self.markup(code, sec["box"]["body"])}</p></div>'
             for code in (frm, to)
             for sec in [self.pack_section(code, slug, sid)]
             if sec.get("box")
@@ -678,11 +704,12 @@ class Site:
         heading = ""
         if not self.repeats_title(slug, sid):
             heading = (
-                f'<h2>{self.inline(frm, self.pack_section(frm, slug, sid)["title"])}'
-                f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></h2>'
+                f'<{hx}>{self.inline(frm, self.pack_section(frm, slug, sid)["title"])}'
+                f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></{hx}>'
             )
+        graded = "" if nested else f' data-level="{self.levels["sections"].get((slug, sid), 1)}"'
         return (
-            f'<section id="{sid}" data-level="{self.levels["sections"].get((slug, sid), 1)}">{heading}{order}{intro}'
+            f'<section id="{sid}"{graded}>{heading}{order}{intro}'
             f'<div class="card"><table class="terms pair"><thead class="sr-only"><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
             f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>'
@@ -695,7 +722,7 @@ class Site:
             return [f"{current}.html"]
         for group in self.groups:
             if current == f"group-{group['id']}":
-                return [f"{slug}.html" for slug in group["pages"] + group["links"]]
+                return list(dict.fromkeys(self.href(slug).split("#")[0] for slug in group["pages"] + group["links"]))
         return []
 
     def search_card(self, current=None):
@@ -777,14 +804,16 @@ class Site:
             "</div>"
         )
 
-    def related_tiles(self, slug):
+    def related_tiles(self, slug, entries=None, ident="related"):
         """The Related row of a topic: a tile for each topic it names that is published, after its sections. A tile opens the page, at
         the section if one is named, and is named for that section in both languages (else for the page). The list is a list of
         tiles that slide in and take the arrow keys, but it names no saved order, so it is never arranged or put in order."""
         frm, to = self.frm, self.to
         tiles = []
-        for entry in self.skel[slug].get("related", []):
+        for entry in self.skel[slug].get("related", []) if entries is None else entries:
             page, _, sid = entry.partition("#")
+            if page == slug or (page in self.homes and self.homes[page] == self.homes.get(slug)):
+                continue  # on one page, a topic of the same page is an accordion away, not a tile
             if page not in self.slugs:  # held back from this release, or with nothing to show in this pair
                 continue
             if sid and sid not in {s["id"] for s in self.sections(page)}:
@@ -795,7 +824,7 @@ class Site:
             level = self.levels["sections"].get((page, sid)) if sid else self.levels["pages"].get(page)
             tiles.append(
                 self.tile(
-                    f"{page}.html#{sid}" if sid else f"{page}.html",
+                    self.href(page, sid or None),
                     titles[0],
                     titles[1],
                     self.skel[page].get("icon"),
@@ -807,11 +836,12 @@ class Site:
         if not tiles:
             return ""
         (first, first_lang), (second, second_lang) = self.ui_text(frm, "related"), self.ui_text(to, "related")
+        hx = "h3" if slug in self.homes and ident != "related" else "h2"  # a row inside a topic's accordion is a level down
         heading = (
-            f'<h2 id="h-related">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span>{self.help_icon("related-topics")}</h2>'
+            f'<{hx} id="h-{ident}">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span>{self.help_icon("related-topics")}</{hx}>'
         )
         return (
-            f'<section class="related" aria-labelledby="h-related">{heading}'
+            f'<section class="related" aria-labelledby="h-{ident}">{heading}'
             f'<ul class="tiles" data-tiles aria-label="{e(self.plain("related"))}">{"".join(tiles)}</ul></section>'
         )
 
@@ -895,15 +925,17 @@ class Site:
         )
 
     def group_page(self, group):
-        """One group's topics as tiles."""
+        """One group's topics as tiles, or on a one-page group as accordions (see one_page)."""
         frm, to, gid = self.frm, self.to, group["id"]
         head = (
             f"<header><h1>{self.inline(frm, self.group_title(frm, gid))}</h1>"
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
+        if group["layout"] == "one-page":
+            return head + self.one_page(group)
         pages = [
             self.tile(
-                f"{slug}.html",
+                self.href(slug),
                 self.title(frm, slug),
                 self.title(to, slug),
                 self.skel[slug].get("icon"),
@@ -913,6 +945,34 @@ class Site:
             for slug in group["pages"] + group["links"]
         ]
         return head + self.tiles(pages, f"group-{gid}")
+
+    def one_page(self, group):
+        """A one-page group: each of its topics is an accordion, shut until opened, whose summary is the topic's tile (its icon
+        and its name in both languages) and whose body is the topic as its own page would show it. The accordions carry the
+        topics' levels and are what Settings' order puts in order, here on the page; the sections inside keep their written
+        order. The pages the group links to follow as a row of tiles."""
+        frm, to = self.frm, self.to
+        folds = []
+        for slug in group["pages"]:
+            ident = f"{TOPIC_PREFIX}{slug}"
+            icon = self.skel[slug].get("icon")
+            l1, l2 = self.pair_spans(self.title(frm, slug), self.title(to, slug))
+            summary = f'<h2 id="h-{ident}">{self.icon_html(icon) if icon else ""}<span class="topic-name">{l1}{l2}</span></h2>'
+            lcode, lede = self.prose(lambda c: self.pack_page(c, slug).get("lede"))
+            fig = self.skel[slug].get("figure")
+            figure = FIGURES[fig](self, slug) if fig else ""
+            body = (
+                (f'<p class="lede"{self.la(lcode)}>{e(lede)}</p>' if lede else "")
+                + figure
+                + "".join(self.render_section(slug, s, nested=True) for s in self.shown_sections(slug, figure))
+                + self.related_tiles(slug, ident=f"related-{slug}")
+                + self.more_note(slug)
+            )
+            level = self.levels["pages"].get(slug)
+            graded = f' data-level="{level}"' if level else ""
+            folds.append(self.fold(summary, body, labelled=f"h-{ident}", attrs=f' id="{ident}"{graded}', cls="topic"))
+        links = self.related_tiles(None, entries=group["links"]) if group["links"] else ""
+        return f'<div class="topics">{"".join(folds)}</div>{self.ORDER_HOOK}{links}'
 
     def licence_html(self, key):
         """A licence by its proper name (linked when it has a page), or in words from the interface messages."""
@@ -1322,7 +1382,8 @@ class Site:
             'try{w.history.replaceState(f?{from:f[1]}:null,"",w.location.pathname+w.location.search+(a?"#"+a[1]:""))}catch(err){};'
             'if(m[1]==="none")d.documentElement.setAttribute("data-slide","none");'
             'else if(!w.PageRevealEvent)d.documentElement.classList.add(m[1]==="back"?"slide-back":"slide-in");'
-            'if(a)d.addEventListener("DOMContentLoaded",function(){var t=d.getElementById(a[1]);if(t)t.scrollIntoView()})'
+            'if(a)d.addEventListener("DOMContentLoaded",function(){var t=d.getElementById(a[1]);if(!t)return;'
+            'for(var p=t;p;p=p.parentElement)if(p.tagName==="DETAILS")p.open=true;t.scrollIntoView()})'
             "})(document,window)</script>\n"
         )
         # Where the browser animates moves between pages itself (cross-document view transitions), say which way the page
@@ -1367,14 +1428,17 @@ class Site:
         out = {"index.html": page("index", self.name, self.home_page(), with_pager=False, wide=True)}
         for group in self.groups:
             key = f"group-{group['id']}"
+            one = group["layout"] == "one-page"  # read like a topic: in the pager's run, and as wide as a topic
             out[f"{key}.html"] = page(
                 key,
                 self.plain("page_title", page=self.group_title(self.frm, group["id"]), site=self.name),
                 self.group_page(group),
-                with_pager=False,
-                wide=True,
+                with_pager=one,
+                wide=not one,
             )
         for slug in self.slugs:
+            if slug in self.homes:
+                continue  # shown on its group's page
             out[f"{slug}.html"] = page(
                 slug, self.plain("page_title", page=self.title(self.frm, slug), site=self.name), self.content_page(slug)
             )
