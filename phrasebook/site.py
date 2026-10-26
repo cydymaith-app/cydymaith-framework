@@ -812,6 +812,14 @@ class Site:
             f'<ul class="tiles" data-tiles aria-label="{e(self.plain("related"))}">{"".join(tiles)}</ul></section>'
         )
 
+    def more_note(self, slug):
+        """The optional closing note of a topic: the page's `more` blocks (as in an About section) from the first language of the pair
+        that has them, after the related row. Used to point to a fuller source."""
+        code, blocks = self.prose(lambda c: self.pack_page(c, slug).get("more"))
+        if not blocks:
+            return ""
+        return f'<footer class="more"{self.la(code)}>{"".join(self.about_block(code, b) for b in blocks)}</footer>'
+
     def content_page(self, slug):
         frm, to = self.frm, self.to
         fig = self.skel[slug].get("figure")
@@ -847,6 +855,7 @@ class Site:
             + "".join(self.render_section(slug, s) for s in sections)
             + self.ORDER_HOOK
             + self.related_tiles(slug)
+            + self.more_note(slug)
         )
 
     def home_page(self):

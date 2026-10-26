@@ -302,6 +302,12 @@ def validate_pack(code, pack, raw):
         if pp.get("source") not in source_ids:
             raise ContentError(f"{where}/pages/{slug}.json: 'source' must be one of {source_ids}")
         validate_text(f"{where}/pages/{slug}.json", pp)
+        more = pp.get("more")
+        if more is not None:
+            if not isinstance(more, list) or not more:
+                raise ContentError(f"{where}/pages/{slug}.json: 'more' must be a list of body blocks")
+            for block in more:
+                validate_about_block(f"{where}/pages/{slug}.json: more", block)
         concepts_of = {s["id"]: set(s["concepts"]) for s in skel["sections"]}
         for sid, sec in pp.get("sections", {}).items():
             if sid not in concepts_of:

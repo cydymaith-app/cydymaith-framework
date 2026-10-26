@@ -144,6 +144,8 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
 h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;margin:.6rem 0 .35rem;text-wrap:balance}
 .title-l2{margin:0;font:500 clamp(1.15rem,4.4vw,1.5rem)/1.25 var(--font-l2);color:var(--muted)}
 .lede{max-width:38rem;margin:1rem 0 0}
+.more{max-width:38rem;margin:2.5rem 0 0;padding-top:1rem;border-top:1px solid var(--rule)}
+.more p:first-child{margin-top:0}
 
 /* tiles: a grid of large touch targets, each an icon with its name in both languages beneath it */
 .tiles{list-style:none;margin:1.5rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1rem}
