@@ -31,7 +31,7 @@
   },
   "features": {
     "tiles": {
-      "title": "Tiles",
+      "title": "Help",
       "body": [
         "The home page shows groups of topics as large tiles. A group opens a page of topic tiles, and a topic opens its words and phrases.",
         "Each tile is a link named in both languages, so a screen reader reads both."
