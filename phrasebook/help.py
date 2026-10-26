@@ -193,4 +193,6 @@ class Book:
     def coverage(self, codes):
         """{language: (features with text of its own, features in the book)}."""
         anchors = self.anchors()
-        return {code: (sum(1 for a in anchors if a in self.texts.get(code, {}).get("features", {})), len(anchors)) for code in codes}
+        return {
+            code: (sum(1 for a in anchors if a in self.texts.get(code, {}).get("features", {})), len(anchors)) for code in codes
+        }

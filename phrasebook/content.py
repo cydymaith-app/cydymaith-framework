@@ -28,7 +28,9 @@ from .messages import Messages
 LANG_CODE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]+)*$")  # also safe inside CSS attribute selectors and attribute names
 VARIETY_ID = re.compile(r"^[a-z][a-z0-9-]*$")
 STORAGE_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]*$")  # also what app.js accepts as a storage name
-CONTACT = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$")  # one plain email address, for the report in the help sheet
+CONTACT = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$"
+)  # one plain email address, for the report in the help sheet
 STYLESHEET = re.compile(r"^(https://\S+|[A-Za-z0-9_-][A-Za-z0-9_./-]*\.css)$")  # an https URL or a file of the project
 ICON_SRC = re.compile(r"^[A-Za-z0-9_-][A-Za-z0-9_./-]*\.(png|svg)$")  # a file of the project
 ICON_PURPOSES = ("any", "maskable", "monochrome")
@@ -174,9 +176,13 @@ def check_layout(g, pages):
         for section in pages[slug].get("sections", []):
             sid = section.get("id")
             if sid in seen:
-                raise ContentError(f"{where}: one page holds section {sid!r} twice, in pages/{seen[sid]}.json and pages/{slug}.json")
+                raise ContentError(
+                    f"{where}: one page holds section {sid!r} twice, in pages/{seen[sid]}.json and pages/{slug}.json"
+                )
             if isinstance(sid, str) and sid.startswith(TOPIC_PREFIX):
-                raise ContentError(f"{where}: section {sid!r} in pages/{slug}.json may not start with {TOPIC_PREFIX!r} on one page")
+                raise ContentError(
+                    f"{where}: section {sid!r} in pages/{slug}.json may not start with {TOPIC_PREFIX!r} on one page"
+                )
             seen[sid] = slug
 
 

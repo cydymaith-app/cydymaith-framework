@@ -24,13 +24,42 @@ from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 # The anchors in the book today. A test fails when one is renamed or dropped, because every link that names it would break.
 # Add to this list when a feature is added; never edit an entry.
 ANCHORS = [
-    "tiles", "trail", "side-bar", "back", "pager", "jump-links", "keys-and-touch", "drag-back",
-    "search", "search-keys", "search-this-page-first", "listen-first-rows", "also-heard", "regional-forms", "sources-notes",
-    "sections-order", "levels", "related-topics",
-    "settings-groups", "language-toggle", "view-mode", "accessibility", "colour-schemes", "order-setting", "reset-tile-layouts", "what-is-saved",
-    "edit-order", "moving-tiles", "saving-order",
-    "offline", "install", "no-script", "share",
-    "help-button", "help-icons", "report-a-problem",
+    "tiles",
+    "trail",
+    "side-bar",
+    "back",
+    "pager",
+    "jump-links",
+    "keys-and-touch",
+    "drag-back",
+    "search",
+    "search-keys",
+    "search-this-page-first",
+    "listen-first-rows",
+    "also-heard",
+    "regional-forms",
+    "sources-notes",
+    "sections-order",
+    "levels",
+    "related-topics",
+    "settings-groups",
+    "language-toggle",
+    "view-mode",
+    "accessibility",
+    "colour-schemes",
+    "order-setting",
+    "reset-tile-layouts",
+    "what-is-saved",
+    "edit-order",
+    "moving-tiles",
+    "saving-order",
+    "offline",
+    "install",
+    "no-script",
+    "share",
+    "help-button",
+    "help-icons",
+    "report-a-problem",
 ]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
@@ -308,14 +337,27 @@ class BuiltBookTests(Scratch):
         return found
 
     def test_there_is_a_page_for_every_chapter_and_the_contents(self):
-        self.assertEqual(set(self.help_pages), {"how-to.html", "help-finding-your-way.html", "help-looking-up-words.html", "help-reading-a-topic.html", "help-your-settings.html",
-                                         "help-arranging-tiles.html", "help-offline-and-install.html", "help-using-help.html"})
+        self.assertEqual(
+            set(self.help_pages),
+            {
+                "how-to.html",
+                "help-finding-your-way.html",
+                "help-looking-up-words.html",
+                "help-reading-a-topic.html",
+                "help-your-settings.html",
+                "help-arranging-tiles.html",
+                "help-offline-and-install.html",
+                "help-using-help.html",
+            },
+        )
 
     def test_every_anchor_is_an_id_exactly_once_in_the_book_and_ids_are_unique_on_each_page(self):
         book_ids = [i for name, text in self.help_pages.items() if name.startswith("help-") for i in self.ids(text)]
         for anchor in ANCHORS:
             self.assertEqual(book_ids.count(anchor), 1, anchor)
-            self.assertNotIn(anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them")
+            self.assertNotIn(
+                anchor, self.ids(self.pages["how-to.html"]), "the contents links to anchors and does not repeat them"
+            )
         for name, text in self.help_pages.items():
             ids = self.ids(text)
             self.assertEqual(len(ids), len(set(ids)), f"{name}: duplicate ids")
@@ -325,7 +367,7 @@ class BuiltBookTests(Scratch):
             self.assertNotIn("{{", text, name)
             self.assertNotIn("}}", text, name)
             self.assertNotRegex(text, r'(src|href)="https?://', name)
-            self.assertNotIn("<script src=\"http", text, name)
+            self.assertNotIn('<script src="http', text, name)
 
     def test_every_link_in_the_contents_goes_to_a_real_anchor(self):
         chapter_ids = {n: set(self.ids(t)) for n, t in self.pages.items()}
@@ -350,7 +392,9 @@ class BuiltBookTests(Scratch):
             self.assertTrue(entry["title"].strip(), ident)
             self.assertTrue(entry["body"], ident)
             for block in entry["body"]:
-                self.assertTrue(isinstance(block, str) and block.strip() or isinstance(block, dict) and set(block) <= {"list", "links"}, ident)
+                self.assertTrue(
+                    isinstance(block, str) and block.strip() or isinstance(block, dict) and set(block) <= {"list", "links"}, ident
+                )
             for field in ("keys", "touch"):
                 if field in entry:
                     self.assertTrue(isinstance(entry[field], str) and entry[field].strip(), f"{ident} {field}")
@@ -383,7 +427,12 @@ class HelpButtonTests(Scratch):
         self.assertIn("finding-your-way#tiles", self.data_help(self.pages["index.html"]))
         self.assertIn("finding-your-way#tiles", self.data_help(self.pages["group-g1.html"]))
         topic = self.data_help(self.pages["p1.html"])
-        for want in ("finding-your-way#trail", "finding-your-way#pager", "finding-your-way#jump-links", "reading-a-topic#related-topics"):
+        for want in (
+            "finding-your-way#trail",
+            "finding-your-way#pager",
+            "finding-your-way#jump-links",
+            "reading-a-topic#related-topics",
+        ):
             self.assertIn(want, topic)
         settings = self.data_help(self.pages["settings.html"])
         for want in ("your-settings#view-mode", "your-settings#reset-tile-layouts"):
@@ -394,14 +443,20 @@ class HelpButtonTests(Scratch):
             for chapter, feature in (pair.split("#") for pair in self.data_help(page)):
                 self.assertIn(f"help-{chapter}.html", self.pages, f"{name}: {chapter}")
                 self.assertIn(f'href="help-{chapter}.html#{feature}"', page, f"{name}: {feature}")
-                self.assertRegex(self.pages[f"help-{chapter}.html"], rf'id="{feature}" data-feature="{feature}"', f"{name}: {feature}")
+                self.assertRegex(
+                    self.pages[f"help-{chapter}.html"], rf'id="{feature}" data-feature="{feature}"', f"{name}: {feature}"
+                )
 
     def test_the_button_is_on_exactly_the_pages_that_have_icons_and_is_hidden_until_the_script_runs(self):
         for name, page in self.pages.items():
             has_button = 'id="help-toggle"' in page
             self.assertEqual(has_button, "data-help=" in page, name)
             if has_button:
-                self.assertRegex(page, r'<button type="button" class="rail-link help-toggle" id="help-toggle" hidden aria-pressed="false"', name)
+                self.assertRegex(
+                    page,
+                    r'<button type="button" class="rail-link help-toggle" id="help-toggle" hidden aria-pressed="false"',
+                    name,
+                )
 
     def test_the_button_is_the_fourth_from_the_bottom_above_edit_order(self):
         rail = self.pages["index.html"]
@@ -430,7 +485,13 @@ class HelpButtonTests(Scratch):
         self.assertIn("color:var(--on-header)", rule, "the bar's own text colour, so it contrasts with the bar")
         self.assertIn("margin-inline-start:auto", rule)
         self.assertIn("margin-block:-", rule, "the 44px target does not grow the bar")
-        self.assertNotIn("help-icon", self.pages["index.html"][self.pages["index.html"].index('<header class="topbar">') : self.pages["index.html"].index("</header>")], "the home page has no trail")
+        self.assertNotIn(
+            "help-icon",
+            self.pages["index.html"][
+                self.pages["index.html"].index('<header class="topbar">') : self.pages["index.html"].index("</header>")
+            ],
+            "the home page has no trail",
+        )
 
     def test_the_icons_are_hidden_until_the_page_is_helping_so_without_the_script_they_never_show(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
@@ -451,10 +512,12 @@ class HelpButtonTests(Scratch):
             frame_ids |= set(BuiltBookTests.ids(None, self.pages[name]))
         self.assertEqual(frame_ids & set(ANCHORS), set(), "an anchor is also an id in the frame")
 
-
     def test_the_sheet_is_a_shut_dialog_with_whats_this_first_and_report_second(self):
         page = self.pages["index.html"]
-        self.assertRegex(page, r'<div class="help-layer" hidden><div class="help-card" id="help-card" role="dialog" aria-modal="true" aria-labelledby="help-card-title" inert')
+        self.assertRegex(
+            page,
+            r'<div class="help-layer" hidden><div class="help-card" id="help-card" role="dialog" aria-modal="true" aria-labelledby="help-card-title" inert',
+        )
         sheet = page[page.index('data-view="sheet"') : page.index('data-view="help"')]
         self.assertLess(sheet.index('data-act="help"'), sheet.index('data-act="report"'))
         self.assertIn('data-view="report" hidden', page)
@@ -487,7 +550,7 @@ class HelpButtonTests(Scratch):
         self.assertRegex(card, r'<span class="t" data-n="1"[^>]*>[^<]+</span><span class="t" data-n="2"[^>]*>[^<]+</span>')
         self.assertNotRegex(card, r'<span class="l1"[^>]*>[^<]+</span><span class="l2"')
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
-        self.assertIn(".lang-radio:nth-of-type(1):checked ~ .l10n-body .t:not([data-n=\"1\"])", css)
+        self.assertIn('.lang-radio:nth-of-type(1):checked ~ .l10n-body .t:not([data-n="1"])', css)
 
     def test_the_toggle_comes_before_the_content_it_switches_and_in_the_head_by_the_x(self):
         page = self.pages["index.html"]
@@ -498,7 +561,11 @@ class HelpButtonTests(Scratch):
 
     def test_the_sheet_closes_with_a_small_x_that_is_named_in_both_languages(self):
         page = self.pages["index.html"]
-        close = re.search(r'<button type="button" class="help-close" data-act="close" aria-label="([^"]*)" title="([^"]*)">(.*?)</button>', page, re.S)
+        close = re.search(
+            r'<button type="button" class="help-close" data-act="close" aria-label="([^"]*)" title="([^"]*)">(.*?)</button>',
+            page,
+            re.S,
+        )
         self.assertTrue(close)
         self.assertEqual(close.group(1), close.group(2))
         self.assertIn(" / ", close.group(1), "named in both languages of the pair")

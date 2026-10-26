@@ -161,13 +161,20 @@ class IconSiteTests(Scratch):
     def test_the_only_icons_without_a_project_icon_are_the_frames_own(self):
         pages = self.built(self.project())
         for name, page in pages.items():
-            frame = re.sub(r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>', "", page, flags=re.S)  # the help icons and the sheet's x, counted apart
+            frame = re.sub(
+                r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>', "", page, flags=re.S
+            )  # the help icons and the sheet's x, counted apart
             limit = (
                 11 if name == "settings.html" else 8
             )  # search, help, back, edit order, about and the gear, and the figure, and the search card's x and delete symbol; the settings page adds three modes
             self.assertLessEqual(frame.count("<svg"), limit, name)
         self.assertEqual(
-            re.sub(r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>', "", pages["index.html"], flags=re.S).count("<svg"),
+            re.sub(
+                r'<a class="help-icon".*?</a>|<button type="button" class="help-close".*?</button>',
+                "",
+                pages["index.html"],
+                flags=re.S,
+            ).count("<svg"),
             7,
             "search, help, edit order, about and the gear in the rail, and the search card's x and delete symbol",
         )
@@ -459,12 +466,18 @@ class FrameTests(Scratch):
     def test_the_search_card_actions_are_symbols_with_names_for_a_screen_reader(self):
         for name, page in self.pages.items():
             card = page[page.index('<div class="search-card"') : page.index('<p class="search-status"')]
-            clear = re.search(r'<button type="button" class="search-clear" hidden aria-label="Clear" title="Clear">(.*?)</button>', card, re.S)
-            close = re.search(r'<button type="button" class="search-close" aria-label="Close" title="Close">(.*?)</button>', card, re.S)
+            clear = re.search(
+                r'<button type="button" class="search-clear" hidden aria-label="Clear" title="Clear">(.*?)</button>', card, re.S
+            )
+            close = re.search(
+                r'<button type="button" class="search-close" aria-label="Close" title="Close">(.*?)</button>', card, re.S
+            )
             self.assertTrue(clear and "<svg" in clear.group(1), f"{name}: a delete symbol clears the field")
             self.assertTrue(close and "<svg" in close.group(1), f"{name}: an x closes the card")
             for button in (clear, close):
-                self.assertNotRegex(re.sub(r"<svg.*?</svg>", "", button.group(1), flags=re.S).strip(), r"\w", f"{name}: no words on the button")
+                self.assertNotRegex(
+                    re.sub(r"<svg.*?</svg>", "", button.group(1), flags=re.S).strip(), r"\w", f"{name}: no words on the button"
+                )
             self.assertLess(card.index('class="search-field"'), card.index('class="search-clear"'), name)
             self.assertNotIn("<label", card[card.index('class="search-clear"') :], name)
 
@@ -672,7 +685,9 @@ class HowToTests(Scratch):
     def setUpClass(cls):
         super().setUpClass()
         cls.proj = cls.project()
-        fixture.edit(cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))  # so the Related topics feature applies
+        fixture.edit(
+            cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"])
+        )  # so the Related topics feature applies
         cls.out = cls.tmp / "howto-out"
         quiet_build(cls.out, project_dir=cls.proj)
         cls.pages = {f.name: f.read_text(encoding="utf-8") for f in cls.out.glob("*.html")}
@@ -690,7 +705,9 @@ class HowToTests(Scratch):
         page = self.pages["how-to.html"]
         for chapter in Book.load(content.read(self.proj)["packs"]).sections:
             self.assertIn(f'href="help-{chapter["id"]}.html"', page)
-            for feature in chapter["features"]:  # the fixture has regional forms and an address for reports, so every feature is shown
+            for feature in chapter[
+                "features"
+            ]:  # the fixture has regional forms and an address for reports, so every feature is shown
                 self.assertIn(f'href="help-{chapter["id"]}.html#{feature["id"]}"', page, feature["id"])
 
     def test_the_chapter_covers_the_moves_the_keys_the_swipes_and_the_buttons(self):
@@ -1273,7 +1290,10 @@ class OnePageGroupTests(Scratch):
         proj = self.project()
 
         def two_groups(d):
-            d["groups"] = [{"id": "g1", "layout": "one-page", "pages": ["p1"]}, {"id": "g2", "pages": ["points"], "links": ["p1"]}]
+            d["groups"] = [
+                {"id": "g1", "layout": "one-page", "pages": ["p1"]},
+                {"id": "g2", "pages": ["points"], "links": ["p1"]},
+            ]
 
         fixture.edit(proj / "structure.json", two_groups)
         for code in fixture.LANGS:

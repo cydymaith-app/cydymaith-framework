@@ -837,9 +837,7 @@ class Site:
             return ""
         (first, first_lang), (second, second_lang) = self.ui_text(frm, "related"), self.ui_text(to, "related")
         hx = "h3" if slug in self.homes and ident != "related" else "h2"  # a row inside a topic's accordion is a level down
-        heading = (
-            f'<{hx} id="h-{ident}">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span>{self.help_icon("related-topics")}</{hx}>'
-        )
+        heading = f'<{hx} id="h-{ident}">{self.inline(first_lang, first)}<span class="l2"{self.la(second_lang)}>{e(second)}</span>{self.help_icon("related-topics")}</{hx}>'
         return (
             f'<section class="related" aria-labelledby="h-{ident}">{heading}'
             f'<ul class="tiles" data-tiles aria-label="{e(self.plain("related"))}">{"".join(tiles)}</ul></section>'
@@ -1224,7 +1222,9 @@ class Site:
             f' data-subject="{e(subject)}"'
         )
         radios, bar = self.language_toggle("help-lang", [self.frm, self.to])
-        close_name = e(" / ".join(self.ui_text(code, "help_close")[0] for code in (self.frm, self.to)))  # the x has no words, so its name has both
+        close_name = e(
+            " / ".join(self.ui_text(code, "help_close")[0] for code in (self.frm, self.to))
+        )  # the x has no words, so its name has both
         sheet_buttons = f'<button type="button" data-act="help">{self.both("help_whats_this")}</button>'
         report_view = ""
         if contact:

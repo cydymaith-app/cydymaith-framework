@@ -408,6 +408,11 @@ class LocalisedInterfaceTests(Scratch):
     def test_no_english_interface_text_survives(self):
         # The framework's own help is English text that names the controls in English; it is marked lang="en" and is not an interface message.
         html_all = re.sub(r'<article class="about-text help-text".*?</article>', "", "\n".join(self.pages.values()), flags=re.S)
+        # The help book's own titles are English too (a word such as Help is the same in Welsh): they reach the pages in a data-title, in the
+        # contents list as lang="en" text, and as the headings of the help chapters, and in the label of a help icon.
+        html_all = re.sub(
+            r' data-title="[^"]*"|<span class="l1" lang="en">[^<]*</span>|<h2>[^<]*</h2>|<a class="help-icon"[^>]*>', "", html_all
+        )
         leaks = []
         for key, template in EN.items():
             for text in forms(template):
