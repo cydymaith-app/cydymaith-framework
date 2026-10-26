@@ -43,7 +43,7 @@ python3 build.py --grades                   # print how demanding each group, pa
 | `structure.json` | Navigation groups and page order. A group may name an `icon` and a `level`. Language neutral. |
 | `pages/<slug>.json` | A page skeleton: sections and the ids of their **concepts**. No words. May name a `figure`, an `icon`, a `level` and `related` topics; a section may name a `level` too (see *Grading* and *Related topics*). |
 | `packs/<code>/pack.json` | One language: `code`, `name`, `names`, `dir`, `ui`, `groups`, `sources`, `varieties`, `commentary_lang`. |
-| `packs/<code>/pages/<slug>.json` | That language's title, lede, default `source`, and per section a title, optional `intro` and `box` commentary, and one entry per concept. |
+| `packs/<code>/pages/<slug>.json` | That language's title, lede, default `source`, an optional `more` note, and per section a title, optional `intro` and `box` commentary, and one entry per concept. `more` is a list of body blocks as in an About section (a paragraph, `{"list"}`, `{"quote"}`, `{"links": [{"text", "href"}]}`, `{"share"}`). It closes the topic, after the related row, from the first language of the pair that has one; use it to point to a fuller source. |
 | `packs/<code>/help.json` | Optional. That language's text for the help book: `chapters` and `features`, keyed by id. Overrides the framework's English in `phrasebook/help/en.json` where it names the same id. See *The help book*. |
 | `editions/<name>.json` | `name`, `languages`, `interface`, `default_pair`, `home` copy, `fonts`, `stylesheets`, and optionally `grading`. |
 | `palettes/<id>.json` | Optional. A colour palette added to the framework's own, or one with a framework id that replaces it. See *Themes and palettes*. |

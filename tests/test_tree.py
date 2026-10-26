@@ -1017,6 +1017,50 @@ class ArrangeTests(Scratch):
         self.assertNotIn("phrasebook:peek", script, "the copy of a page is ordered by order.js")
 
 
+class MoreNoteTests(Scratch):
+    """A topic can end with a note of its own: body blocks (text and links, as in an About section) from the first language that
+    has them, after the related row. It is there to point a reader to a fuller source."""
+
+    MORE = ["Not a full list.", {"links": [{"text": "Fuller list", "href": "https://example.org/list"}]}]
+
+    def with_more(self, more, code="qab"):
+        proj = self.project()
+        fixture.edit(proj / "packs" / code / "pages" / "p1.json", lambda d: d.update(more=more))
+        return proj
+
+    def test_the_note_closes_the_topic_with_its_text_and_links(self):
+        page = self.built(self.with_more(self.MORE))["p1.html"]
+        note = page[page.index('<footer class="more"') : page.index("</footer>", page.index('<footer class="more"'))]
+        self.assertIn('lang="qab"', note)
+        self.assertIn("<p>Not a full list.</p>", note)
+        self.assertIn('<a href="https://example.org/list">Fuller list</a>', note)
+        self.assertLess(page.index('new Event("phrasebook:order")'), page.index('<footer class="more"'))
+        self.assertLess(page.index('<footer class="more"'), page.index('class="pager"'))
+
+    def test_it_follows_the_related_row(self):
+        proj = self.with_more(self.MORE)
+        fixture.edit(proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))
+        page = self.built(proj)["p1.html"]
+        self.assertLess(page.index('<section class="related"'), page.index('<footer class="more"'))
+
+    def test_a_topic_without_one_has_none(self):
+        self.assertNotIn('class="more"', self.built(self.project())["p1.html"])
+
+    def test_the_first_language_of_the_pair_that_has_one_gives_it(self):
+        proj = self.with_more(["From the first."], code="qaa")
+        fixture.edit(proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d.update(more=["From the second."]))
+        page = self.built(proj)["p1.html"]
+        self.assertIn("From the first.", page)
+        self.assertNotIn("From the second.", page)
+
+    def test_a_bad_note_is_refused_naming_the_file(self):
+        for bad in ("text", [], [3], [{"links": [{"text": "x", "href": "http://example.org"}]}]):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ContentError) as caught:
+                    content.validate(content.read(self.with_more(bad)))
+                self.assertIn("pages/p1.json", str(caught.exception))
+
+
 class RelatedTopicsTests(Scratch):
     """An end topic can link to related topics as a row of tiles, after its sections, so a reader can go from one to another
     without going back up the tree. A tile opens the page, at a section if one is named."""
