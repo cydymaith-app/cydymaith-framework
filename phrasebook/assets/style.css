@@ -164,6 +164,14 @@ h1{font:600 clamp(1.8rem,7vw,2.6rem)/1.08 var(--font-ui);letter-spacing:-.02em;m
 .tile-name .l1{font:600 1rem/1.25 var(--font-ui);overflow-wrap:anywhere}
 .tile-name .l2{font:500 .92rem/1.25 var(--font-l2);color:var(--muted);overflow-wrap:anywhere}
 
+/* a related topic is a compact link, not a tile: its icon and its names on one line, in a wrapping row */
+section.related .tiles{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin:.5rem 0 0}
+section.related .tile-link{flex-direction:row;align-items:center;gap:.5rem;min-height:44px;text-align:start}
+section.related .tile{display:contents}
+section.related .tile .icon{width:1.5rem;height:1.5rem;color:var(--accent)}
+section.related .tile-name{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:0 .5rem}
+section.related .tile-link:hover .tile-name .l1{text-decoration:underline}
+
 /* edit order: the spanner in the rail, a bar with the hint, Done and Reset, icon-only tiles, and the screen in the surface shade
    while it is on. */
 .arrange-toggle[aria-pressed="true"]{background:var(--surface);color:var(--accent)}
