@@ -44,7 +44,10 @@ class Site:
         self.messages = messages or Messages(raw["packs"])
         self.book = help_book or Book.load(raw["packs"])  # the help book: its chapters and the words (see help.py)
         self.palettes = raw["palettes"]
-        self.palette_ids = edition.get("palettes") or list(self.palettes)
+        self.default_palette = edition.get("default_palette", palettes.DEFAULT)
+        self.palette_ids = edition.get("palettes") or [self.default_palette] + [
+            pid for pid in self.palettes if pid != self.default_palette
+        ]
         # Only pages with at least one row available in both languages are published for this pair.
         self.slugs = [s for g in raw["structure"]["groups"] for s in g["pages"] if self.count_entries(s)]
         self.icons = {name: icons.markup(text) for name, text in raw["icons"].items()}
@@ -335,7 +338,7 @@ class Site:
         """Each offered colour scheme as a small picture of itself, drawn from its own colours (see palettes.css)."""
         cards = "".join(
             f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
-            f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == palettes.DEFAULT else ""}'
+            f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == self.default_palette else ""}'
             f' data-tier="{palettes.access_level(self.palettes[pid])}">'
             f'<span class="preview" data-palette="{pid}" aria-hidden="true"><i class="pv-bar"></i><i class="pv-tile"><b></b></i>'
             f'<i class="pv-card"><b></b><b></b></i><i class="pv-dot"></i></span>'
@@ -385,7 +388,7 @@ class Site:
         if len(self.palette_ids) > 1:
             levels = self.palette_levels()
             if len(levels) > 1:
-                parts += self.accessibility_section(levels, palettes.access_level(self.palettes[palettes.DEFAULT]))
+                parts += self.accessibility_section(levels, palettes.access_level(self.palettes[self.default_palette]))
             parts += self.colours_section()
         if self.has_keys():
             parts += self.keys_section()
@@ -468,7 +471,7 @@ class Site:
         return f'<div class="prefs" id="prefs" hidden>{self.look_group()}{self.order_group()}{self.variety_fields()}</div>'
 
     def palettes_css(self):
-        return palettes.css(self.palettes, self.palette_ids)
+        return palettes.css(self.palettes, self.palette_ids, self.default_palette)
 
     # -- structure
 
@@ -1072,12 +1075,12 @@ class Site:
         return head + "".join(sections)
 
     def theme_color(self):
-        """The installed app's toolbar colour: the accent of the default palette, light variant."""
-        return colour.rgb_to_hex(palettes.resolve(self.palettes[palettes.DEFAULT])["light"]["accent"])
+        """The installed app's toolbar colour: the accent of the edition's default palette, light variant."""
+        return colour.rgb_to_hex(palettes.resolve(self.palettes[self.default_palette])["light"]["accent"])
 
     def background_color(self):
-        """The installed app's splash background: the background of the default palette, light variant."""
-        return colour.rgb_to_hex(palettes.resolve(self.palettes[palettes.DEFAULT])["light"]["bg"])
+        """The installed app's splash background: the background of the edition's default palette, light variant."""
+        return colour.rgb_to_hex(palettes.resolve(self.palettes[self.default_palette])["light"]["bg"])
 
     def manifest(self):
         """A web app manifest so the site installs: relative start_url and scope work under any sub-path.
@@ -1410,6 +1413,8 @@ class Site:
         extra += "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("stylesheets", []))
         direction = ' dir="rtl"' if self.dir_of(self.interface) == "rtl" else ""
         storage = f' data-storage="{e(self.storage_name())}"'
+        if self.default_palette != palettes.DEFAULT:
+            storage += f' data-default-palette="{e(self.default_palette)}"'
         if parent:
             storage += f' data-parent="{e(parent)}"'
         # nav.js moves between pages by sliding the two together, and carries the way it went in the address: #slide=none when

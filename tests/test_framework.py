@@ -1197,7 +1197,7 @@ class PaletteSiteTests(Scratch):
             self.assertIn('name="appearance" value="system" data-pref="appearance" checked', page, name)
             for value in ("light", "dark"):
                 self.assertIn(f'name="appearance" value="{value}" data-pref="appearance"', page, name)
-            for pid in ("default", "high-contrast", "red-green", "red-green-safe", "blue-yellow-safe"):
+            for pid in palettes.ENGINE_ORDER:
                 self.assertIn(f'name="palette" value="{pid}" data-pref="palette"', page, name)
             self.assertIn('name="palette" value="default" data-pref="palette" checked', page, name)
 
@@ -1219,11 +1219,7 @@ class PaletteSiteTests(Scratch):
             "appearance_light",
             "appearance_dark",
             "colours",
-            "palette_default",
-            "palette_high_contrast",
-            "palette_red_green",
-            "palette_red_green_safe",
-            "palette_blue_yellow_safe",
+            *("palette_" + pid.replace("-", "_") for pid in palettes.ENGINE_ORDER),
         ):
             self.assertIn(fixture.pseudo(EN[key]), page, key)
 
@@ -1251,7 +1247,8 @@ class PaletteSiteTests(Scratch):
         self.assertIn('name="access" value="standard" data-pref="access" checked', page)
         for pid, level in (
             ("default", "standard"),
-            ("red-green", "standard"),
+            ("blue-white-red", "standard"),
+            ("black-red-gold", "standard"),
             ("red-green-safe", "safe"),
             ("blue-yellow-safe", "safe"),
             ("high-contrast", "high"),
@@ -1261,7 +1258,7 @@ class PaletteSiteTests(Scratch):
 
     def test_each_scheme_is_drawn_as_a_small_picture_of_itself(self):
         page = self.built(self.project())["settings.html"]
-        self.assertEqual(page.count('<span class="preview" data-palette='), 5)
+        self.assertEqual(page.count('<span class="preview" data-palette='), len(palettes.ENGINE_ORDER))
         self.assertIn('<span class="preview" data-palette="high-contrast" aria-hidden="true">', page)
 
     def test_the_level_is_worked_out_from_the_palette_file(self):
@@ -1273,7 +1270,7 @@ class PaletteSiteTests(Scratch):
 
     def test_an_edition_whose_palettes_share_one_level_has_no_accessibility_choice_but_still_has_the_colours(self):
         proj = self.project()
-        self.edit_edition(proj, palettes=["default", "red-green"])
+        self.edit_edition(proj, palettes=["default", "blue-white-red"])
         page = self.built(proj)["settings.html"]
         self.assertNotIn('data-pref="access"', page)
         self.assertEqual(page.count('data-pref="palette"'), 2)
@@ -1335,6 +1332,60 @@ class PaletteSiteTests(Scratch):
         self.assertEqual(manifest["theme_color"], "#005a9c")  # the installed app wears the project's colours
         self.assertEqual(manifest["background_color"], default_palette_hex("light", "bg"))
         self.assertIn('<meta name="theme-color" content="#005a9c">', (out / "p1.html").read_text(encoding="utf-8"))
+
+    def test_an_edition_can_make_any_palette_its_default(self):
+        proj = self.project()
+        self.add_palette(proj, "sepia", names={"qaa": "Sepia paper"}, light={**default_palette()["light"], "accent": "#005a9c"})
+        self.edit_edition(proj, default_palette="sepia")
+        out = self.build_out(proj, "own-default")
+        css = (out / "palettes.css").read_text(encoding="utf-8")
+        page = (out / "settings.html").read_text(encoding="utf-8")
+        self.assertIn("--accent:#005a9c", css.splitlines()[1])  # the baseline rule, first in the file, has no attribute
+        self.assertIn(':root[data-palette="default"]{--bg:', css)  # the neutral palette now needs its attribute
+        self.assertNotIn(':root[data-palette="sepia"]{--bg:', css)
+        self.assertIn('name="palette" value="sepia" data-pref="palette" checked', page)
+        self.assertNotIn('name="palette" value="default" data-pref="palette" checked', page)
+        self.assertLess(page.index('value="sepia" data-pref="palette"'), page.index('value="default" data-pref="palette"'))
+        self.assertIn('data-default-palette="sepia"', page)
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["theme_color"], "#005a9c")
+
+    def test_a_site_whose_default_is_the_neutral_palette_says_nothing_about_it(self):
+        self.assertNotIn("data-default-palette", self.built(self.project())["settings.html"])
+
+    def test_the_default_palette_must_exist_and_be_offered(self):
+        for fields in (
+            {"default_palette": "no-such"},
+            {"default_palette": 3},
+            {"default_palette": "blue-white-red", "palettes": ["default"]},
+        ):
+            proj = self.project()
+            self.edit_edition(proj, **fields)
+            with self.assertRaises(ContentError, msg=fields):
+                content.validate(content.read(proj))
+
+    def test_a_palette_may_start_from_another_and_change_only_some_colours(self):
+        proj = self.project()
+        fixture.write(
+            proj / "palettes" / "warm.json",
+            {"names": {"qaa": "Warm"}, "extends": "blue-white-red", "light": {"accent": "oklch(0.45 0.18 40)"}, "dark": {}},
+        )
+        out = self.build_out(proj, "extends")
+        css = (out / "palettes.css").read_text(encoding="utf-8")
+        warm = next(l for l in css.splitlines() if l.startswith(':root[data-palette="warm"]{'))
+        parent = next(l for l in css.splitlines() if l.startswith(':root[data-palette="blue-white-red"]{'))
+        self.assertNotEqual(warm, parent)
+        self.assertIn("--bg:", warm)
+
+    def test_a_palette_that_breaks_its_promise_after_extending_fails_the_build(self):
+        proj = self.project()
+        fixture.write(
+            proj / "palettes" / "faint.json",
+            {"extends": "default", "light": {"ink": "oklch(0.8 0.01 230)"}, "dark": {}},
+        )
+        with self.assertRaises(ContentError) as ctx:
+            quiet_build(self.tmp / "faint-extends-out", project_dir=proj)
+        self.assertIn("palettes/faint.json", str(ctx.exception))
 
     def test_a_project_palette_that_breaks_its_promise_fails_the_build(self):
         proj = self.project()

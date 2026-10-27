@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import phrasebook  # noqa: E402
-from phrasebook import channels, cli, content, screenshots  # noqa: E402
+from phrasebook import channels, cli, content, palettes, screenshots  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
 from test_framework import Scratch, quiet_build  # noqa: E402
 
@@ -60,15 +60,11 @@ class ShootingTests(Scratch):
 
     def test_there_is_one_picture_for_every_palette_and_variant_and_no_more(self):
         fake, taken, out = self.take("all")
-        self.assertEqual(len(fake.calls), 5 * 2)  # five palettes, light and dark, one page
-        self.assertEqual(len(taken), 10)
+        self.assertEqual(len(fake.calls), 9 * 2)  # nine palettes, light and dark, one page
+        self.assertEqual(len(taken), 18)
         self.assertEqual(
             sorted(p.name for p in out.glob("*.png")),
-            sorted(
-                f"{pal}-{v}.png"
-                for pal in ("default", "high-contrast", "red-green", "red-green-safe", "blue-yellow-safe")
-                for v in ("light", "dark")
-            ),
+            sorted(f"{pal}-{v}.png" for pal in palettes.ENGINE_ORDER for v in ("light", "dark")),
         )
 
     def test_the_one_page_is_the_first_topic_with_a_drawing_because_it_shows_the_most_colour(self):
@@ -135,12 +131,12 @@ class ShootingTests(Scratch):
         _, _, out = self.take("gallery")
         readme = (out / "README.md").read_text(encoding="utf-8")
         self.assertIn("python3 build.py dist --screenshots", readme)
-        for name in ("Default", "High contrast", "Red–green safe", "Blue–yellow safe"):
+        for name in ("Neutral", "Blue, white and red", "High contrast", "Red–green safe", "Blue–yellow safe"):
             self.assertIn(f"| {name} | ", readme)
         for png in out.glob("*.png"):
             self.assertIn(f"]({png.name})", readme)
         self.assertIn("| Palette | Light | Dark |", readme)
-        self.assertEqual(readme.count("\n| "), 1 + 5, "a header and a row for each of the five palettes")
+        self.assertEqual(readme.count("\n| "), 1 + 9, "a header and a row for each of the nine palettes")
         self.assertIn("`points.html`", readme, "it says which page every picture shows")
         self.assertIn("ignored by git", readme)
 

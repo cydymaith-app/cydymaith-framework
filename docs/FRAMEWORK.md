@@ -94,7 +94,8 @@ A concept is `{ "text": "...", "note": "...", "source": "id" }` or `{ "forms": [
 
 - `languages`: every pack to publish. `interface`: the language the interface is in, one of them. `default_pair`: the two languages shown first.
 - `home.headline` needs a text for each language of the default pair. `home.lede` and `home.about` are optional, per language.
-- `palettes`: optional list of palette ids to offer, which must include `default`. Omit it to offer every palette available (the framework's and the project's).
+- `palettes`: optional list of palette ids to offer, which must include the default palette. Omit it to offer every palette available (the project's first, then the framework's).
+- `default_palette`: optional id of the palette every visitor starts on (default `default`). See *Themes and palettes*.
 - `grading`: optional `{"language", "bounds"}` for how tiles and sections are graded from beginner to advanced; see *Grading*.
 - `contact`: optional email address for problem reports (see *The help book*). Without it the help sheet offers only *What's this?*.
 - `storage`: optional name under which the browser keeps this site's saved choices (default: the edition name as a slug). Two sites on one origin must not share it.
@@ -248,9 +249,9 @@ The framework colours the interface from data, so appearance and colour-blindnes
 **What the visitor can choose** (on the **Settings** page, linked from the menu; the controls appear once the script runs and are remembered in this browser only):
 
 - *Appearance*: same as the device (default), light, or dark.
-- *Colours*: a palette. The framework ships four: `default`, `high-contrast`, `red-green-safe` (for protanopia and deuteranopia) and `blue-yellow-safe` (for tritanopia).
+- *Colours*: a palette. The framework ships a library of nine, in this order: `default` (neutral), five colour schemes named by their colours (`blue-white-red`, `green-white-red`, `green-white-orange`, `red-yellow`, `black-red-gold`), `red-green-safe` (for protanopia and deuteranopia), `blue-yellow-safe` (for tritanopia) and `high-contrast`. The colour schemes are at the standard level and make no colour-vision promise.
 
-The two choices are independent, so every palette has a light and a dark variant. The page sets `data-theme` (light or dark, absent when following the device) and `data-palette` (absent for the default) on `<html>` before first paint.
+The two choices are independent, so every palette has a light and a dark variant. The page sets `data-theme` (light or dark, absent when following the device) and `data-palette` (absent for the edition's default palette) on `<html>` before first paint. A page whose edition sets `default_palette` also carries it as `data-default-palette`, so the script knows which palette is the baseline.
 
 **A palette** is a JSON file of ten colour roles (`bg`, `surface`, `ink`, `muted`, `rule`, `rule-strong`, `accent`, `star`, `tile`, `on-tile`) for `light` and for `dark`. `tile` is the background of a topic tile and `on-tile` the icon drawn on it. Colours are written in OKLCH (`oklch(0.5 0.17 258)`), where equal steps in lightness look equal, or as OKLab or `#rrggbb`. The build converts them to sRGB hex, reducing chroma where a colour is outside sRGB, and writes `palettes.css`. `style.css` sets no colour of its own.
 
@@ -258,6 +259,7 @@ The two choices are independent, so every palette has a light and a dark variant
 {
   "names": { "en": "Sepia" },
   "notes": "Where the colours came from, what was derived and why.",
+  "extends": "default",
   "level": "AA",
   "colour_vision": ["protan", "deutan"],
   "light": { "bg": "oklch(0.95 0.03 85)", "surface": "oklch(1 0 0)", "ink": "...", "muted": "...", "rule": "...", "rule-strong": "...", "accent": "...", "star": "..." },
@@ -278,10 +280,13 @@ These checks catch mistakes. They do not replace asking people who see colour di
 
 - Add `palettes/<id>.json` to a project. It is offered to visitors automatically, or list the ids the edition should offer in `palettes`.
 - A project palette names itself in `names`, per interface language. A framework palette's name is an interface message (`palette_<id>` with hyphens as underscores), so it can be translated like any other. With no name for the interface language, the English name is shown, then the id.
-- A project file named `default.json` (or any other framework id) replaces the framework's palette of that name. A project that wants its own baseline colours replaces `default`.
+- A project file named `default.json` (or any other framework id) replaces the framework's palette of that name.
+- **Choosing the default.** An edition's `default_palette` names the palette every visitor starts on, and that the manifest colours and the `theme-color` tag come from. It must exist, and be one of the palettes the edition offers. It falls back to `default`. The neutral `default` palette is then just another choice, and gets a `data-palette` attribute like the rest. A visitor's saved choice that the page no longer offers falls back to the edition's default.
+- **Starting from another palette.** `"extends": "<id>"` takes the colours of that palette (the framework's or the project's, and so a chain is fine) and lists only the ones that differ, in `light` and `dark`. Names, notes, level and `colour_vision` are not inherited, because a safe or high-contrast version makes its own promise. The finished palette is checked as a whole, and a missing parent or a loop fails the build, naming the file.
+- **Order.** With no `palettes` list the edition offers its default first, then the project's own palettes in file order, then the framework's in the order above. The settings page sorts them into their accessibility levels and keeps that order inside each. A `palettes` list overrides it.
 - Roles are fixed by the framework stylesheet. A project that needs another colour adds its own custom property in its own stylesheet and sets it per palette there.
 
-`notes` is free text for provenance. The installed app's toolbar colour and splash background (`theme_color`, `background_color` in the manifest, and the `theme-color` tag) come from the `default` palette's light accent and background, so a project that recolours `default` recolours the installed app too. Icons are project files and are not recoloured.
+`notes` is free text for provenance. The installed app's toolbar colour and splash background (`theme_color`, `background_color` in the manifest, and the `theme-color` tag) come from the edition's default palette (`default` unless the edition says otherwise), light accent and background. Icons are project files and are not recoloured.
 
 Also handled: Windows forced-colours mode keeps the current-page marker and the compass visible.
 

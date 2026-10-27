@@ -462,12 +462,15 @@ def validate_edition(name, ed, packs, available_palettes):
             raise ContentError(f"{where}: home.headline needs a text for {code!r}")
     if ed.get("storage") is not None and not STORAGE_NAME.match(str(ed["storage"])):
         raise ContentError(f"{where}: 'storage' must be lower case letters, digits, dots, hyphens or underscores")
+    baseline = ed.get("default_palette", palettes.DEFAULT)
+    if not isinstance(baseline, str) or baseline not in available_palettes:
+        raise ContentError(f"{where}: 'default_palette' must be one of the palettes: {', '.join(available_palettes)}")
     offered = ed.get("palettes")
     if offered is not None:
         if not isinstance(offered, list) or len(set(offered)) != len(offered):
             raise ContentError(f"{where}: 'palettes' must be a list of palette ids with no repeats")
-        if palettes.DEFAULT not in offered:
-            raise ContentError(f"{where}: 'palettes' must include {palettes.DEFAULT!r}, the baseline every page starts from")
+        if baseline not in offered:
+            raise ContentError(f"{where}: 'palettes' must include {baseline!r}, the baseline every page starts from")
         unknown = [pid for pid in offered if pid not in available_palettes]
         if unknown:
             raise ContentError(

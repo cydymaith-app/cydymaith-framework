@@ -116,9 +116,19 @@ class ShippedPaletteTests(unittest.TestCase):
     def setUpClass(cls):
         cls.palettes = palettes.load()
 
-    def test_the_default_comes_first_and_the_others_are_the_colour_vision_and_contrast_choices(self):
+    def test_the_neutral_palette_comes_first_then_the_colour_schemes_then_the_accessible_ones(self):
+        self.assertEqual(list(self.palettes), list(palettes.ENGINE_ORDER))
         self.assertEqual(list(self.palettes)[0], "default")
-        self.assertEqual(set(self.palettes), {"default", "high-contrast", "red-green", "red-green-safe", "blue-yellow-safe"})
+
+    def test_the_colour_schemes_are_named_by_their_colours_and_promise_nothing_about_colour_vision(self):
+        for pid in ("blue-white-red", "green-white-red", "green-white-orange", "red-yellow", "black-red-gold"):
+            self.assertEqual(palettes.access_level(self.palettes[pid]), "standard", pid)
+            self.assertNotIn("colour_vision", self.palettes[pid], pid)
+
+    def test_the_colour_schemes_have_a_top_bar_and_tiles_that_read_in_light_and_dark(self):
+        for pid in ("blue-white-red", "green-white-red", "green-white-orange", "red-yellow", "black-red-gold"):
+            for variant, colours in palettes.resolve(self.palettes[pid]).items():
+                self.assertGreaterEqual(colour.contrast(colours["on-header"], colours["header"]), 4.5, (pid, variant))
 
     def test_every_shipped_palette_passes_its_own_promises(self):
         palettes.validate(self.palettes, LANG_CODE)
@@ -281,6 +291,13 @@ class PaletteCssTests(unittest.TestCase):
                 self.assertIn(f"--{role}:#", rule)
             self.assertRegex(rule, r"color-scheme:(light|dark)")
 
+    def test_another_palette_can_be_the_baseline(self):
+        css = palettes.css(self.all, list(self.all), "blue-white-red")
+        self.assertIn(":root{--bg:", css)
+        self.assertNotIn(':root[data-palette="blue-white-red"]{', css)
+        self.assertIn(':root[data-palette="default"]{--bg:#f1f4f5;', css)
+        self.assertEqual(len([l for l in css.splitlines() if l.startswith(":root{")]), 1)
+
     def test_only_the_offered_palettes_are_written(self):
         css = palettes.css(self.all, ["default", "high-contrast"])
         self.assertIn('data-palette="high-contrast"', css)
@@ -328,8 +345,8 @@ class LoadingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             (pathlib.Path(tmp) / "sepia.json").write_text(json.dumps(palettes.load()["default"]), encoding="utf-8")
             loaded = palettes.load(tmp)
-        self.assertEqual(list(loaded)[0], "default")
-        self.assertEqual(list(loaded)[-1], "sepia")
+        self.assertEqual(list(loaded)[0], "sepia")
+        self.assertEqual(list(loaded)[1:], list(palettes.ENGINE_ORDER))
 
     def test_a_project_palette_with_a_framework_id_replaces_it(self):
         import tempfile
@@ -341,6 +358,61 @@ class LoadingTests(unittest.TestCase):
             loaded = palettes.load(tmp)
         self.assertEqual(loaded["default"]["light"]["accent"], "oklch(0.45 0.15 150)")
         self.assertEqual(list(loaded)[0], "default")
+
+    def load_with(self, **files):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, data in files.items():
+                (pathlib.Path(tmp) / f"{name.replace('_', '-')}.json").write_text(json.dumps(data), encoding="utf-8")
+            return palettes.load(tmp)
+
+    def test_a_palette_that_extends_another_is_filled_in_from_it(self):
+        loaded = self.load_with(mine={"extends": "default", "light": {"accent": "#005a9c"}})
+        parent = loaded["default"]
+        self.assertEqual(loaded["mine"]["light"]["accent"], "#005a9c")
+        self.assertEqual(
+            {k: v for k, v in loaded["mine"]["light"].items() if k != "accent"},
+            {k: v for k, v in parent["light"].items() if k != "accent"},
+        )
+        self.assertEqual(loaded["mine"]["dark"], parent["dark"])
+
+    def test_only_the_colours_are_inherited(self):
+        parent = {**copy.deepcopy(palettes.load()["high-contrast"]), "names": {"en": "Parent"}, "notes": "parent notes"}
+        loaded = self.load_with(base=parent, child={"extends": "base", "light": {}, "dark": {}})
+        self.assertEqual(loaded["child"]["light"], parent["light"])
+        for key in ("names", "notes", "level", "colour_vision"):
+            self.assertNotIn(key, loaded["child"], key)
+
+    def test_a_chain_of_extends_is_followed_and_a_project_may_extend_a_framework_palette(self):
+        loaded = self.load_with(
+            one={"extends": "blue-white-red", "light": {"accent": "#005a9c"}},
+            two={"extends": "one", "dark": {"accent": "#99ccff"}},
+        )
+        self.assertEqual(loaded["two"]["light"]["accent"], "#005a9c")
+        self.assertEqual(loaded["two"]["dark"]["accent"], "#99ccff")
+        self.assertEqual(loaded["two"]["light"]["bg"], loaded["blue-white-red"]["light"]["bg"])
+
+    def test_extending_a_missing_palette_or_going_round_in_a_circle_is_an_error(self):
+        with self.assertRaises(ContentError) as ctx:
+            self.load_with(lost={"extends": "no-such"})
+        self.assertIn("palettes/lost.json", str(ctx.exception))
+        for files in ({"a": {"extends": "b"}, "b": {"extends": "a"}}, {"a": {"extends": "a"}}):
+            with self.assertRaises(ContentError) as ctx:
+                self.load_with(**files)
+            self.assertIn("circle", str(ctx.exception))
+        with self.assertRaises(ContentError):
+            self.load_with(odd={"extends": 3})
+
+    def test_a_palette_that_extends_is_checked_as_a_whole(self):
+        loaded = self.load_with(faint={"extends": "default", "light": {"ink": "oklch(0.8 0.01 230)"}, "dark": {}})
+        with self.assertRaises(ContentError) as ctx:
+            palettes.validate(loaded, LANG_CODE)
+        self.assertIn("palettes/faint.json", str(ctx.exception))
+
+    def test_a_palette_that_extends_cannot_leave_a_colour_out_of_both(self):
+        with self.assertRaises(ContentError):
+            palettes.validate({"default": palettes.load()["default"], "x": {"light": {}, "dark": {}}}, LANG_CODE)
 
     def test_a_project_with_no_palettes_folder_gets_the_framework_ones(self):
         self.assertEqual(set(palettes.load("no/such/folder")), set(palettes.load()))

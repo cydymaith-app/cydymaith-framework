@@ -21,7 +21,9 @@
   var LANG = /^[a-z]{2,3}(-[a-z0-9]+)*$/;
   var ID = /^[a-z][a-z0-9-]*$/;
   var APPEARANCES = ["system", "light", "dark"];
-  var DEFAULT_PALETTE = "default";
+  // The edition's default palette (data-default-palette on <html>, absent for "default") is the page's baseline.
+  var DEFAULT_PALETTE = root.getAttribute("data-default-palette");
+  if (!DEFAULT_PALETTE || !ID.test(DEFAULT_PALETTE)) DEFAULT_PALETTE = "default";
   var LEVELS = ["standard", "safe", "high"];  // the accessibility levels: standard, safe colours, high contrast
   var ORDERS = ["written", "simple", "advanced"];  // tiles and sections as written, simplest first, most advanced first
   var KEYS = ["colour", "line", "off"];  // key words marked by colour, by underline, or not at all

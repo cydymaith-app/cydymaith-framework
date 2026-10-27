@@ -1,26 +1,29 @@
 """Colour palettes: how the interface is coloured, in a light and a dark variant each.
 
 A palette is a JSON file, phrasebook/palettes/<id>.json for the framework's own and <project>/palettes/<id>.json
-for a project's. A project file with the id of a framework palette replaces it, so a project can recolour the
-default or add choices of its own.
+for a project's. A project file with the id of a framework palette replaces it, so a project can recolour a
+framework palette or add choices of its own. An edition may make any palette its default ("default_palette").
 
     {
       "names": {"en": "High contrast"},       optional; the interface text for a project's own palette
       "notes": "Where the colours came from",  optional free text: the source, what was derived, and why
+      "extends": "other-id",                   optional: start from that palette (the framework's or the project's) and list
+                                               only the colours that differ; names, notes, level and colour_vision are not inherited
       "level": "AA",                           "AA" (default) or "AAA": how much contrast the text must have
       "colour_vision": ["protan", "deutan"],   optional: kinds of colour blindness the palette promises to survive
       "light": {"bg": "oklch(0.97 0.004 220)", "surface": "#ffffff", ...},
       "dark":  {...}
     }
 
-A colour is "oklch(L C h)", "oklab(L a b)" or "#rrggbb". Every role in ROLES is required in both variants.
+A colour is "oklch(L C h)", "oklab(L a b)" or "#rrggbb". Every role in ROLES is required in both variants, once the
+palette has been filled in from the one it extends. The checks run on the finished palette.
 The build checks the promises: text contrast for the level, light that is light and dark that is dark, and for
 each kind of colour blindness named, that the accent still reads against the background and stays clearly different
 from the text colours after simulating that vision (colour.py). A palette that breaks its promise fails the build.
 These checks are a safeguard, not a substitute for asking people who see colour differently.
 
-The page picks a palette with data-palette="<id>" on <html> and a variant with data-theme="light|dark", or follows
-the system's light/dark setting when data-theme is absent. See css() for the selectors.
+The page picks a palette with data-palette="<id>" on <html> (absent for the edition's default) and a variant with
+data-theme="light|dark", or follows the system's light/dark setting when data-theme is absent. See css() for the selectors.
 """
 
 import json
@@ -50,8 +53,20 @@ ROLES = (
 )
 KEYS_OF_WORDS = ("key-1", "key-2", "key-3")  # colours for the matching key words of a row (see site.py, keyed)
 DEFAULT = "default"
+# The framework's palettes in the order they are offered: the neutral one, the colour schemes, then the accessible ones.
+ENGINE_ORDER = (
+    DEFAULT,
+    "blue-white-red",
+    "green-white-red",
+    "green-white-orange",
+    "red-yellow",
+    "black-red-gold",
+    "red-green-safe",
+    "blue-yellow-safe",
+    "high-contrast",
+)
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
-KEYS = {"names", "notes", "level", "colour_vision", "light", "dark"}
+KEYS = {"names", "notes", "extends", "level", "colour_vision", "light", "dark"}
 LEVELS = {"AA": {"text": 4.5, "boundary": None, "graphic": 3.0}, "AAA": {"text": 7.0, "boundary": 3.0, "graphic": 4.5}}
 TEXT_ROLES = ("ink", "muted", "accent") + KEYS_OF_WORDS  # drawn as text on bg and on surface
 LIGHT_MIN, DARK_MAX = 0.70, 0.35  # OKLab lightness of the background that makes a variant honestly light or dark
@@ -60,15 +75,50 @@ SEPARATION = 0.12  # OKLab distance the accent must keep from the text colours u
 
 
 def load(project_dir=None, engine_dir=ENGINE_PALETTES):
-    """{id: palette}: the framework's palettes (default first), then the project's, which may replace them."""
+    """{id: palette}: the project's own palettes first, then the framework's in ENGINE_ORDER. A project file with a
+    framework id replaces that palette and keeps its place among the framework's. Palettes that "extend" another are
+    filled in from it."""
     found = {}
     for folder in (engine_dir, pathlib.Path(project_dir) if project_dir else None):
         if folder and pathlib.Path(folder).is_dir():
             for path in sorted(pathlib.Path(folder).glob("*.json")):
                 found[path.stem] = json.loads(path.read_text(encoding="utf-8"))
-    ordered = {DEFAULT: found.pop(DEFAULT)} if DEFAULT in found else {}
-    ordered.update(found)
-    return ordered
+    engine = {path.stem for path in pathlib.Path(engine_dir).glob("*.json")} if pathlib.Path(engine_dir).is_dir() else set()
+    named = [pid for pid in ENGINE_ORDER if pid in engine]
+    first = [pid for pid in found if pid not in engine]
+    last = named + sorted(engine - set(named))
+    return extend({pid: found[pid] for pid in first + last})
+
+
+def extend(found):
+    """Fill in each palette that has "extends": the parent's colours, with the palette's own listed colours on top, for
+    light and dark each. Only the colours are inherited: names, notes, level and colour_vision are the palette's own."""
+    done = {}
+
+    def build(pid, trail):
+        if pid in done:
+            return done[pid]
+        palette = found[pid]
+        parent = palette.get("extends") if isinstance(palette, dict) else None
+        if parent is None:
+            done[pid] = palette
+            return palette
+        where = f"palettes/{pid}.json"
+        if not isinstance(parent, str) or parent not in found:
+            raise ContentError(f"{where}: 'extends' must name another palette; available: {', '.join(found)}")
+        if parent in trail or parent == pid:
+            raise ContentError(f"{where}: 'extends' goes round in a circle: {' -> '.join([*trail, pid, parent])}")
+        base = build(parent, [*trail, pid])
+        out = dict(palette)
+        for variant in ("light", "dark"):
+            own = palette.get(variant, {})
+            if not isinstance(own, dict):
+                raise ContentError(f"{where}: '{variant}' must list colours by role")
+            out[variant] = {**base.get(variant, {}), **own}
+        done[pid] = out
+        return out
+
+    return {pid: build(pid, []) for pid in found}
 
 
 def resolve(palette):
@@ -191,8 +241,8 @@ def tokens(colours, prefix="--"):
     return ";".join(f"{prefix}{role}:{colour.rgb_to_hex(colours[role])}" for role in ROLES)
 
 
-def css(palettes, ids):
-    """The stylesheet for the offered palettes. The default palette is the page's baseline, with no attribute.
+def css(palettes, ids, baseline=DEFAULT):
+    """The stylesheet for the offered palettes. The edition's default palette (`baseline`) is the page's baseline, with no attribute.
 
     Each palette gets three rules (and three more for its preview, see below), all of which win over the baseline in the right cases:
       light:         the variant when nothing says dark
@@ -202,7 +252,7 @@ def css(palettes, ids):
     out = ["/* Generated by the phrasebook builder from the palettes. Do not edit. */"]
     for pid in ids:
         resolved = resolve(palettes[pid])
-        mark = "" if pid == DEFAULT else f'[data-palette="{pid}"]'
+        mark = "" if pid == baseline else f'[data-palette="{pid}"]'
         out.append(f":root{mark}{{{tokens(resolved['light'])};color-scheme:light}}")
         out.append(
             f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{tokens(resolved["dark"])};color-scheme:dark}}}}'

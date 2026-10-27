@@ -1,0 +1,38 @@
+{
+  "notes": "A black, red and gold scheme. The black is black, the red #DD0000 and the gold #FFCE00. The top bar is near-black in the light variant and the red in the dark one, where a black bar would vanish into the page; the tiles are the gold with near-black text, because gold is a light colour. The page is a neutral white in light and near-black in dark. Light accent: the red darkened to lightness 0.48 so that it reads as text on white. Dark accent: the gold at lightness 0.88. Not colour-blind safe: the scheme makes no colour-vision promise. Key-word colours (key-1 to key-3): a blue, an orange or gold and a purple, found by a search for the colourful end of what keeps the level's text contrast on the page and the card and stays at least 0.12 apart, and from the ink, in OKLab as seen with normal, protan, deutan and tritan vision.",
+  "level": "AA",
+  "light": {
+    "bg": "oklch(0.970 0.004 90)",
+    "surface": "oklch(0.995 0.002 90)",
+    "ink": "oklch(0.200 0.005 90)",
+    "muted": "oklch(0.500 0.008 90)",
+    "rule": "oklch(0.890 0.008 90)",
+    "rule-strong": "oklch(0.740 0.012 90)",
+    "accent": "oklch(0.480 0.200 27)",
+    "star": "oklch(0.940 0.060 95)",
+    "tile": "oklch(0.860 0.170 92)",
+    "on-tile": "oklch(0.200 0.005 90)",
+    "header": "oklch(0.200 0.005 90)",
+    "on-header": "oklch(0.980 0.004 90)",
+    "key-1": "oklch(0.380 0.14 240)",
+    "key-2": "oklch(0.520 0.14 40)",
+    "key-3": "oklch(0.540 0.14 305)"
+  },
+  "dark": {
+    "bg": "oklch(0.160 0.004 90)",
+    "surface": "oklch(0.215 0.005 90)",
+    "ink": "oklch(0.960 0.006 90)",
+    "muted": "oklch(0.740 0.010 90)",
+    "rule": "oklch(0.320 0.006 90)",
+    "rule-strong": "oklch(0.500 0.010 90)",
+    "accent": "oklch(0.880 0.170 92)",
+    "star": "oklch(0.330 0.070 92)",
+    "tile": "oklch(0.860 0.170 92)",
+    "on-tile": "oklch(0.200 0.005 90)",
+    "header": "oklch(0.520 0.220 27)",
+    "on-header": "oklch(0.980 0.004 90)",
+    "key-1": "oklch(0.770 0.14 235)",
+    "key-2": "oklch(0.770 0.14 100)",
+    "key-3": "oklch(0.690 0.14 350)"
+  }
+}

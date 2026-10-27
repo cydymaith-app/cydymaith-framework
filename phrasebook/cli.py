@@ -142,7 +142,15 @@ def take_screenshots(out, view, ed, shots_dir, browser=None):
     pages = [s for g in site.groups for s in g["pages"]]
     topic = next((s for s in pages if site.skel[s].get("figure")), pages[0])
     labels = {pid: site.palette_label(pid)[0] for pid in site.palette_ids}
-    return screenshots.shoot(out, shots_dir, site.palette_ids, f"{topic}.html", labels=labels, browser=browser)
+    return screenshots.shoot(
+        out,
+        shots_dir,
+        site.palette_ids,
+        f"{topic}.html",
+        default_palette=site.default_palette,
+        labels=labels,
+        browser=browser,
+    )
 
 
 def main(argv=None, projects_dir=None):

@@ -28,7 +28,7 @@ function makeRadio(lang, value, pref, tier, hideAt) {
 }
 
 // readyState "loading" means the script runs in the head, as it does on the real pages.
-function run({ stored, storage, radios, langRadios, shareButtons, navigator, withPanel = true, readyState = "loading", site, key = KEY } = {}) {
+function run({ stored, storage, radios, langRadios, shareButtons, navigator, withPanel = true, readyState = "loading", site, key = KEY, defaultPalette } = {}) {
   const attrs = {};
   const data = Object.assign({}, stored === undefined ? {} : { [key]: stored });
   const localStorage = storage || {
@@ -44,7 +44,7 @@ function run({ stored, storage, radios, langRadios, shareButtons, navigator, wit
   const document = {
     readyState,
     documentElement: {
-      getAttribute: (k) => (k === "data-storage" && site !== undefined ? site : null),
+      getAttribute: (k) => (k === "data-storage" && site !== undefined ? site : k === "data-default-palette" && defaultPalette !== undefined ? defaultPalette : null),
       setAttribute: (k, v) => { attrs[k] = v; },
       removeAttribute: (k) => { delete attrs[k]; },
     },
@@ -349,6 +349,34 @@ test("choosing an appearance updates the page and is remembered", () => {
   radios[0].fire("change");
   assert.deepEqual(page.attrs, {});
   assert.deepEqual(JSON.parse(page.data[KEY]), state());
+});
+
+test("a page can name its own default palette: it is the baseline with no attribute, and what a new visitor starts on", () => {
+  const radios = [makeRadio(null, "red-green", "palette"), makeRadio(null, "default", "palette")];
+  const page = run({ defaultPalette: "red-green", radios });
+  assert.deepEqual(page.attrs, {});
+  page.domReady();
+  assert.deepEqual(radios.map((r) => r.checked), [true, false]);
+  radios[1].checked = true;
+  radios[1].fire("change");
+  assert.equal(page.attrs["data-palette"], "default", "the neutral palette now needs its attribute");
+  assert.equal(JSON.parse(page.data[KEY]).palette, "default");
+  radios[0].checked = true;
+  radios[0].fire("change");
+  assert.deepEqual(page.attrs, {});
+  assert.equal(JSON.parse(page.data[KEY]).palette, "red-green");
+});
+
+test("a saved palette the page no longer offers falls back to the page's own default", () => {
+  const radios = [makeRadio(null, "red-green", "palette"), makeRadio(null, "default", "palette")];
+  const page = run({ defaultPalette: "red-green", stored: saved({}, { palette: "retired" }), radios });
+  page.domReady();
+  assert.deepEqual(radios.map((r) => r.checked), [true, false]);
+  assert.deepEqual(page.attrs, {});
+});
+
+test("a default palette name that is not an identifier is ignored", () => {
+  assert.deepEqual(run({ defaultPalette: "../x", stored: saved({}, { palette: "default" }) }).attrs, {});
 });
 
 test("choosing a palette updates the page, and the default removes the attribute", () => {
