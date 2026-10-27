@@ -64,7 +64,7 @@ def make_project(root, interface="qaa", ui_extra=None):
             if code == "qab"
             else {"text": f"{code} two", "note": f"A note on {{{{{code} two}}}}"}
         )
-        c1 = {"text": f"{code} one", **({"source": "dr", "also": ["qab uno"]} if code == "qab" else {})}
+        c1 = {"text": f"{code} one", "keys": ["one"], **({"source": "dr", "also": ["qab uno"]} if code == "qab" else {})}
         c3 = {"text": f"{code} three", **({"source": "pd"} if code == "qaa" else {})}
         write(
             root / "packs" / code / "pages" / "p1.json",

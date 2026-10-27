@@ -31,14 +31,32 @@ from . import colour
 from .errors import ContentError
 
 ENGINE_PALETTES = pathlib.Path(__file__).resolve().parent / "palettes"
-ROLES = ("bg", "surface", "ink", "muted", "rule", "rule-strong", "accent", "star", "tile", "on-tile", "header", "on-header")
+ROLES = (
+    "bg",
+    "surface",
+    "ink",
+    "muted",
+    "rule",
+    "rule-strong",
+    "accent",
+    "star",
+    "tile",
+    "on-tile",
+    "header",
+    "on-header",
+    "key-1",
+    "key-2",
+    "key-3",
+)
+KEYS_OF_WORDS = ("key-1", "key-2", "key-3")  # colours for the matching key words of a row (see site.py, keyed)
 DEFAULT = "default"
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
 KEYS = {"names", "notes", "level", "colour_vision", "light", "dark"}
 LEVELS = {"AA": {"text": 4.5, "boundary": None, "graphic": 3.0}, "AAA": {"text": 7.0, "boundary": 3.0, "graphic": 4.5}}
-TEXT_ROLES = ("ink", "muted", "accent")  # drawn as text on bg and on surface
+TEXT_ROLES = ("ink", "muted", "accent") + KEYS_OF_WORDS  # drawn as text on bg and on surface
 LIGHT_MIN, DARK_MAX = 0.70, 0.35  # OKLab lightness of the background that makes a variant honestly light or dark
-SEPARATION = 0.12  # OKLab distance the accent must keep from the text colours under simulated colour blindness
+SEPARATION = 0.12  # OKLab distance the accent must keep from the text colours under simulated colour blindness, and the
+# key-word colours from each other and from the ink, in every palette and under each kind of colour blindness it promises
 
 
 def load(project_dir=None, engine_dir=ENGINE_PALETTES):
@@ -97,6 +115,7 @@ def validate(palettes, lang_code):
         check_scheme(where, resolved)
         for variant, colours in resolved.items():
             check_contrast(f"{where} {variant}", colours, level)
+            check_key_colours(f"{where} {variant}", colours)
             for kind in claims:
                 check_colour_vision(f"{where} {variant}", colours, level, kind)
 
@@ -133,12 +152,27 @@ def check_contrast(where, colours, level, kind=None):
 def check_colour_vision(where, colours, level, kind):
     seen = {role: colour.simulate(rgb, kind) for role, rgb in colours.items()}
     check_contrast(where, seen, level, kind)
+    check_key_colours(where, seen, kind)
     for other in ("ink", "muted"):
         gap = colour.distance(seen["accent"], seen[other])
         if gap < SEPARATION:
             raise ContentError(
                 f"{where}: with {kind} vision the accent is hard to tell from {other} "
                 f"(distance {gap:.3f}, needs {SEPARATION}); change its lightness or chroma"
+            )
+
+
+def check_key_colours(where, colours, kind=None):
+    """The three key-word colours must be told apart from each other and from the ink (as seen with `kind`, if given)."""
+    seen = f" as seen with {kind}" if kind else ""
+    for first, second in [(a, b) for i, a in enumerate(KEYS_OF_WORDS) for b in KEYS_OF_WORDS[i + 1 :]] + [
+        (k, "ink") for k in KEYS_OF_WORDS
+    ]:
+        gap = colour.distance(colours[first], colours[second])
+        if gap < SEPARATION:
+            raise ContentError(
+                f"{where}: {first} is hard to tell from {second}{seen} (distance {gap:.3f}, needs {SEPARATION}); "
+                f"change its lightness or hue"
             )
 
 

@@ -226,6 +226,34 @@ class PaletteRejectionTests(unittest.TestCase):
             palettes.validate({"other": self.base}, LANG_CODE)
 
 
+class KeyColourTests(unittest.TestCase):
+    def test_every_shipped_palette_has_three_key_colours_in_both_variants(self):
+        for pid, palette in palettes.load().items():
+            for variant in ("light", "dark"):
+                for role in palettes.KEYS_OF_WORDS:
+                    self.assertIn(role, palette[variant], f"{pid} {variant}")
+                    self.assertTrue(palette[variant][role].startswith("oklch("), f"{pid} {variant} {role}")
+
+    def test_two_key_colours_that_are_the_same_are_rejected(self):
+        palette = copy.deepcopy(palettes.load()["default"])
+        palette["light"]["key-2"] = palette["light"]["key-1"]
+        with self.assertRaises(ContentError) as ctx:
+            palettes.validate({"default": palette}, LANG_CODE)
+        self.assertIn("key-1 is hard to tell from key-2", str(ctx.exception))
+
+    def test_a_key_colour_too_pale_for_the_level_is_rejected(self):
+        palette = copy.deepcopy(palettes.load()["default"])
+        palette["light"]["key-3"] = "oklch(0.8 0.14 305)"
+        with self.assertRaises(ContentError) as ctx:
+            palettes.validate({"default": palette}, LANG_CODE)
+        self.assertIn("key-3", str(ctx.exception))
+
+    def test_the_css_carries_the_key_colours(self):
+        css = palettes.css(palettes.load(), ["default"])
+        for role in palettes.KEYS_OF_WORDS:
+            self.assertIn(f"--{role}:", css)
+
+
 class PaletteCssTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

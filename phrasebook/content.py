@@ -19,7 +19,7 @@ import pathlib
 import re
 import unicodedata
 
-from . import grading, icons, palettes
+from . import grading, icons, keys as keywords, palettes
 from .errors import ContentError
 from .figures import FIGURE_CONCEPTS
 from .channels import check_status
@@ -147,6 +147,7 @@ def validate(raw):
         check_icon(f"pages/{slug}.json", p.get("icon"), raw["icons"])
     for code, pack in packs.items():
         validate_pack(code, pack, raw)
+    check_keys_agree(raw)
     palettes.validate(raw["palettes"], LANG_CODE)
     for pid, palette in raw["palettes"].items():
         validate_text(f"palettes/{pid}.json", palette.get("names", {}))
@@ -367,6 +368,27 @@ def validate_pack(code, pack, raw):
                     raise ContentError(f"{where}/pages/{slug}.json/{sid}: concept {cid!r} names unknown source {c['source']!r}")
 
 
+def check_keys_agree(raw):
+    """Key words pair up by position, which is also their colour, so every language that has a concept must use the same positions."""
+    for slug, page in raw["pages"].items():
+        for section in page["sections"]:
+            for cid in section["concepts"]:
+                counts = {}
+                for code, pack in raw["packs"].items():
+                    c = pack["pages"].get(slug, {}).get("sections", {}).get(section["id"], {}).get("concepts", {}).get(cid)
+                    if c is not None:
+                        if "keys" in c:  # a language that marks none yet is simply drawn plain
+                            counts[code] = [k is not None for k in c["keys"]]
+                if len({tuple(used) for used in counts.values()}) > 1:
+                    given = ", ".join(
+                        f"{code}: {''.join('x' if on else '-' for on in used) or 'none'}" for code, used in counts.items()
+                    )
+                    raise ContentError(
+                        f"pages/{slug}.json/{section['id']}: concept {cid!r} marks different key words in each language, "
+                        f"which must use the same colours ({given})"
+                    )
+
+
 def validate_varieties(where, varieties):
     """Check a pack's declared varieties. Returns their ids."""
     ids = []
@@ -396,6 +418,10 @@ def validate_concept(where, cid, c, variety_ids):
     for a in also:
         if a in shown or also.count(a) > 1:
             raise ContentError(f"{where}: concept {cid!r}: 'also' repeats {a!r}")
+    if "keys" in c:
+        wrong = keywords.problem(c["keys"], shown)
+        if wrong:
+            raise ContentError(f"{where}: concept {cid!r}: {wrong}")
     if not forms:
         return
     if not variety_ids:

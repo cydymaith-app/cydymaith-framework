@@ -214,11 +214,31 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .card .terms{margin-top:0;border-top:0}
 .card .terms tbody tr:first-child{border-top:0}
 /* listen-first rows: the first language is the one heard, so it leads and is strong; the second sits at the end, muted */
+/* the first language sits above the second, so a row reads straight down instead of across; the table markup is kept, so a screen reader still reads a row's header then its cell */
+.terms.pair,.terms.pair tbody{display:block}
+.terms.pair tbody tr{display:block;padding-block:.65rem}
+.terms.pair th.l1,.terms.pair td{display:block;width:auto;padding:0;text-align:start}
 .terms.pair th.l1{font-weight:700;font-size:1.2rem;line-height:1.3}
-.terms.pair td{text-align:end;color:var(--muted)}
+.terms.pair td{margin-top:.15rem;color:var(--muted)}
 .terms.pair td .l2{font:400 1rem/1.3 var(--font-ui)}
-.terms.pair .also-row{border-top:0}
-.terms.pair .also-row td{padding:0 0 .6rem;text-align:start;font-size:.92rem;color:var(--ink)}
+.terms.pair .also-row{border-top:0;padding-block:0}
+.terms.pair .also-row td{margin:0;padding:0 0 .6rem;font-size:.92rem;color:var(--ink)}
+/* key words: the same mark for the word and its match in the other language. The settings choose colour (the default), underline (a
+   solid, dotted or wavy line, so a pair is told apart without colour) or neither. Forced colours replace every colour, so there the underline is used */
+.key[data-k="1"]{color:var(--key-1)}
+.key[data-k="2"]{color:var(--key-2)}
+.key[data-k="3"]{color:var(--key-3)}
+html[data-keys="line"] .key,html[data-keys="off"] .key{color:inherit}
+html[data-keys="line"] .key{text-decoration-line:underline;text-decoration-thickness:.1em;text-underline-offset:.2em}
+html[data-keys="line"] .key[data-k="1"]{text-decoration-style:solid}
+html[data-keys="line"] .key[data-k="2"]{text-decoration-style:dotted}
+html[data-keys="line"] .key[data-k="3"]{text-decoration-style:wavy}
+@media (forced-colors:active){
+  html:not([data-keys="off"]) .key{text-decoration-line:underline;text-decoration-thickness:.1em;text-underline-offset:.2em}
+  html:not([data-keys="off"]) .key[data-k="1"]{text-decoration-style:solid}
+  html:not([data-keys="off"]) .key[data-k="2"]{text-decoration-style:dotted}
+  html:not([data-keys="off"]) .key[data-k="3"]{text-decoration-style:wavy}
+}
 .also-label{display:inline-flex;align-items:center;margin-inline-end:.4rem;color:var(--accent)}
 .also-label .icon{width:1.15rem;height:1.15rem}
 .also-form{display:inline-block;margin-block:.1rem;margin-inline-end:.3rem;padding:.05rem .45rem;border-radius:6px;background:var(--bg);font-family:var(--font-l2);font-weight:500}

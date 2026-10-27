@@ -123,7 +123,7 @@
     "listen-first-rows": {
       "title": "Which language comes first",
       "body": [
-        "Each row shows the first language of the pair at the start of the row in large, strong type, and the second language at the end of the same row, in a lighter colour. The first language is the one you hear, so you can scan it quickly. The site chooses the pair."
+        "Each row shows the first language of the pair on top, in large, strong type, and the second language directly beneath it, in a lighter colour. The first language is the one you hear, so you can scan down it quickly. The site chooses the pair."
       ]
     },
     "also-heard": {
@@ -214,6 +214,14 @@
       "title": "Putting tiles in order",
       "body": [
         "Order puts tiles and sections in order: as they are written (Default), the simplest first, or the most advanced first. It applies to the pages you open next. A screen whose tiles you have arranged yourself keeps your own order."
+      ],
+      "keys": "Tab to the choices and use the arrow keys.",
+      "touch": "Tap a choice."
+    },
+    "key-words": {
+      "title": "Colouring the key words",
+      "body": [
+        "Key words marks the main words of a row, and the word that matches each one in the other language, in one of two ways. Colour gives a pair the same colour, and follows the colour scheme you chose. Underline gives a pair the same line: solid, dotted or wavy, so you can match words without relying on colour. With Safe colours or High contrast only Underline is offered, and the underline is used whenever your device overrides colours. Turn it off if you no longer need it."
       ],
       "keys": "Tab to the choices and use the arrow keys.",
       "touch": "Tap a choice."

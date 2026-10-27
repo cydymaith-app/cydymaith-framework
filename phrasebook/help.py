@@ -24,8 +24,8 @@ HELP_DIR = pathlib.Path(__file__).resolve().parent / "help"
 ANCHOR = re.compile(r"^[a-z][a-z0-9-]*$")
 PAGE_PREFIX = "help-"  # generated chapter pages are help-<id>.html
 # What a feature can ask of the edition before it is shown: "about" (an About page), "varieties" (a language has regional forms), "palettes" (more than one
-# colour scheme), "access" (schemes at more than one accessibility level), "levels" (tiles or sections of more than one level), "related" (a topic links to others), "contact" (the edition has an address for reports).
-CONDITIONS = ("about", "varieties", "palettes", "access", "levels", "related", "contact")
+# colour scheme), "access" (schemes at more than one accessibility level), "levels" (tiles or sections of more than one level), "related" (a topic links to others), "keys" (a row marks key words), "contact" (the edition has an address for reports).
+CONDITIONS = ("about", "varieties", "palettes", "access", "levels", "related", "keys", "contact")
 
 # The book, in reading order. Add a chapter here only with its English text; the build refuses a feature with none.
 SECTIONS = [
@@ -71,6 +71,7 @@ SECTIONS = [
             {"id": "accessibility", "requires": "access"},
             {"id": "colour-schemes", "requires": "palettes"},
             {"id": "order-setting", "requires": "levels"},
+            {"id": "key-words", "requires": "keys"},
             {"id": "reset-tile-layouts"},
             {"id": "what-is-saved"},
         ],

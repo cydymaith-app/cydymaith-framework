@@ -12,7 +12,7 @@ const KEY = "phrasebook:prefs";  // the default, used when the page names no sto
 
 // A regional-form radio: makeRadio("cy", "north"). A theme radio: makeRadio(null, "dark", "appearance").
 // A palette swatch also names its accessibility level: makeRadio(null, "red-green-safe", "palette", "safe").
-function makeRadio(lang, value, pref, tier) {
+function makeRadio(lang, value, pref, tier, hideAt) {
   const listeners = {};
   return {
     value,
@@ -20,7 +20,8 @@ function makeRadio(lang, value, pref, tier) {
     pref,
     tier,
     checked: false,
-    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : name === "data-tier" ? tier || null : null),
+    parentNode: { hidden: false },
+    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : name === "data-tier" ? tier || null : name === "data-hide-at" ? hideAt || null : null),
     addEventListener: (type, fn) => { listeners[type] = fn; },
     fire(type) { listeners[type](); },
   };
@@ -59,7 +60,7 @@ function run({ stored, storage, radios, langRadios, shareButtons, navigator, wit
 }
 
 const saved = (varieties, extra = {}) => JSON.stringify({ v: 4, varieties, ...extra });
-const state = (varieties = {}, extra = {}) => ({ v: 4, appearance: "system", palette: "default", order: "written", picks: {}, varieties, ...extra });
+const state = (varieties = {}, extra = {}) => ({ v: 4, appearance: "system", palette: "default", order: "written", keys: "colour", picks: {}, varieties, ...extra });
 
 test("applies a saved variety to the page before it is painted", () => {
   const page = run({ stored: saved({ cy: "north" }) });
@@ -282,6 +283,58 @@ test("the order is kept when the other choices change, and an earlier version's 
   const older = run({ stored: JSON.stringify({ v: 3, appearance: "dark", palette: "default", varieties: {} }) });
   older.domReady();
   assert.equal(older.attrs["data-theme"], "dark");
+});
+
+const keyRadios = () => [
+  makeRadio(null, "colour", "keys", null, "safe high"), makeRadio(null, "line", "keys"), makeRadio(null, "off", "keys"),
+];
+
+test("key words are marked by colour until another way is chosen, and the choice is remembered", () => {
+  const radios = keyRadios();
+  const page = run({ radios });
+  page.domReady();
+  assert.deepEqual(page.attrs, {}, "colour sets no attribute");
+  assert.deepEqual(radios.map((r) => r.checked), [true, false, false], "colour is ticked when nothing is saved");
+  for (const value of ["line", "off"]) {
+    const r = radios.find((x) => x.value === value);
+    r.checked = true;
+    r.fire("change");
+    assert.equal(page.attrs["data-keys"], value);
+    assert.deepEqual(JSON.parse(page.data[KEY]), state({}, { keys: value }));
+  }
+  const again = run({ stored: saved({}, { keys: "line" }), radios: keyRadios() });
+  assert.equal(again.attrs["data-keys"], "line", "applied before the page is painted");
+  radios[0].checked = true;
+  radios[0].fire("change");
+  assert.equal(page.attrs["data-keys"], undefined);
+  assert.deepEqual(JSON.parse(page.data[KEY]), state());
+});
+
+test("a saved key-word choice that is not one of the three counts as colour", () => {
+  for (const keys of ["maybe", "", 0, null, "OFF", "both", "on", '"><script>']) {
+    assert.deepEqual(run({ stored: saved({}, { keys }) }).attrs, {}, JSON.stringify(keys));
+  }
+});
+
+test("colour is hidden at the safe and high-contrast levels, and a choice of it becomes the underline", () => {
+  const keys = keyRadios();
+  const swatches = [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "red-green-safe", "palette", "safe")];
+  const page = run({ radios: [...swatches, ...keys] });
+  page.domReady();
+  assert.equal(keys[0].parentNode.hidden, false, "shown with a standard palette");
+  swatches[1].checked = true;
+  swatches[1].fire("change");
+  assert.equal(keys[0].parentNode.hidden, true, "hidden once a safe palette is chosen");
+  assert.equal(page.attrs["data-keys"], "line", "colour was chosen, so it becomes the underline");
+  assert.equal(JSON.parse(page.data[KEY]).keys, "line");
+  assert.deepEqual(keys.map((r) => r.checked), [false, true, false]);
+  swatches[0].checked = true;
+  swatches[0].fire("change");
+  assert.equal(keys[0].parentNode.hidden, false, "offered again at the standard level");
+  assert.equal(JSON.parse(page.data[KEY]).keys, "line", "and the choice is not changed back for the person");
+  const safe = run({ stored: saved({}, { palette: "red-green-safe" }), radios: [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "red-green-safe", "palette", "safe"), ...keyRadios()] });
+  safe.domReady();
+  assert.equal(JSON.parse(safe.data[KEY]).keys, "line", "a saved colour choice at a safe level is corrected and kept");
 });
 
 test("choosing an appearance updates the page and is remembered", () => {

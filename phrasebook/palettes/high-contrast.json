@@ -1,4 +1,5 @@
 {
+  "notes": "Key-word colours (key-1 to key-3): a blue, an orange or gold and a purple, found by a search for the colourful end of what keeps the level's text contrast on the page and the card and stays at least 0.12 apart, and from the ink, in OKLab as seen with normal, protan, deutan and tritan vision.",
   "level": "AAA",
   "light": {
     "bg": "oklch(1 0 0)",
@@ -12,7 +13,10 @@
     "tile": "oklch(0.92 0.01 230)",
     "on-tile": "oklch(0.15 0.01 232)",
     "header": "oklch(1 0 0)",
-    "on-header": "oklch(0.15 0.01 232)"
+    "on-header": "oklch(0.15 0.01 232)",
+    "key-1": "oklch(0.290 0.14 245)",
+    "key-2": "oklch(0.420 0.14 40)",
+    "key-3": "oklch(0.440 0.14 305)"
   },
   "dark": {
     "bg": "oklch(0.1 0.005 232)",
@@ -26,6 +30,9 @@
     "tile": "oklch(0.25 0.01 232)",
     "on-tile": "oklch(0.98 0.003 225)",
     "header": "oklch(0.1 0.005 232)",
-    "on-header": "oklch(0.98 0.003 225)"
+    "on-header": "oklch(0.98 0.003 225)",
+    "key-1": "oklch(0.850 0.14 265)",
+    "key-2": "oklch(0.770 0.14 40)",
+    "key-3": "oklch(0.730 0.14 305)"
   }
 }

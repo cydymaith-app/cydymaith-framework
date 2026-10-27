@@ -1,5 +1,5 @@
 {
-  "notes": "Recoloured from the hellocolor.de palette used by the content project's default (docs/ASSETS.md, Colour palettes in use): the neutrals, the Accent blue #009EDB (hue 235) and the Warning amber #EFA800 (hue 78). Blue and amber stay apart under protanopia and deuteranopia, so the red and green tokens (Primary, Secondary, Success, Danger) are not used. The light accent is the Accent's hue and chroma at L 0.36, darker than the source so that it reads as text on white. The dark accent is L 0.80, lighter than the source, because the source lightness is the same as the dark muted text and fails the colour-vision check. Tiles are pale and deep tints of the blue; the star is a pale and deep tint of the amber. Checked by the build's colour-vision test, which is a safeguard and not a substitute for asking people who see colour differently.",
+  "notes": "Recoloured from the hellocolor.de palette used by the content project's default (docs/ASSETS.md, Colour palettes in use): the neutrals, the Accent blue #009EDB (hue 235) and the Warning amber #EFA800 (hue 78). Blue and amber stay apart under protanopia and deuteranopia, so the red and green tokens (Primary, Secondary, Success, Danger) are not used. The light accent is the Accent's hue and chroma at L 0.36, darker than the source so that it reads as text on white. The dark accent is L 0.80, lighter than the source, because the source lightness is the same as the dark muted text and fails the colour-vision check. Tiles are pale and deep tints of the blue; the star is a pale and deep tint of the amber. Checked by the build's colour-vision test, which is a safeguard and not a substitute for asking people who see colour differently. Key-word colours (key-1 to key-3): a blue, an orange or gold and a purple, found by a search for the colourful end of what keeps the level's text contrast on the page and the card and stays at least 0.12 apart, and from the ink, in OKLab as seen with normal, protan, deutan and tritan vision.",
   "level": "AA",
   "colour_vision": [
     "protan",
@@ -17,7 +17,10 @@
     "tile": "oklch(0.90 0.040 235)",
     "on-tile": "oklch(0.200 0.007 34.31)",
     "header": "oklch(0.989 0.006 31.05)",
-    "on-header": "oklch(0.200 0.007 34.31)"
+    "on-header": "oklch(0.200 0.007 34.31)",
+    "key-1": "oklch(0.380 0.14 225)",
+    "key-2": "oklch(0.520 0.14 45)",
+    "key-3": "oklch(0.540 0.14 305)"
   },
   "dark": {
     "bg": "oklch(0.119 0.005 17.88)",
@@ -31,6 +34,9 @@
     "tile": "oklch(0.32 0.060 235)",
     "on-tile": "oklch(0.969 0.008 27.23)",
     "header": "oklch(0.119 0.005 17.88)",
-    "on-header": "oklch(0.969 0.008 27.23)"
+    "on-header": "oklch(0.969 0.008 27.23)",
+    "key-1": "oklch(0.730 0.14 260)",
+    "key-2": "oklch(0.600 0.14 95)",
+    "key-3": "oklch(0.700 0.14 350)"
   }
 }

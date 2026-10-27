@@ -579,6 +579,81 @@ class ListenFirstTests(Scratch):
 # ---------------------------------------------------------------- the About page
 
 
+class KeyWordTests(Scratch):
+    """`keys` marks matching words in a row, in the same order in each language; the setting that colours them is offered with them."""
+
+    def keyed(self, qaa=("one",), qab=("one",)):
+        proj = self.project()
+        fixture.edit(
+            proj / "packs" / "qaa" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].update(keys=list(qaa))
+        )
+        fixture.edit(
+            proj / "packs" / "qab" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].update(keys=list(qab))
+        )
+        return proj
+
+    def plain(self):
+        proj = self.project()
+        for code in ("qaa", "qab", "qac"):
+            fixture.edit(proj / "packs" / code / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].pop("keys"))
+        return proj
+
+    def render(self, proj):
+        raw = content.read(proj)
+        return phrasebook.Site(raw, content.pick_edition(raw)[1], pair=("qaa", "qab")).render_all()
+
+    def test_a_key_word_is_wrapped_with_its_number_in_both_languages(self):
+        page = self.render(self.keyed())["p1.html"]
+        self.assertIn('qaa <span class="key" data-k="1">one</span></th>', page)
+        self.assertIn('qab <span class="key" data-k="1">one</span></span>', page)
+
+    def test_a_gap_leaves_a_colour_unused_so_a_word_keeps_its_colour_from_row_to_row(self):
+        page = self.render(self.keyed((None, "one"), (None, "one")))["p1.html"]
+        self.assertIn('qaa <span class="key" data-k="2">one</span></th>', page)
+        self.assertNotIn('data-k="1"', page)
+
+    def test_a_row_without_keys_is_written_as_before(self):
+        self.assertNotIn('class="key"', self.render(self.plain())["p1.html"])
+
+    def test_the_setting_is_offered_only_when_some_row_has_keys(self):
+        self.assertIn('data-pref="keys"', self.render(self.keyed())["settings.html"])
+        self.assertNotIn('data-pref="keys"', self.render(self.plain())["settings.html"])
+
+    def test_keys_never_change_the_dictionary_terms(self):
+        raw = content.read(self.keyed())
+        entry = next(e for e in dictionary.index(raw, content.pick_edition(raw)[1])["entries"] if e["concept"] == "c1")
+        self.assertEqual([t["text"] for t in entry["terms"]["qaa"]], ["qaa one"])
+
+    def test_keys_are_checked(self):
+        for qaa, qab, fault in (
+            (("missing",), ("one",), "not a whole word"),
+            (("one", "one"), ("one", "one"), "repeats"),
+            (("qaa", "one", "x", "y"), ("qab", "one", "x", "y"), "1 to 3"),
+            (("one",), ("qab", "one"), "different key words"),
+            ((None, "one"), ("one",), "different key words"),
+            ((None,), (None,), "1 to 3"),
+            (("one",), (), "1 to 3"),
+        ):
+            proj = self.keyed(qaa, qab)
+            with self.assertRaises(ContentError, msg=repr((qaa, qab))) as ctx:
+                content.validate(content.read(proj))
+            self.assertIn(fault, str(ctx.exception))
+
+    def test_a_language_that_marks_none_yet_is_drawn_plain_not_rejected(self):
+        proj = self.keyed()
+        fixture.edit(proj / "packs" / "qac" / "pages" / "p1.json", lambda d: d["sections"]["s1"]["concepts"]["c1"].pop("keys"))
+        content.validate(content.read(proj))
+
+    def test_a_key_is_a_whole_word_found_ignoring_case_and_not_overlapping_another(self):
+        from phrasebook import keys
+
+        self.assertEqual(keys.find("Glaw trwm a gwynt cryf", ["gwynt", "GLAW"]), [(0, 4, 1), (12, 17, 0)])
+        self.assertEqual(keys.find("Glaw trwm a gwynt cryf", [None, "gwynt"]), [(12, 17, 1)])
+        self.assertEqual(keys.find("heavy rain", ["rain", "heavy rain"]), [(6, 10, 0)])
+        self.assertEqual(keys.find("a high-pressure area", ["pressure"]), [(7, 15, 0)])
+        self.assertEqual(keys.find("rainbow", ["rain"]), [])
+
+
 class AboutPageTests(Scratch):
     @classmethod
     def setUpClass(cls):

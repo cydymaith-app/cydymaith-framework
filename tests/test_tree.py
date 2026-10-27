@@ -788,7 +788,7 @@ class SettingsPageTests(Scratch):
         look = self.group("h-look")
         self.assertIn("Accessibility and appearance", look.split("</summary>")[0])
         parts = re.findall(r'<section class="subsection" aria-labelledby="(h-[a-z]+)"><h3', look)
-        self.assertEqual(parts, ["h-appearance", "h-access", "h-colours"])
+        self.assertEqual(parts, ["h-appearance", "h-access", "h-colours", "h-keys"])
         self.assertIn("View mode", look)
         self.assertNotIn(">Appearance<", look, "the light and dark choice is called View mode")
         for name in ("appearance", "access", "palette"):

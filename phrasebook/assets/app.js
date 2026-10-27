@@ -1,7 +1,9 @@
 /* Phrasebook framework: remembers display preferences in this browser only.
    Preferences: light or dark appearance, a colour palette (and the palette last picked at each accessibility level),
-   a regional form per language, the language shown by the Cy|En toggles, and whether tiles and sections are put in order from
-   simple to advanced, the reverse, or left as written (order.js does the ordering; this only remembers the choice).
+   a regional form per language, the language shown by the Cy|En toggles, whether tiles and sections are put in order from
+   simple to advanced, the reverse, or left as written (order.js does the ordering; this only remembers the choice), and
+   how the key words of a row are marked: by colour (the default), by underline, or not at all.
+   Colour is not offered at the safe-colours and high-contrast levels, where colour alone is not a reliable cue.
    It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
@@ -22,9 +24,10 @@
   var DEFAULT_PALETTE = "default";
   var LEVELS = ["standard", "safe", "high"];  // the accessibility levels: standard, safe colours, high contrast
   var ORDERS = ["written", "simple", "advanced"];  // tiles and sections as written, simplest first, most advanced first
+  var KEYS = ["colour", "line", "off"];  // key words marked by colour, by underline, or not at all
 
   function empty() {
-    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, order: "written", picks: {}, varieties: {} };
+    return { v: VERSION, appearance: "system", palette: DEFAULT_PALETTE, order: "written", keys: "colour", picks: {}, varieties: {} };
   }
 
   // Keep only values we understand. Anything else in storage is ignored. Versions 1 (only varieties) and 2
@@ -34,6 +37,7 @@
     if (!raw || typeof raw !== "object" || [1, 2, 3, VERSION].indexOf(raw.v) === -1) return out;
     if (APPEARANCES.indexOf(raw.appearance) !== -1) out.appearance = raw.appearance;
     if (ORDERS.indexOf(raw.order) !== -1) out.order = raw.order;
+    if (KEYS.indexOf(raw.keys) !== -1) out.keys = raw.keys;
     if (typeof raw.palette === "string" && ID.test(raw.palette)) out.palette = raw.palette;
     if (typeof raw.lang === "string" && LANG.test(raw.lang)) out.lang = raw.lang;
     if (raw.picks && typeof raw.picks === "object") {
@@ -87,6 +91,15 @@
     }
   }
 
+  // Key words are marked by colour unless chosen otherwise, so "colour" sets no attribute.
+  function setKeys(value) {
+    if (value === "colour") {
+      root.removeAttribute("data-keys");
+    } else {
+      root.setAttribute("data-keys", value);
+    }
+  }
+
   // The default palette is the page's baseline and sets no attribute.
   function setPalette(value) {
     if (value === DEFAULT_PALETTE) {
@@ -109,6 +122,7 @@
   // Runs in the head, before the first paint, so there is no flash of the wrong theme or emphasis.
   setAppearance(prefs.appearance);
   setPalette(prefs.palette);
+  setKeys(prefs.keys);
   Object.keys(prefs.varieties).forEach(function (lang) {
     setVariety(lang, prefs.varieties[lang]);
   });
@@ -196,6 +210,24 @@
       note.hidden = count > 1;
     }
 
+    // A way of marking key words that suits the accessibility level: a choice a level does not offer is hidden, and one already
+    // chosen becomes the underline. Returns true if the choice changed.
+    var keyRadios = themes.filter(function (r) { return r.getAttribute("data-pref") === "keys"; });
+    function fitKeys(level) {
+      var changed = false;
+      keyRadios.forEach(function (r) {
+        var hide = (r.getAttribute("data-hide-at") || "").split(" ").indexOf(level) !== -1;
+        if (r.parentNode) r.parentNode.hidden = hide;
+        if (hide && prefs.keys === r.value) {
+          prefs.keys = "line";
+          setKeys("line");
+          keyRadios.forEach(function (k) { k.checked = k.value === "line"; });
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
     // A saved palette the page does not offer counts as the default.
     if (swatches.length && offered.indexOf(prefs.palette) === -1) {
       prefs.palette = offered.indexOf(DEFAULT_PALETTE) === -1 ? offered[0] : DEFAULT_PALETTE;
@@ -223,9 +255,10 @@
 
     themes.forEach(function (r) {
       var pref = r.getAttribute("data-pref");
-      if (pref !== "appearance" && pref !== "palette" && pref !== "access" && pref !== "order") return;
+      if (pref !== "appearance" && pref !== "palette" && pref !== "access" && pref !== "order" && pref !== "keys") return;
       if (pref === "appearance") r.checked = prefs.appearance === r.value;
       if (pref === "order") r.checked = prefs.order === r.value;
+      if (pref === "keys") r.checked = prefs.keys === r.value;
       r.addEventListener("change", function () {
         if (!r.checked) return;
         if (pref === "appearance") {
@@ -233,20 +266,27 @@
           setAppearance(r.value);
         } else if (pref === "order") {
           prefs.order = r.value;  // takes effect on the pages that follow; order.js reads it as each one loads
+        } else if (pref === "keys") {
+          prefs.keys = r.value;
+          setKeys(r.value);
         } else if (pref === "palette") {
           prefs.palette = r.value;
           if (levelOf(r.value)) prefs.picks[levelOf(r.value)] = r.value;
           setPalette(r.value);
+          fitKeys(levelOf(r.value));
         } else {
           // Choosing a level changes which schemes are listed, and returns to the one last picked there.
           prefs.palette = paletteFor(r.value);
           setPalette(prefs.palette);
           swatches.forEach(function (s) { s.checked = s.value === prefs.palette; });
           showNote(r.value);
+          fitKeys(r.value);
         }
         save(prefs);
       });
     });
+
+    if (fitKeys(levelOf(prefs.palette))) save(prefs);
 
     // Shown only now, so without the script there is never a control that does nothing.
     panel.hidden = false;

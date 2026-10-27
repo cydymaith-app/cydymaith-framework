@@ -15,7 +15,7 @@ import pathlib
 import re
 import unicodedata
 
-from . import colour, grading, icons, palettes
+from . import colour, grading, icons, keys as keywords, palettes
 from .figures import FIGURE_CONCEPTS, FIGURES
 from .content import LICENCES, STORAGE_NAME, TOPIC_PREFIX
 from .help import PAGE_PREFIX as HELP_PREFIX, Book
@@ -184,7 +184,17 @@ class Site:
                 shows[i].append(v["id"])
         return shows
 
-    def form_markup(self, code, form, show, cls):
+    def keyed(self, text, keys):
+        """A row's text, escaped, with its key words (see keys.py) wrapped to be drawn in their colour and underline."""
+        if not keys:
+            return e(text)
+        text, out, at = keywords.fold(text), [], 0
+        for start, end, n in keywords.find(text, keys):
+            out.append(f'{e(text[at:start])}<span class="key" data-k="{n + 1}">{e(text[start:end])}</span>')
+            at = end
+        return "".join(out) + e(text[at:])
+
+    def form_markup(self, code, form, show, cls, keys=None):
         names = {v["id"]: v for v in self.varieties(code)}
         tags = "".join(
             f'<abbr class="vtag" title="{e(names[v]["name"])}">{e(names[v]["short"])}</abbr>' for v in form["varieties"]
@@ -193,7 +203,7 @@ class Site:
         cls_attr = f' class="{cls}"' if cls else ""
         return (
             f'<span class="form" data-lang="{e(code)}" data-show="{" ".join(show)}">'
-            f'<span{cls_attr}{self.la(code)}>{e(form["text"])}</span>{tags}{note}</span>'
+            f'<span{cls_attr}{self.la(code)}>{self.keyed(form["text"], keys)}</span>{tags}{note}</span>'
         )
 
     def is_plain(self, forms):
@@ -340,6 +350,34 @@ class Site:
             f'<p class="hint colours-only" hidden>{self.both("colours_only")}</p>',
         )
 
+    KEY_STYLES = ("colour", "line", "off")  # marked by colour, by underline, or not at all
+
+    def has_keys(self):
+        """True when some concept marks key words, so the setting that colours them has something to do."""
+        return any(
+            "keys" in c
+            for pack in self.raw["packs"].values()
+            for page in pack["pages"].values()
+            for sec in page.get("sections", {}).values()
+            for c in sec.get("concepts", {}).values()
+        )
+
+    def keys_section(self):
+        """How key words are marked: by colour, by underline, or not at all. Colour is hidden at the safe and high-contrast levels
+        (app.js), where colour alone is not a reliable cue, and a choice of it becomes the underline. Offered only when some concept has key words, so it
+        is never a control that does nothing."""
+        radios = "".join(
+            f'<label><input type="radio" name="keys" value="{v}" data-pref="keys"{" checked" if v == "colour" else ""}'
+            f'{" data-hide-at=" + chr(34) + "safe high" + chr(34) if v == "colour" else ""}>'
+            f'<span class="seg-label">{self.both("keys_" + v)}</span></label>'
+            for v in self.KEY_STYLES
+        )
+        return self.subsection(
+            "h-keys",
+            self.both("keys_title") + self.help_icon("key-words"),
+            f'<p class="hint">{self.both("keys_hint")}</p><div class="seg" role="radiogroup" aria-labelledby="h-keys">{radios}</div>',
+        )
+
     def look_group(self):
         """Accessibility and appearance, one fold, open to begin with: the view mode (light, dark or the device's own), the accessibility
         level and the colour schemes. The last two appear only when the edition offers a choice."""
@@ -349,6 +387,8 @@ class Site:
             if len(levels) > 1:
                 parts += self.accessibility_section(levels, palettes.access_level(self.palettes[palettes.DEFAULT]))
             parts += self.colours_section()
+        if self.has_keys():
+            parts += self.keys_section()
         return self.fold(f'<h2 id="h-look">{self.both("group_look")}</h2>', parts, open_=True, card=True, labelled="h-look")
 
     def variety_fields(self):
@@ -663,14 +703,14 @@ class Site:
             )
             ff, ft = self.forms_of(cf), self.forms_of(ct)
             if self.is_plain(ff):
-                head = f'<th scope="row" class="l1"{self.la(frm)}>{e(ff[0]["text"])}</th>'
+                head = f'<th scope="row" class="l1"{self.la(frm)}>{self.keyed(ff[0]["text"], cf.get("keys"))}</th>'
             else:
-                forms = "".join(self.form_markup(frm, f, s, None) for f, s in zip(ff, self.show_sets(frm, ff)))
+                forms = "".join(self.form_markup(frm, f, s, None, cf.get("keys")) for f, s in zip(ff, self.show_sets(frm, ff)))
                 head = f'<th scope="row" class="l1"><span class="forms">{forms}</span></th>'
             if self.is_plain(ft):
-                cell = f'<span class="l2"{self.la(to)}>{e(ft[0]["text"])}</span>'
+                cell = f'<span class="l2"{self.la(to)}>{self.keyed(ft[0]["text"], ct.get("keys"))}</span>'
             else:
-                forms = "".join(self.form_markup(to, f, s, "l2") for f, s in zip(ft, self.show_sets(to, ft)))
+                forms = "".join(self.form_markup(to, f, s, "l2", ct.get("keys")) for f, s in zip(ft, self.show_sets(to, ft)))
                 cell = f'<span class="forms">{forms}</span>'
             rows.append(f'<tr id="{sid}.{cid}">{head}<td>{cell}{notes}</td></tr>')
             also = "".join(
@@ -1164,6 +1204,7 @@ class Site:
             ("access", many and len(self.palette_levels()) > 1),
             ("levels", self.has_levels()),
             ("related", any(page.get("related") for page in self.skel.values())),
+            ("keys", self.has_keys()),
             ("contact", bool(self.edition.get("contact"))),
         )
         return {name for name, on in found if on}

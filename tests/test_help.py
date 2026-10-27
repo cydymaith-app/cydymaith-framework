@@ -48,6 +48,7 @@ ANCHORS = [
     "accessibility",
     "colour-schemes",
     "order-setting",
+    "key-words",
     "reset-tile-layouts",
     "what-is-saved",
     "edit-order",
