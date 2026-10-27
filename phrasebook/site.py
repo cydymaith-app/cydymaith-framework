@@ -363,12 +363,12 @@ class Site:
         )
 
     def keys_section(self):
-        """How key words are marked: by colour, by underline, or not at all. Colour is hidden at the safe and high-contrast levels
-        (app.js), where colour alone is not a reliable cue, and a choice of it becomes the underline. Offered only when some concept has key words, so it
+        """How key words are marked: by colour, by underline, or not at all. Colour is hidden at the high-contrast level
+        (app.js), where the key colours are least distinct, and a choice of it becomes the underline. Offered only when some concept has key words, so it
         is never a control that does nothing."""
         radios = "".join(
             f'<label><input type="radio" name="keys" value="{v}" data-pref="keys"{" checked" if v == "colour" else ""}'
-            f'{" data-hide-at=" + chr(34) + "safe high" + chr(34) if v == "colour" else ""}>'
+            f'{" data-hide-at=" + chr(34) + "high" + chr(34) if v == "colour" else ""}>'
             f'<span class="seg-label">{self.both("keys_" + v)}</span></label>'
             for v in self.KEY_STYLES
         )
