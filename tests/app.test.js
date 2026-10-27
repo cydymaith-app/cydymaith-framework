@@ -28,7 +28,7 @@ function makeRadio(lang, value, pref, tier, hideAt) {
 }
 
 // readyState "loading" means the script runs in the head, as it does on the real pages.
-function run({ stored, storage, radios, langRadios, shareButtons, navigator, withPanel = true, readyState = "loading", site, key = KEY, defaultPalette } = {}) {
+function run({ stored, storage, radios, langRadios, shareButtons, navigator, withPanel = true, readyState = "loading", site, key = KEY, defaultPalette, contrastPalette, contrast } = {}) {
   const attrs = {};
   const data = Object.assign({}, stored === undefined ? {} : { [key]: stored });
   const localStorage = storage || {
@@ -44,7 +44,7 @@ function run({ stored, storage, radios, langRadios, shareButtons, navigator, wit
   const document = {
     readyState,
     documentElement: {
-      getAttribute: (k) => (k === "data-storage" && site !== undefined ? site : k === "data-default-palette" && defaultPalette !== undefined ? defaultPalette : null),
+      getAttribute: (k) => (k === "data-storage" && site !== undefined ? site : k === "data-default-palette" && defaultPalette !== undefined ? defaultPalette : k === "data-contrast-palette" && contrastPalette !== undefined ? contrastPalette : null),
       setAttribute: (k, v) => { attrs[k] = v; },
       removeAttribute: (k) => { delete attrs[k]; },
     },
@@ -52,7 +52,8 @@ function run({ stored, storage, radios, langRadios, shareButtons, navigator, wit
     getElementById: (id) => (id === "prefs" && withPanel ? panel : null),
   };
   if (langRadios || shareButtons) document.querySelectorAll = everything;
-  vm.runInNewContext(SOURCE, { document, window: { localStorage, navigator } });
+  const matchMedia = contrast === undefined ? undefined : (query) => ({ matches: contrast === true && query === "(prefers-contrast: more)" });
+  vm.runInNewContext(SOURCE, { document, window: { localStorage, navigator, matchMedia } });
   return {
     attrs, data, panel,
     domReady() { readyHandlers.forEach((fn) => fn()); },
@@ -385,6 +386,48 @@ test("a saved palette the page no longer offers falls back to the page's own def
 
 test("a default palette name that is not an identifier is ignored", () => {
   assert.deepEqual(run({ defaultPalette: "../x", stored: saved({}, { palette: "default" }) }).attrs, {});
+});
+
+test("a first-time visitor whose device asks for more contrast starts on the high-contrast palette", () => {
+  const page = run({ contrastPalette: "high-contrast", contrast: true });
+  assert.equal(page.attrs["data-palette"], "high-contrast");
+  assert.deepEqual(page.data, {}, "it is a starting point, not a saved choice");
+});
+
+test("the high-contrast start is ticked on the settings page, at the high level", () => {
+  const radios = [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "high-contrast", "palette", "high")];
+  const page = run({ contrastPalette: "high-contrast", contrast: true, radios });
+  page.domReady();
+  assert.deepEqual(radios.map((r) => r.checked), [false, true]);
+});
+
+test("nothing changes when the device does not ask for more contrast, or does not say", () => {
+  assert.deepEqual(run({ contrastPalette: "high-contrast", contrast: false }).attrs, {});
+  assert.deepEqual(run({ contrastPalette: "high-contrast" }).attrs, {}, "a browser with no matchMedia");
+});
+
+test("a page that offers no high-contrast palette has nothing to start them on", () => {
+  assert.deepEqual(run({ contrast: true }).attrs, {});
+});
+
+test("a visitor with a stored choice keeps it, whatever the device asks for", () => {
+  const page = run({ contrastPalette: "high-contrast", contrast: true, stored: saved({}, { palette: "default" }) });
+  assert.deepEqual(page.attrs, {}, "they chose the default palette and it is honoured");
+  assert.equal(run({ contrastPalette: "high-contrast", contrast: true, stored: saved({}, { palette: "red-green-safe" }) }).attrs["data-palette"], "red-green-safe");
+});
+
+test("a visitor who starts on high contrast can choose another palette and that is remembered", () => {
+  const radios = [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "high-contrast", "palette", "high")];
+  const page = run({ contrastPalette: "high-contrast", contrast: true, radios });
+  page.domReady();
+  radios[0].checked = true;
+  radios[0].fire("change");
+  assert.deepEqual(page.attrs, {});
+  assert.equal(JSON.parse(page.data[KEY]).palette, "default");
+});
+
+test("a palette name that is not an identifier is ignored for the contrast start", () => {
+  assert.deepEqual(run({ contrastPalette: "../x", contrast: true }).attrs, {});
 });
 
 test("choosing a palette updates the page, and the default removes the attribute", () => {

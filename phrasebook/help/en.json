@@ -205,7 +205,8 @@
     "colour-schemes": {
       "title": "Choosing a colour scheme",
       "body": [
-        "Each colour scheme is shown as a small picture of itself, drawn in its own colours as it would look in the current view mode. Choose one to use it straight away. A level with only one scheme says so."
+        "Each colour scheme is shown as a small picture of itself, drawn in its own colours as it would look in the current view mode. Choose one to use it straight away. A level with only one scheme says so.",
+        "If your device is set to ask for more contrast, the first time you open the app it starts on a high contrast scheme. Choose another at any time."
       ],
       "keys": "Tab to the schemes and use the arrow keys.",
       "touch": "Tap a scheme."

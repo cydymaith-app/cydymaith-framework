@@ -320,6 +320,11 @@ class Site:
         used = {palettes.access_level(self.palettes[pid]) for pid in self.palette_ids}
         return [level for level in palettes.ACCESS_LEVELS if level in used]
 
+    def contrast_palette(self):
+        """The palette a visitor who asks their device for more contrast starts on: the first offered at the high-contrast
+        level, or None when the edition offers none (then there is nothing to start them on)."""
+        return next((pid for pid in self.palette_ids if palettes.access_level(self.palettes[pid]) == "high"), None)
+
     def accessibility_section(self, levels, first):
         """Standard, safe colours or high contrast: chooses which colour schemes are listed. It changes no scheme."""
         radios = "".join(
@@ -1415,6 +1420,8 @@ class Site:
         storage = f' data-storage="{e(self.storage_name())}"'
         if self.default_palette != palettes.DEFAULT:
             storage += f' data-default-palette="{e(self.default_palette)}"'
+        if self.contrast_palette():
+            storage += f' data-contrast-palette="{e(self.contrast_palette())}"'
         if parent:
             storage += f' data-parent="{e(parent)}"'
         # nav.js moves between pages by sliding the two together, and carries the way it went in the address: #slide=none when

@@ -8,7 +8,8 @@
    It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
-   palette, and shows every regional form equally. */
+   palette, and shows every regional form equally. A first-time visitor whose device asks for more contrast starts on the
+   high-contrast palette. */
 (function () {
   "use strict";
 
@@ -120,7 +121,33 @@
     }
   }
 
+  // The palette to start on when the device asks for more contrast (data-contrast-palette on <html>), if the page offers one.
+  var CONTRAST_PALETTE = root.getAttribute("data-contrast-palette");
+  if (CONTRAST_PALETTE && !ID.test(CONTRAST_PALETTE)) CONTRAST_PALETTE = null;
+
+  // Nothing is stored yet: the first visit, or storage that is blocked or cleared.
+  function firstVisit() {
+    try {
+      return window.localStorage.getItem(KEY) === null;
+    } catch (err) {
+      return true;
+    }
+  }
+
+  function wantsContrast() {
+    try {
+      return !!(window.matchMedia && window.matchMedia("(prefers-contrast: more)").matches);
+    } catch (err) {
+      return false;
+    }
+  }
+
   var prefs = load();
+
+  // A first-time visitor whose device asks for more contrast starts on the high-contrast palette, so the first screen they
+  // see is one they can read. This is a starting point, not a saved choice: anything they pick in Settings replaces it, and it
+  // is never applied once they have stored a choice.
+  if (CONTRAST_PALETTE && firstVisit() && wantsContrast()) prefs.palette = CONTRAST_PALETTE;
 
   // Runs in the head, before the first paint, so there is no flash of the wrong theme or emphasis.
   setAppearance(prefs.appearance);

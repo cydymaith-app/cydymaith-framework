@@ -443,14 +443,14 @@ class LocalisedInterfaceTests(Scratch):
         proj = self.project(interface="qab")
         pages = self.built(proj)
         page = pages["index.html"]
-        self.assertIn('<html lang="qab" data-storage="demo-book">', page)
+        self.assertIn('<html lang="qab" data-storage="demo-book"', page)
         self.assertIn('<span lang="en">Skip to content</span>', page)
         self.assertNotIn('<span lang="qab">Skip', page)
 
     def test_a_right_to_left_interface_sets_the_document_direction_and_marks_english(self):
         proj = self.project(interface="qac")
         page = self.built(proj)["index.html"]
-        self.assertIn('<html lang="qac" dir="rtl" data-storage="demo-book">', page)
+        self.assertIn('<html lang="qac" dir="rtl" data-storage="demo-book"', page)
         self.assertIn('<span lang="en" dir="ltr">Skip to content</span>', page)
 
     def test_the_pair_arrow_is_part_of_the_message_not_the_code(self):
@@ -1350,6 +1350,28 @@ class PaletteSiteTests(Scratch):
         manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["theme_color"], "#005a9c")
 
+    def test_the_page_names_the_palette_for_a_visitor_who_asks_for_more_contrast(self):
+        page = self.built(self.project())["settings.html"]
+        self.assertIn('data-contrast-palette="high-contrast"', page)
+
+    def test_the_first_high_contrast_palette_the_edition_offers_is_the_one(self):
+        proj = self.project()
+        self.add_palette(
+            proj,
+            "calm",
+            names={"qaa": "Calm"},
+            level="AAA",
+            light=high_contrast_palette()["light"],
+            dark=high_contrast_palette()["dark"],
+        )
+        self.assertIn('data-contrast-palette="calm"', self.built(proj)["settings.html"])
+
+    def test_an_edition_with_no_high_contrast_palette_names_none(self):
+        proj = self.project()
+        self.edit_edition(proj, palettes=["default", "blue-white-red"])
+        for page in self.built(proj).values():
+            self.assertNotIn("data-contrast-palette", page)
+
     def test_a_site_whose_default_is_the_neutral_palette_says_nothing_about_it(self):
         self.assertNotIn("data-default-palette", self.built(self.project())["settings.html"])
 
@@ -1415,6 +1437,10 @@ class PaletteSiteTests(Scratch):
 
 def default_palette():
     return json.loads((ENGINE / "palettes" / "default.json").read_text(encoding="utf-8"))
+
+
+def high_contrast_palette():
+    return json.loads((ENGINE / "palettes" / "high-contrast.json").read_text(encoding="utf-8"))
 
 
 def default_palette_hex(variant, role):
