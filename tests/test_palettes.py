@@ -258,6 +258,12 @@ class KeyColourTests(unittest.TestCase):
             palettes.validate({"default": palette}, LANG_CODE)
         self.assertIn("key-3", str(ctx.exception))
 
+    def test_a_high_contrast_palette_underlines_key_words_and_the_others_do_not(self):
+        css = palettes.css(palettes.load(), ["default", "high-contrast", "red-green-safe"])
+        self.assertIn(':root[data-palette="high-contrast"]:not([data-keys="off"]) .key{color:inherit;', css)
+        self.assertIn('.key[data-k="3"]{text-decoration-style:wavy}', css)
+        self.assertNotIn('data-palette="red-green-safe"]:not([data-keys="off"]) .key', css)
+
     def test_the_css_carries_the_key_colours(self):
         css = palettes.css(palettes.load(), ["default"])
         for role in palettes.KEYS_OF_WORDS:
@@ -307,6 +313,8 @@ class PaletteCssTests(unittest.TestCase):
         for line in self.css.splitlines():
             if ".preview" in line:
                 self.assertNotRegex(line, r"(?<!prefers-)color-scheme:")  # a preview paints a picture, not the page
+            elif ".key" in line:  # the key-word rules for a high-contrast palette are not colour schemes
+                continue
             elif line.startswith(":root") and "[data-theme" not in line:
                 self.assertTrue(line.endswith("color-scheme:light}"), line)
             elif "[data-theme=" in line:

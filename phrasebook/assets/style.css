@@ -374,7 +374,7 @@ html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75
 .seg label{position:relative;flex:1 1 0;min-width:0}
 .seg-label{display:grid;place-items:center;min-height:2.75rem;padding:.4rem .6rem;border:1px solid var(--rule-strong);background:var(--surface);color:var(--muted);font:600 .9rem/1.2 var(--font-ui);text-align:center}
 .seg label + label .seg-label{margin-inline-start:-1px}
-.seg label:first-child .seg-label{border-start-start-radius:8px;border-end-start-radius:8px}
+.seg label:first-child .seg-label,.seg label[hidden] + label .seg-label{border-start-start-radius:8px;border-end-start-radius:8px}
 .seg label:last-child .seg-label{border-start-end-radius:8px;border-end-end-radius:8px}
 .swatches{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem}
 .swatch{position:relative;display:flex;flex-direction:column;gap:.4rem;padding:.55rem;border:1px solid var(--rule-strong);border-radius:12px;background:var(--bg)}
@@ -440,6 +440,7 @@ html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75
 #prefs .hint{min-height:2lh}
 #prefs .mode-box{height:6.25rem;min-height:0;justify-content:center}
 #prefs .seg label{display:flex}
+#prefs .seg label[hidden]{display:none}
 #prefs .seg-label{flex:1;min-height:3.5rem;padding-block:.3rem}  /* at least 3.5rem, more where a label wraps, and the segments stay one height */
 /* A section a link lands on (a related topic opened at its section) sits just under the title bar, not behind it. */
 section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}

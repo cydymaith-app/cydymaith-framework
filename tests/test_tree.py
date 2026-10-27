@@ -656,6 +656,11 @@ class MobileFirstTests(unittest.TestCase):
         self.assertIn(".terms tr:target{background:var(--bg)}", self.CSS)
         self.assertIn(".terms tr{scroll-margin-top:", self.CSS)
 
+    def test_a_hidden_choice_in_a_segmented_control_really_disappears(self):
+        # `#prefs .seg label{display:flex}` would otherwise beat the hidden attribute, and a hidden choice (Colour at high contrast) would show
+        self.assertIn("#prefs .seg label{display:flex}", self.CSS)
+        self.assertIn("#prefs .seg label[hidden]{display:none}", self.CSS)
+
     def test_the_slide_comes_from_the_other_side_in_right_to_left(self):
         self.assertIn("@keyframes slide-in-rtl{from{transform:translateX(-100%)}", self.CSS)
         self.assertIn(':root[dir="rtl"].slide-in main{animation-name:slide-in-rtl}', self.CSS)
