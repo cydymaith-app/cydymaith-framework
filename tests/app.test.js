@@ -286,7 +286,7 @@ test("the order is kept when the other choices change, and an earlier version's 
 });
 
 const keyRadios = () => [
-  makeRadio(null, "colour", "keys", null, "safe high"), makeRadio(null, "line", "keys"), makeRadio(null, "off", "keys"),
+  makeRadio(null, "colour", "keys", null, "high"), makeRadio(null, "line", "keys"), makeRadio(null, "off", "keys"),
 ];
 
 test("key words are marked by colour until another way is chosen, and the choice is remembered", () => {
@@ -316,15 +316,23 @@ test("a saved key-word choice that is not one of the three counts as colour", ()
   }
 });
 
-test("colour is hidden at the safe and high-contrast levels, and a choice of it becomes the underline", () => {
+test("colour is hidden at the high-contrast level only, and a choice of it becomes the underline", () => {
   const keys = keyRadios();
-  const swatches = [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "red-green-safe", "palette", "safe")];
+  const swatches = [
+    makeRadio(null, "default", "palette", "standard"),
+    makeRadio(null, "red-green-safe", "palette", "safe"),
+    makeRadio(null, "high-contrast", "palette", "high"),
+  ];
   const page = run({ radios: [...swatches, ...keys] });
   page.domReady();
   assert.equal(keys[0].parentNode.hidden, false, "shown with a standard palette");
   swatches[1].checked = true;
   swatches[1].fire("change");
-  assert.equal(keys[0].parentNode.hidden, true, "hidden once a safe palette is chosen");
+  assert.equal(keys[0].parentNode.hidden, false, "and with a safe palette, whose key colours are checked for colour blindness");
+  assert.equal(page.attrs["data-keys"], undefined, "a colour choice is kept there");
+  swatches[2].checked = true;
+  swatches[2].fire("change");
+  assert.equal(keys[0].parentNode.hidden, true, "hidden once a high-contrast palette is chosen");
   assert.equal(page.attrs["data-keys"], "line", "colour was chosen, so it becomes the underline");
   assert.equal(JSON.parse(page.data[KEY]).keys, "line");
   assert.deepEqual(keys.map((r) => r.checked), [false, true, false]);
@@ -332,9 +340,9 @@ test("colour is hidden at the safe and high-contrast levels, and a choice of it 
   swatches[0].fire("change");
   assert.equal(keys[0].parentNode.hidden, false, "offered again at the standard level");
   assert.equal(JSON.parse(page.data[KEY]).keys, "line", "and the choice is not changed back for the person");
-  const safe = run({ stored: saved({}, { palette: "red-green-safe" }), radios: [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "red-green-safe", "palette", "safe"), ...keyRadios()] });
-  safe.domReady();
-  assert.equal(JSON.parse(safe.data[KEY]).keys, "line", "a saved colour choice at a safe level is corrected and kept");
+  const high = run({ stored: saved({}, { palette: "high-contrast" }), radios: [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "high-contrast", "palette", "high"), ...keyRadios()] });
+  high.domReady();
+  assert.equal(JSON.parse(high.data[KEY]).keys, "line", "a saved colour choice at the high-contrast level is corrected and kept");
 });
 
 test("choosing an appearance updates the page and is remembered", () => {

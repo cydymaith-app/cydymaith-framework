@@ -3,7 +3,8 @@
    a regional form per language, the language shown by the Cy|En toggles, whether tiles and sections are put in order from
    simple to advanced, the reverse, or left as written (order.js does the ordering; this only remembers the choice), and
    how the key words of a row are marked: by colour (the default), by underline, or not at all.
-   Colour is not offered at the safe-colours and high-contrast levels, where colour alone is not a reliable cue.
+   Colour is not offered at the high-contrast level, where the key colours are least distinct. The safe-colours level keeps it:
+   its palettes' key colours are checked under simulated colour blindness.
    It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default

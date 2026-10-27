@@ -49,7 +49,7 @@
   "order_simple": "Simplest first",
   "order_advanced": "Most advanced first",
   "keys_title": "Key words",
-  "keys_hint": "Mark the words that match across the two languages, by colour or by underline. Colour is not offered with Safe colours or High contrast.",
+  "keys_hint": "Mark the words that match across the two languages, by colour or by underline. Colour is not offered with High contrast.",
   "keys_colour": "Colour",
   "keys_line": "Underline",
   "keys_off": "Off",
