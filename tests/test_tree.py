@@ -1240,6 +1240,9 @@ class OnePageGroupTests(Scratch):
         cls.pages = cls.built(cls.proj)
         cls.page = cls.pages["group-g1.html"]
 
+    def test_a_figure_section_keeps_its_address_inside_an_accordion_too(self):
+        self.assertIn('<section id="dirs" class="figure">', self.page)
+
     def test_the_group_page_holds_each_topic_as_a_shut_accordion_named_as_its_tile(self):
         folds = re.findall(r'<details class="fold topic"[^>]*>', self.page)
         self.assertEqual(len(folds), 2)

@@ -959,10 +959,14 @@ class Site:
             lcode, lede = self.prose(lambda c: self.pack_page(c, slug).get("lede"))
             fig = self.skel[slug].get("figure")
             figure = FIGURES[fig](self, slug) if fig else ""
+            shown = self.shown_sections(slug, figure)
+            for hidden in self.sections(slug):
+                if hidden not in shown:  # a section the figure stands in for keeps its address, here as on a page of its own
+                    figure = f'<section id="{hidden["id"]}" class="figure">{figure}</section>'
             body = (
                 (f'<p class="lede"{self.la(lcode)}>{e(lede)}</p>' if lede else "")
                 + figure
-                + "".join(self.render_section(slug, s, nested=True) for s in self.shown_sections(slug, figure))
+                + "".join(self.render_section(slug, s, nested=True) for s in shown)
                 + self.related_tiles(slug, ident=f"related-{slug}")
                 + self.more_note(slug)
             )
