@@ -49,7 +49,7 @@ def make_project(root, interface="qaa", ui_extra=None):
             "dir": direction,
             "names": {interface: name},
             "ui": {"endonym": ENDONYMS[code], **ui_extra.get(code, {})},
-            "groups": {"g1": f"{code} group"},
+            "groups": {"g1": f"{code} group", "g2": f"{code} second group"},
             "sources": [
                 {"id": "own", "title": "Test author", "licence": "own"},
                 {"id": "pd", "title": "Old book", "licence": "public-domain"},

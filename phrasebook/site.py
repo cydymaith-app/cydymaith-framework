@@ -1003,7 +1003,7 @@ class Site:
         """A one-page group: each of its topics is an accordion, shut until opened, whose summary is the topic's tile (its icon
         and its name in both languages) and whose body is the topic as its own page would show it. The accordions carry the
         topics' levels and are what Settings' order puts in order, here on the page; the sections inside keep their written
-        order. The pages the group links to follow as a row of tiles."""
+        order. The topics' related pages and the group's links follow as one row of tiles at the bottom of the page."""
         frm, to = self.frm, self.to
         folds = []
         for slug in group["pages"]:
@@ -1022,14 +1022,23 @@ class Site:
                 (f'<p class="lede"{self.la(lcode)}>{e(lede)}</p>' if lede else "")
                 + figure
                 + "".join(self.render_section(slug, s, nested=True) for s in shown)
-                + self.related_tiles(slug, ident=f"related-{slug}")
                 + self.more_note(slug)
             )
             level = self.levels["pages"].get(slug)
             graded = f' data-level="{level}"' if level else ""
             folds.append(self.fold(summary, body, labelled=f"h-{ident}", attrs=f' id="{ident}"{graded}', cls="topic"))
-        links = self.related_tiles(None, entries=group["links"]) if group["links"] else ""
+        related = self.group_related(group)
+        links = self.related_tiles(None, entries=related) if related else ""
         return f'<div class="topics">{"".join(folds)}</div>{self.ORDER_HOOK}{links}'
+
+    def group_related(self, group):
+        """The related topics of a one-page group, for one row at the bottom of the whole page: what each of its topics names, then
+        the group's own links, each once, leaving out a topic of the group itself (an accordion away, not a tile)."""
+        entries = []
+        for slug in group["pages"]:
+            entries += self.skel[slug].get("related", [])
+        entries += group["links"]
+        return [x for i, x in enumerate(entries) if x not in entries[:i] and x.partition("#")[0] not in group["pages"]]
 
     def licence_html(self, key):
         """A licence by its proper name (linked when it has a page), or in words from the interface messages."""

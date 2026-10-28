@@ -1338,3 +1338,38 @@ class OnePageGroupTests(Scratch):
                 content.validate(content.read(proj))
             self.assertIn(fragment, str(caught.exception))
             self.assertIn("group 'g1'", str(caught.exception))
+
+
+class OnePageRelatedTests(Scratch):
+    """On a one-page group the related topics of every topic are one row at the bottom of the whole page, each once."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.proj = cls.project()
+        fixture.edit(
+            cls.proj / "structure.json",
+            lambda d: d.update(
+                groups=[
+                    {"id": "g1", "pages": ["p1"], "layout": "one-page", "links": ["points"]},
+                    {"id": "g2", "pages": ["points"]},
+                ]
+            ),
+        )
+        fixture.edit(cls.proj / "pages" / "p1.json", lambda d: d.update(related=["points"]))
+        cls.page = cls.built(cls.proj)["group-g1.html"]
+
+    def test_there_is_one_row_and_it_is_after_every_accordion(self):
+        self.assertEqual(self.page.count('<section class="related"'), 1)
+        self.assertLess(self.page.rindex("</details>"), self.page.index('<section class="related"'))
+
+    def test_no_row_is_inside_a_topic(self):
+        body = self.page[self.page.index('id="topic-p1"') : self.page.index('<section class="related"')]
+        self.assertNotIn('class="related"', body)
+
+    def test_a_page_named_by_a_topic_and_by_the_group_is_one_tile_and_no_topic_of_the_group_is_one(self):
+        row = self.page[self.page.index('<section class="related"') :]
+        row = row[: row.index("</section>")]
+        self.assertEqual(row.count('href="points.html'), 1)
+        self.assertNotIn("p1.html", row)
+        self.assertNotIn("group-g1.html", row)
