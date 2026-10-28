@@ -344,7 +344,7 @@ class Site:
         cards = "".join(
             f'<label class="swatch" data-tier="{palettes.access_level(self.palettes[pid])}">'
             f'<input type="radio" name="palette" value="{pid}" data-pref="palette"{" checked" if pid == self.default_palette else ""}'
-            f' data-tier="{palettes.access_level(self.palettes[pid])}">'
+            f' data-tier="{palettes.access_level(self.palettes[pid])}"{" data-keys-line" if palettes.keys_by_line(self.palettes[pid]) else ""}>'
             f'<span class="preview" data-palette="{pid}" aria-hidden="true"><i class="pv-bar"></i><i class="pv-tile"><b></b></i>'
             f'<i class="pv-card"><b></b><b></b></i><i class="pv-dot"></i></span>'
             f'<span class="swatch-name">{self.both_palette(pid)}</span></label>'
@@ -372,7 +372,8 @@ class Site:
 
     def keys_section(self):
         """How key words are marked: by colour, by underline, or not at all. Colour is hidden at the high-contrast level
-        (app.js), where the key colours are least distinct, and a choice of it becomes the underline. Offered only when some concept has key words, so it
+        and with a palette for no colour vision (app.js, palettes.keys_by_line), where the key colours are least distinct, and a
+        choice of it becomes the underline. Offered only when some concept has key words, so it
         is never a control that does nothing."""
         radios = "".join(
             f'<label><input type="radio" name="keys" value="{v}" data-pref="keys"{" checked" if v == "colour" else ""}'

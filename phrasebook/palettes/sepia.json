@@ -1,0 +1,38 @@
+{
+  "notes": "Warm and low in glare, for reading for longer. Light is paper rather than white: a warm off-white background (L 0.94, hue 80) and a darker card, with dark brown ink rather than black (L 0.27), so the contrast is well over AA without the glare of black on white. Dark is a warm near-black with dimmed cream text (L 0.86) rather than white. The accent is a rust (hue 45) in light and an amber (hue 70) in dark. The key-word colours are a blue, a green and a plum, muted to suit the paper, and found by trial against the build's checks: the level's text contrast on the background and the card, and at least 0.12 apart from each other and from the ink in OKLab. The palette makes no colour-vision promise. Written for the framework, 2026-10-28.",
+  "level": "AA",
+  "light": {
+    "bg": "oklch(0.940 0.025 80)",
+    "surface": "oklch(0.915 0.028 80)",
+    "ink": "oklch(0.270 0.030 60)",
+    "muted": "oklch(0.470 0.030 60)",
+    "rule": "oklch(0.860 0.025 80)",
+    "rule-strong": "oklch(0.680 0.025 70)",
+    "accent": "oklch(0.450 0.120 45)",
+    "star": "oklch(0.880 0.060 80)",
+    "tile": "oklch(0.870 0.040 70)",
+    "on-tile": "oklch(0.270 0.030 60)",
+    "header": "oklch(0.940 0.025 80)",
+    "on-header": "oklch(0.270 0.030 60)",
+    "key-1": "oklch(0.430 0.100 250)",
+    "key-2": "oklch(0.470 0.100 150)",
+    "key-3": "oklch(0.470 0.120 340)"
+  },
+  "dark": {
+    "bg": "oklch(0.170 0.015 70)",
+    "surface": "oklch(0.210 0.018 70)",
+    "ink": "oklch(0.860 0.030 80)",
+    "muted": "oklch(0.680 0.025 75)",
+    "rule": "oklch(0.300 0.020 70)",
+    "rule-strong": "oklch(0.460 0.020 70)",
+    "accent": "oklch(0.760 0.110 70)",
+    "star": "oklch(0.320 0.050 80)",
+    "tile": "oklch(0.320 0.040 60)",
+    "on-tile": "oklch(0.860 0.030 80)",
+    "header": "oklch(0.170 0.015 70)",
+    "on-header": "oklch(0.860 0.030 80)",
+    "key-1": "oklch(0.740 0.090 240)",
+    "key-2": "oklch(0.760 0.100 150)",
+    "key-3": "oklch(0.730 0.110 340)"
+  }
+}

@@ -61,8 +61,10 @@ ENGINE_ORDER = (
     "green-white-orange",
     "red-yellow",
     "black-red-gold",
+    "sepia",
     "red-green-safe",
     "blue-yellow-safe",
+    "monochrome",
     "high-contrast",
 )
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -237,6 +239,13 @@ def access_level(palette):
     return "safe" if palette.get("colour_vision") else "standard"
 
 
+def keys_by_line(palette):
+    """Whether a palette marks key words by underline only, never by colour: at the high-contrast level, where the key colours
+    are least distinct, and in a palette that promises to work with no colour vision ("achromat"), where they differ only in
+    lightness. The build's check passes those greys, but in use the darkest key is hard to tell from the text."""
+    return access_level(palette) == "high" or "achromat" in palette.get("colour_vision", [])
+
+
 def tokens(colours, prefix="--"):
     return ";".join(f"{prefix}{role}:{colour.rgb_to_hex(colours[role])}" for role in ROLES)
 
@@ -259,10 +268,10 @@ def css(palettes, ids, baseline=DEFAULT):
             f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{tokens(resolved["dark"])};color-scheme:dark}}}}'
         )
         out.append(f':root{mark}[data-theme="dark"]{{{tokens(resolved["dark"])};color-scheme:dark}}')
-    # At the high-contrast level the key words are underlined, never coloured, whatever was chosen before the palette changed
-    # (the settings page hides Colour there and corrects the choice, but only when it is open).
+    # Where key words are drawn by line (keys_by_line) they are underlined, never coloured, whatever was chosen before the
+    # palette changed (the settings page hides Colour there and corrects the choice, but only when it is open).
     for pid in ids:
-        if access_level(palettes[pid]) == "high":
+        if keys_by_line(palettes[pid]):
             mark = "" if pid == baseline else f'[data-palette="{pid}"]'
             key = f':root{mark}:not([data-keys="off"]) .key'
             out.append(

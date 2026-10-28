@@ -1,0 +1,44 @@
+{
+  "notes": "Greys only, for achromatopsia (no colour vision), and for anyone who wants no colour. Every role is a grey with chroma 0, so the palette looks the same to everyone, and it promises all four kinds of colour vision the build simulates. With no hue to tell them apart, the accent and the three key-word colours differ from the text and from each other by lightness alone: in light the ink is near black (L 0.14) and the keys step up by 0.125 (0.265, 0.39, 0.515), the lightest still at 4.5:1 on the card; in dark the ink is near white (L 0.97) and the keys step down by 0.125 (0.845, 0.72, 0.595). The accent sits between the ink and the muted text, at least 0.12 from both. The dark variant's background is a deep grey rather than black, since many people with achromatopsia are sensitive to glare. Written for the framework, 2026-10-28.",
+  "level": "AA",
+  "colour_vision": [
+    "protan",
+    "deutan",
+    "tritan",
+    "achromat"
+  ],
+  "light": {
+    "bg": "oklch(0.975 0 0)",
+    "surface": "oklch(0.950 0 0)",
+    "ink": "oklch(0.140 0 0)",
+    "muted": "oklch(0.470 0 0)",
+    "rule": "oklch(0.880 0 0)",
+    "rule-strong": "oklch(0.700 0 0)",
+    "accent": "oklch(0.330 0 0)",
+    "star": "oklch(0.900 0 0)",
+    "tile": "oklch(0.880 0 0)",
+    "on-tile": "oklch(0.140 0 0)",
+    "header": "oklch(0.975 0 0)",
+    "on-header": "oklch(0.140 0 0)",
+    "key-1": "oklch(0.265 0 0)",
+    "key-2": "oklch(0.390 0 0)",
+    "key-3": "oklch(0.515 0 0)"
+  },
+  "dark": {
+    "bg": "oklch(0.130 0 0)",
+    "surface": "oklch(0.170 0 0)",
+    "ink": "oklch(0.970 0 0)",
+    "muted": "oklch(0.660 0 0)",
+    "rule": "oklch(0.280 0 0)",
+    "rule-strong": "oklch(0.450 0 0)",
+    "accent": "oklch(0.820 0 0)",
+    "star": "oklch(0.300 0 0)",
+    "tile": "oklch(0.320 0 0)",
+    "on-tile": "oklch(0.970 0 0)",
+    "header": "oklch(0.130 0 0)",
+    "on-header": "oklch(0.970 0 0)",
+    "key-1": "oklch(0.845 0 0)",
+    "key-2": "oklch(0.720 0 0)",
+    "key-3": "oklch(0.595 0 0)"
+  }
+}

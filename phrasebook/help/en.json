@@ -196,7 +196,7 @@
     "accessibility": {
       "title": "Easier-to-see colour schemes",
       "body": [
-        "Accessibility chooses which colour schemes are offered below it. Standard shows the usual schemes. Safe colours shows schemes that stay easy to tell apart with colour-blind vision. High contrast shows schemes with stronger text and borders.",
+        "Accessibility chooses which colour schemes are offered below it. Standard shows the usual schemes. Safe colours shows schemes that stay easy to tell apart with colour-blind vision, and Monochrome, in greys only, for no colour vision at all. High contrast shows schemes with stronger text and borders.",
         "Choosing a level switches to the scheme you last picked at that level, or the first it lists."
       ],
       "keys": "Tab to the choices and use the arrow keys.",
@@ -222,7 +222,7 @@
     "key-words": {
       "title": "Colouring the key words",
       "body": [
-        "Key words marks the main words of a row, and the word that matches each one in the other language, in one of two ways. Colour gives a pair the same colour, and follows the colour scheme you chose. Underline gives a pair the same line: solid, dotted or wavy, so you can match words without relying on colour. Safe colours keeps both, with colours chosen to stay apart for colour-blind vision. With High contrast only Underline is offered, and the underline is used whenever your device overrides colours. Turn it off if you no longer need it."
+        "Key words marks the main words of a row, and the word that matches each one in the other language, in one of two ways. Colour gives a pair the same colour, and follows the colour scheme you chose. Underline gives a pair the same line: solid, dotted or wavy, so you can match words without relying on colour. Safe colours keeps both, with colours chosen to stay apart for colour-blind vision. With High contrast or Monochrome only Underline is offered, and the underline is used whenever your device overrides colours. Turn it off if you no longer need it."
       ],
       "keys": "Tab to the choices and use the arrow keys.",
       "touch": "Tap a choice."

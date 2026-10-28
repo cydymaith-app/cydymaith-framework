@@ -138,10 +138,13 @@ DEFICIENCIES = {
     "protan": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216), (-0.003882, -0.048116, 1.051998)),
     "deutan": ((0.367322, 0.860646, -0.227968), (0.280085, 0.672501, 0.047413), (-0.011820, 0.042940, 0.968881)),
     "tritan": ((1.255528, -0.076749, -0.178779), (-0.078411, 0.930809, 0.147602), (0.004733, 0.691367, 0.303900)),
+    # Achromatopsia: no colour at all, only lightness. Each colour becomes the grey of the same luminance (Rec. 709 weights,
+    # as in luminance() above), so contrast is kept and only differences of lightness remain.
+    "achromat": ((0.2126, 0.7152, 0.0722),) * 3,
 }
 
 
 def simulate(rgb, kind):
-    """How an sRGB colour looks to someone with complete protanopia, deuteranopia or tritanopia."""
+    """How an sRGB colour looks to someone with complete protanopia, deuteranopia, tritanopia or achromatopsia."""
     linear = [to_linear(c) for c in rgb]
     return tuple(from_linear(sum(m * c for m, c in zip(row, linear))) for row in DEFICIENCIES[kind])

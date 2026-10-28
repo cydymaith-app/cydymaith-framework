@@ -1249,8 +1249,10 @@ class PaletteSiteTests(Scratch):
             ("default", "standard"),
             ("blue-white-red", "standard"),
             ("black-red-gold", "standard"),
+            ("sepia", "standard"),
             ("red-green-safe", "safe"),
             ("blue-yellow-safe", "safe"),
+            ("monochrome", "safe"),
             ("high-contrast", "high"),
         ):
             at = page.index(f'name="palette" value="{pid}"')

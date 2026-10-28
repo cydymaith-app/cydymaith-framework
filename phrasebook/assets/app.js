@@ -3,8 +3,9 @@
    a regional form per language, the language shown by the Cy|En toggles, whether tiles and sections are put in order from
    simple to advanced, the reverse, or left as written (order.js does the ordering; this only remembers the choice), and
    how the key words of a row are marked: by colour (the default), by underline, or not at all.
-   Colour is not offered at the high-contrast level, where the key colours are least distinct. The safe-colours level keeps it:
-   its palettes' key colours are checked under simulated colour blindness.
+   Colour is not offered at the high-contrast level, where the key colours are least distinct, nor with a palette for no colour
+   vision, where they differ only in lightness (data-keys-line on its swatch). The other safe palettes keep it: their key
+   colours are checked under simulated colour blindness.
    It also reveals the Share button.
    Storage is localStorage on this device. There are no cookies, no network requests and no analytics.
    The site works without this script: it then follows the device's light or dark setting, uses the default
@@ -240,13 +241,16 @@
       note.hidden = count > 1;
     }
 
-    // A way of marking key words that suits the accessibility level: a choice a level does not offer is hidden, and one already
-    // chosen becomes the underline. Returns true if the choice changed.
+    // A way of marking key words that suits the palette: a choice its level does not offer is hidden, and so is Colour where the
+    // palette marks key words by line only; a choice already made there becomes the underline. Returns true if it changed.
     var keyRadios = themes.filter(function (r) { return r.getAttribute("data-pref") === "keys"; });
-    function fitKeys(level) {
+    function fitKeys(palette) {
+      var level = levelOf(palette);
+      var swatch = swatches.filter(function (s) { return s.value === palette; })[0];
+      var lineOnly = !!swatch && swatch.getAttribute("data-keys-line") !== null;
       var changed = false;
       keyRadios.forEach(function (r) {
-        var hide = (r.getAttribute("data-hide-at") || "").split(" ").indexOf(level) !== -1;
+        var hide = (r.getAttribute("data-hide-at") || "").split(" ").indexOf(level) !== -1 || (lineOnly && r.value === "colour");
         if (r.parentNode) r.parentNode.hidden = hide;
         if (hide && prefs.keys === r.value) {
           prefs.keys = "line";
@@ -303,20 +307,20 @@
           prefs.palette = r.value;
           if (levelOf(r.value)) prefs.picks[levelOf(r.value)] = r.value;
           setPalette(r.value);
-          fitKeys(levelOf(r.value));
+          fitKeys(r.value);
         } else {
           // Choosing a level changes which schemes are listed, and returns to the one last picked there.
           prefs.palette = paletteFor(r.value);
           setPalette(prefs.palette);
           swatches.forEach(function (s) { s.checked = s.value === prefs.palette; });
           showNote(r.value);
-          fitKeys(r.value);
+          fitKeys(prefs.palette);
         }
         save(prefs);
       });
     });
 
-    if (fitKeys(levelOf(prefs.palette))) save(prefs);
+    if (fitKeys(prefs.palette)) save(prefs);
 
     // Shown only now, so without the script there is never a control that does nothing.
     panel.hidden = false;

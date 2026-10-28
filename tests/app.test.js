@@ -12,7 +12,7 @@ const KEY = "phrasebook:prefs";  // the default, used when the page names no sto
 
 // A regional-form radio: makeRadio("cy", "north"). A theme radio: makeRadio(null, "dark", "appearance").
 // A palette swatch also names its accessibility level: makeRadio(null, "red-green-safe", "palette", "safe").
-function makeRadio(lang, value, pref, tier, hideAt) {
+function makeRadio(lang, value, pref, tier, hideAt, keysLine) {
   const listeners = {};
   return {
     value,
@@ -21,7 +21,7 @@ function makeRadio(lang, value, pref, tier, hideAt) {
     tier,
     checked: false,
     parentNode: { hidden: false },
-    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : name === "data-tier" ? tier || null : name === "data-hide-at" ? hideAt || null : null),
+    getAttribute: (name) => (name === "data-variety-lang" ? lang : name === "data-pref" ? pref : name === "data-tier" ? tier || null : name === "data-hide-at" ? hideAt || null : name === "data-keys-line" && keysLine ? "" : null),
     addEventListener: (type, fn) => { listeners[type] = fn; },
     fire(type) { listeners[type](); },
   };
@@ -344,6 +344,24 @@ test("colour is hidden at the high-contrast level only, and a choice of it becom
   const high = run({ stored: saved({}, { palette: "high-contrast" }), radios: [makeRadio(null, "default", "palette", "standard"), makeRadio(null, "high-contrast", "palette", "high"), ...keyRadios()] });
   high.domReady();
   assert.equal(JSON.parse(high.data[KEY]).keys, "line", "a saved colour choice at the high-contrast level is corrected and kept");
+});
+
+test("colour is hidden with a palette for no colour vision, though its level keeps it for the others", () => {
+  const keys = keyRadios();
+  const swatches = [
+    makeRadio(null, "red-green-safe", "palette", "safe"),
+    makeRadio(null, "monochrome", "palette", "safe", null, true),
+  ];
+  const page = run({ radios: [...swatches, ...keys] });
+  page.domReady();
+  assert.equal(keys[0].parentNode.hidden, false, "shown with a colour-blind safe palette");
+  swatches[1].checked = true;
+  swatches[1].fire("change");
+  assert.equal(keys[0].parentNode.hidden, true, "hidden once the greys-only palette is chosen");
+  assert.equal(page.attrs["data-keys"], "line", "colour was chosen, so it becomes the underline");
+  swatches[0].checked = true;
+  swatches[0].fire("change");
+  assert.equal(keys[0].parentNode.hidden, false, "offered again with a colour palette at the same level");
 });
 
 test("choosing an appearance updates the page and is remembered", () => {

@@ -107,6 +107,13 @@ class ColourTests(unittest.TestCase):
             self.assertLess(colour.distance(colour.simulate(red, kind), colour.simulate(green, kind)), normal / 2, kind)
         self.assertGreater(colour.distance(colour.simulate(red, "tritan"), colour.simulate(green, "tritan")), normal / 2)
 
+    def test_with_no_colour_vision_every_colour_is_the_grey_of_its_own_luminance(self):
+        for text in ("oklch(0.6 0.15 25)", "oklch(0.6 0.15 145)", "oklch(0.4 0.14 260)"):
+            rgb = colour.parse(text)
+            seen = colour.simulate(rgb, "achromat")
+            self.assertTrue(max(seen) - min(seen) < 0.01, (text, seen))
+            self.assertAlmostEqual(colour.luminance(seen), colour.luminance(rgb), places=3)
+
     def test_the_distance_of_a_colour_from_itself_is_zero(self):
         self.assertEqual(colour.distance((0.2, 0.4, 0.6), (0.2, 0.4, 0.6)), 0.0)
 
@@ -150,6 +157,29 @@ class ShippedPaletteTests(unittest.TestCase):
     def test_the_colour_vision_palettes_name_what_they_promise(self):
         self.assertEqual(self.palettes["red-green-safe"]["colour_vision"], ["protan", "deutan"])
         self.assertEqual(self.palettes["blue-yellow-safe"]["colour_vision"], ["tritan"])
+        self.assertEqual(self.palettes["monochrome"]["colour_vision"], ["protan", "deutan", "tritan", "achromat"])
+
+    def test_the_monochrome_palette_is_greys_only_and_tells_its_key_words_apart_by_lightness(self):
+        self.assertEqual(palettes.access_level(self.palettes["monochrome"]), "safe")
+        for variant, colours in palettes.resolve(self.palettes["monochrome"]).items():
+            for role, rgb in colours.items():
+                self.assertLess(max(rgb) - min(rgb), 0.01, (variant, role))
+            lightness = sorted(colour.rgb_to_oklab(colours[r])[0] for r in (*palettes.KEYS_OF_WORDS, "ink"))
+            self.assertTrue(all(b - a >= palettes.SEPARATION for a, b in zip(lightness, lightness[1:])), (variant, lightness))
+
+    def test_the_sepia_palette_is_warm_and_low_in_glare_and_promises_nothing_about_colour_vision(self):
+        self.assertEqual(palettes.access_level(self.palettes["sepia"]), "standard")
+        self.assertNotIn("colour_vision", self.palettes["sepia"])
+        resolved = palettes.resolve(self.palettes["sepia"])
+        self.assertLess(colour.rgb_to_oklab(resolved["light"]["bg"])[0], 0.96, "paper, not white")
+        self.assertLess(colour.rgb_to_oklab(resolved["dark"]["ink"])[0], 0.9, "dimmed text, not white")
+
+    def test_the_check_discriminates_a_colourful_palette_is_not_safe_with_no_colour_vision(self):
+        claiming = copy.deepcopy(self.palettes["default"])
+        claiming["colour_vision"] = ["achromat"]
+        with self.assertRaises(ContentError) as ctx:
+            palettes.validate({"default": claiming}, LANG_CODE)
+        self.assertIn("achromat", str(ctx.exception))
 
     def test_the_check_discriminates_the_default_red_is_not_safe_for_red_green_colour_blindness(self):
         claiming = copy.deepcopy(self.palettes["default"])
@@ -200,7 +230,7 @@ class PaletteRejectionTests(unittest.TestCase):
 
     def test_an_unknown_level_or_kind_of_colour_blindness(self):
         self.rejects(lambda p: p.update(level="AAAA"), "'level' must be one of")
-        self.rejects(lambda p: p.update(colour_vision=["achromat"]), "'colour_vision' must list")
+        self.rejects(lambda p: p.update(colour_vision=["monochromacy"]), "'colour_vision' must list")
 
     def test_names_must_be_text_by_language(self):
         self.rejects(lambda p: p.update(names={"en": ""}), "'names' must map")
@@ -257,6 +287,15 @@ class KeyColourTests(unittest.TestCase):
         with self.assertRaises(ContentError) as ctx:
             palettes.validate({"default": palette}, LANG_CODE)
         self.assertIn("key-3", str(ctx.exception))
+
+    def test_a_palette_for_no_colour_vision_underlines_key_words_too(self):
+        loaded = palettes.load()
+        self.assertTrue(palettes.keys_by_line(loaded["monochrome"]))
+        self.assertTrue(palettes.keys_by_line(loaded["high-contrast"]))
+        self.assertFalse(palettes.keys_by_line(loaded["red-green-safe"]))
+        self.assertFalse(palettes.keys_by_line(loaded["sepia"]))
+        css = palettes.css(loaded, ["default", "monochrome"])
+        self.assertIn(':root[data-palette="monochrome"]:not([data-keys="off"]) .key{color:inherit;', css)
 
     def test_a_high_contrast_palette_underlines_key_words_and_the_others_do_not(self):
         css = palettes.css(palettes.load(), ["default", "high-contrast", "red-green-safe"])
@@ -351,9 +390,9 @@ class LoadingTests(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            (pathlib.Path(tmp) / "sepia.json").write_text(json.dumps(palettes.load()["default"]), encoding="utf-8")
+            (pathlib.Path(tmp) / "plum.json").write_text(json.dumps(palettes.load()["default"]), encoding="utf-8")
             loaded = palettes.load(tmp)
-        self.assertEqual(list(loaded)[0], "sepia")
+        self.assertEqual(list(loaded)[0], "plum")
         self.assertEqual(list(loaded)[1:], list(palettes.ENGINE_ORDER))
 
     def test_a_project_palette_with_a_framework_id_replaces_it(self):

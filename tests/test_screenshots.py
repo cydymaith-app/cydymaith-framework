@@ -60,8 +60,8 @@ class ShootingTests(Scratch):
 
     def test_there_is_one_picture_for_every_palette_and_variant_and_no_more(self):
         fake, taken, out = self.take("all")
-        self.assertEqual(len(fake.calls), 9 * 2)  # nine palettes, light and dark, one page
-        self.assertEqual(len(taken), 18)
+        self.assertEqual(len(fake.calls), len(palettes.ENGINE_ORDER) * 2)  # every palette, light and dark, one page
+        self.assertEqual(len(taken), len(palettes.ENGINE_ORDER) * 2)
         self.assertEqual(
             sorted(p.name for p in out.glob("*.png")),
             sorted(f"{pal}-{v}.png" for pal in palettes.ENGINE_ORDER for v in ("light", "dark")),
@@ -136,7 +136,7 @@ class ShootingTests(Scratch):
         for png in out.glob("*.png"):
             self.assertIn(f"]({png.name})", readme)
         self.assertIn("| Palette | Light | Dark |", readme)
-        self.assertEqual(readme.count("\n| "), 1 + 9, "a header and a row for each of the nine palettes")
+        self.assertEqual(readme.count("\n| "), 1 + len(palettes.ENGINE_ORDER), "a header and a row for each palette")
         self.assertIn("`points.html`", readme, "it says which page every picture shows")
         self.assertIn("ignored by git", readme)
 
