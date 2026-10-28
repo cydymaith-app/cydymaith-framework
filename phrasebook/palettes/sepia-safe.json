@@ -1,0 +1,32 @@
+{
+  "notes": "Sepia made safe for colour-blind vision: protan, deutan and tritan, checked by the build (colour.py). Derived from sepia.json. The paper is a little lighter and the ink darker, so the accent and the three key-word colours have room to stay apart under simulated colour blindness; the accent is a lighter, more orange rust, and the ink and muted text are darker, so the accent stays clearly different from both. The key-word colours were found by a random search against the build's checks: the level's text contrast on the page and the card, and at least 0.12 apart from each other and from the ink, in OKLab as seen with normal, protan, deutan and tritan vision. Arithmetic on simulated vision, not evidence from people who see colour differently. Written 2026-10-28.",
+  "extends": "sepia",
+  "colour_vision": [
+    "protan",
+    "deutan",
+    "tritan"
+  ],
+  "light": {
+    "bg": "oklch(0.965 0.018 80)",
+    "surface": "oklch(0.975 0.014 80)",
+    "ink": "oklch(0.200 0.020 60)",
+    "muted": "oklch(0.400 0.025 60)",
+    "accent": "oklch(0.527 0.157 66)",
+    "on-tile": "oklch(0.200 0.020 60)",
+    "key-1": "oklch(0.386 0.160 224)",
+    "key-2": "oklch(0.351 0.156 72)",
+    "key-3": "oklch(0.545 0.130 293)",
+    "header": "oklch(0.965 0.018 80)",
+    "on-header": "oklch(0.200 0.020 60)"
+  },
+  "dark": {
+    "ink": "oklch(0.930 0.025 80)",
+    "muted": "oklch(0.760 0.025 78)",
+    "accent": "oklch(0.718 0.159 60)",
+    "on-tile": "oklch(0.930 0.025 80)",
+    "key-1": "oklch(0.816 0.128 260)",
+    "key-2": "oklch(0.790 0.144 82)",
+    "key-3": "oklch(0.664 0.166 316)",
+    "on-header": "oklch(0.930 0.025 80)"
+  }
+}

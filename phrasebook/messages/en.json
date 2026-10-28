@@ -71,6 +71,8 @@
   "palette_red_yellow": "Red and yellow",
   "palette_black_red_gold": "Black, red and gold",
   "palette_sepia": "Sepia",
+  "palette_sepia_safe": "Sepia, safe",
+  "palette_sepia_high_contrast": "Sepia, high contrast",
   "palette_high_contrast": "High contrast",
   "palette_red_green_safe": "Red–green safe",
   "palette_blue_yellow_safe": "Blue–yellow safe",

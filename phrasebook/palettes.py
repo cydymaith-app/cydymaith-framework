@@ -64,8 +64,10 @@ ENGINE_ORDER = (
     "sepia",
     "red-green-safe",
     "blue-yellow-safe",
+    "sepia-safe",
     "monochrome",
     "high-contrast",
+    "sepia-high-contrast",
 )
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
 KEYS = {"names", "notes", "extends", "level", "colour_vision", "light", "dark"}

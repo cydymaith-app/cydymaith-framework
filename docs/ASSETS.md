@@ -57,7 +57,7 @@ The paths are unmodified. The only change is a one-line comment added at the top
 
 | Palette | Where it came from | Licence |
 |---|---|---|
-| `phrasebook/palettes/*.json` (`default`, `blue-white-red`, `green-white-red`, `green-white-orange`, `red-yellow`, `black-red-gold`, `sepia`, `red-green-safe`, `blue-yellow-safe`, `monochrome`, `high-contrast`) | Written for this project. Values chosen by the author and checked by the build. The five colour schemes start from the nominal colours of a flag, named in each file's `notes`, and are darkened or lightened until the text contrast holds. | Same as the code: MIT |
+| `phrasebook/palettes/*.json` (`default`, `blue-white-red`, `green-white-red`, `green-white-orange`, `red-yellow`, `black-red-gold`, `sepia`, `red-green-safe`, `blue-yellow-safe`, `sepia-safe`, `monochrome`, `high-contrast`, `sepia-high-contrast`) | Written for this project. Values chosen by the author and checked by the build. The five colour schemes start from the nominal colours of a flag, named in each file's `notes`, and are darkened or lightened until the text contrast holds. | Same as the code: MIT |
 
 A project can replace any of these with a palette of its own in its `palettes/` folder, and records where those colours came from in its own `docs/ASSETS.md`.
 

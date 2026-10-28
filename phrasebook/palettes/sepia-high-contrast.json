@@ -1,0 +1,35 @@
+{
+  "notes": "Sepia at level AAA (7:1 text, 3:1 borders, 4.5:1 for the icon on a tile). Derived from sepia.json: a lighter paper, darker brown ink and muted text, stronger borders, and a deeper rust accent in light; in dark a darker page, brighter cream text and a brighter amber accent. The key-word colours are the sepia ones, darkened or lightened to keep the level's contrast. Written 2026-10-28.",
+  "extends": "sepia",
+  "level": "AAA",
+  "light": {
+    "bg": "oklch(0.965 0.020 80)",
+    "surface": "oklch(0.945 0.024 80)",
+    "ink": "oklch(0.180 0.025 60)",
+    "muted": "oklch(0.370 0.030 60)",
+    "rule": "oklch(0.780 0.025 75)",
+    "rule-strong": "oklch(0.480 0.030 65)",
+    "accent": "oklch(0.380 0.120 45)",
+    "on-tile": "oklch(0.180 0.025 60)",
+    "key-1": "oklch(0.330 0.100 250)",
+    "key-2": "oklch(0.370 0.100 150)",
+    "key-3": "oklch(0.380 0.120 340)",
+    "header": "oklch(0.965 0.020 80)",
+    "on-header": "oklch(0.180 0.025 60)"
+  },
+  "dark": {
+    "bg": "oklch(0.130 0.012 70)",
+    "surface": "oklch(0.180 0.016 70)",
+    "ink": "oklch(0.940 0.030 80)",
+    "muted": "oklch(0.820 0.030 78)",
+    "rule": "oklch(0.420 0.025 70)",
+    "rule-strong": "oklch(0.700 0.030 70)",
+    "accent": "oklch(0.860 0.110 70)",
+    "on-tile": "oklch(0.940 0.030 80)",
+    "key-1": "oklch(0.840 0.090 240)",
+    "key-2": "oklch(0.850 0.100 150)",
+    "key-3": "oklch(0.830 0.110 340)",
+    "header": "oklch(0.130 0.012 70)",
+    "on-header": "oklch(0.940 0.030 80)"
+  }
+}

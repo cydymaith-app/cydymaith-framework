@@ -467,3 +467,28 @@ class LoadingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SepiaVariantTests(unittest.TestCase):
+    """Sepia is offered at every accessibility level: the safe and high-contrast versions extend it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.palettes = palettes.load()
+
+    def test_the_variants_extend_sepia_and_sit_at_their_own_levels(self):
+        self.assertEqual(self.palettes["sepia-safe"]["extends"], "sepia")
+        self.assertEqual(self.palettes["sepia-high-contrast"]["extends"], "sepia")
+        self.assertEqual(palettes.access_level(self.palettes["sepia"]), "standard")
+        self.assertEqual(palettes.access_level(self.palettes["sepia-safe"]), "safe")
+        self.assertEqual(palettes.access_level(self.palettes["sepia-high-contrast"]), "high")
+
+    def test_the_safe_variant_promises_all_three_kinds_of_colour_blindness_and_the_build_holds_it_to_that(self):
+        self.assertEqual(self.palettes["sepia-safe"]["colour_vision"], ["protan", "deutan", "tritan"])
+        palettes.validate(self.palettes, LANG_CODE)
+
+    def test_the_header_follows_the_page_and_the_ink_in_both_variants(self):
+        for pid in ("sepia-safe", "sepia-high-contrast"):
+            for variant, colours in palettes.resolve(self.palettes[pid]).items():
+                self.assertEqual(colours["header"], colours["bg"], (pid, variant))
+                self.assertEqual(colours["on-header"], colours["ink"], (pid, variant))
