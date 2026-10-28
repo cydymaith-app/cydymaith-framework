@@ -41,7 +41,7 @@ The paths are unmodified. The only change is a one-line comment added at the top
 | `asleep` | The dark appearance |
 | `screen` | The appearance that follows the device |
 | `tools` | Edit order, on the home page and a group page |
-| `headphones` | The "Also heard as" label above alternative forms |
+| `chat` | The "Also heard as" label above alternative forms: a speech bubble, "also said as" (it replaced `headphones`, which looked like an audio player) |
 | `help` | The help button in the side rail, and the help icons it reveals |
 | `close` | The x that closes the help sheet and the search card |
 | `backspace` | Clears the search field (drawn for this site, see below) |

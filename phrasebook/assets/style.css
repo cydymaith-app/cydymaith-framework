@@ -239,7 +239,7 @@ html[data-keys="line"] .key[data-k="3"]{text-decoration-style:wavy}
   html:not([data-keys="off"]) .key[data-k="2"]{text-decoration-style:dotted}
   html:not([data-keys="off"]) .key[data-k="3"]{text-decoration-style:wavy}
 }
-.also-label{display:inline-flex;align-items:center;margin-inline-end:.4rem;color:var(--accent)}
+.also-label{display:inline-flex;align-items:center;margin-inline-end:.4rem;color:var(--muted)}  /* a label, not a control: muted, not the accent */
 .also-label .icon{width:1.15rem;height:1.15rem}
 .also-form{display:inline-block;margin-block:.1rem;margin-inline-end:.3rem;padding:.05rem .45rem;border-radius:6px;background:var(--bg);font-family:var(--font-l2);font-weight:500}
 .order{max-width:38rem;margin:.25rem 0 0;color:var(--muted);font-size:.85rem}
