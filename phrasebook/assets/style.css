@@ -200,6 +200,7 @@ li.is-dragging .tile{transform:scale(1.06)}
 /* sections and term tables */
 section{margin-top:2.25rem}
 section.figure{margin-top:0}
+.fold.sec{margin-top:2.25rem}
 h2{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.1rem/1.3 var(--font-ui)}
 h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .intro{max-width:38rem;margin:.5rem 0 0;color:var(--muted);font-size:.95rem}
@@ -420,7 +421,7 @@ html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75
   .trail .l2{display:inline;margin-inline-start:.3rem;font-family:var(--font-l2)}
   .has-trail .brand small{display:block}
   .terms .l2{font-size:1.2rem}
-  section{margin-top:2.75rem}
+  section,.fold.sec{margin-top:2.75rem}
 }
 @media (min-width:960px){
   .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -443,7 +444,7 @@ html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75
 #prefs .seg label[hidden]{display:none}
 #prefs .seg-label{flex:1;min-height:3.5rem;padding-block:.3rem}  /* at least 3.5rem, more where a label wraps, and the segments stay one height */
 /* A section a link lands on (a related topic opened at its section) sits just under the title bar, not behind it. */
-section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
+section[id],.fold.sec[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 /* A fold that groups choices holds each as a sub-section with its own heading, set apart by a rule. */
 .subsection{margin-top:0}  /* not the page-wide gap between sections */
 .subsection + .subsection{margin-block-start:1.25rem;padding-block-start:1rem;border-block-start:1px solid var(--rule)}
@@ -456,7 +457,8 @@ section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 .fold > summary::after{content:"";flex:none;width:.55rem;height:.55rem;margin-block-end:.3rem;border-inline-end:2px solid var(--muted);border-block-end:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
 .fold[open] > summary::after{margin-block:.3rem 0;transform:rotate(-135deg)}
 .fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-.l10n-body .fold > summary > h2,.about-text .fold > summary > h2{margin:0}
+.l10n-body .fold > summary > h2,.about-text .fold > summary > h2,.fold.sec > summary > :is(h2,h3){margin:0}
+.fold.sec > .fold-body{padding-block-start:0}  /* the card and the order line keep their own gap under the heading */
 .fold-body{padding-block-start:.5rem}
 .l10n-body .card.fold{padding-block:.35rem 1rem}
 .l10n-body .card.fold:not([open]){padding-block-end:.35rem}
@@ -475,6 +477,6 @@ section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
 .fold.topic > .fold-body{padding-block:0 1.25rem}
 .fold.topic > .fold-body > .lede{margin-block-start:0}
 .fold.topic{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}
-.fold.topic section > h3,.fold.topic .related > h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.05rem/1.3 var(--font-ui)}
-.fold.topic section > h3 .l2,.fold.topic .related > h3 .l2{font:500 1rem/1.3 var(--font-l2);color:var(--muted)}
+.fold.topic section > h3,.fold.topic .fold.sec > summary > h3,.fold.topic .related > h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.05rem/1.3 var(--font-ui)}
+.fold.topic section > h3 .l2,.fold.topic .fold.sec > summary > h3 .l2,.fold.topic .related > h3 .l2{font:500 1rem/1.3 var(--font-l2);color:var(--muted)}
 @media (forced-colors:active){.fold > summary:focus-visible{outline:2px solid Highlight}}

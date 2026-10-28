@@ -1005,7 +1005,9 @@ class ArrangeTests(Scratch):
         for name in ("p1.html", "points.html"):
             page = self.pages[name]
             self.assertEqual(page.count('new Event("phrasebook:order")'), 1, name)
-            self.assertLess(page.rindex("</section>"), page.index('new Event("phrasebook:order")'), name)
+            self.assertLess(
+                max(page.rfind("</section>"), page.rfind("</details>")), page.index('new Event("phrasebook:order")'), name
+            )
             if 'class="pager"' in page:
                 self.assertLess(page.index('new Event("phrasebook:order")'), page.index('class="pager"'), name)
 
@@ -1027,8 +1029,8 @@ class ArrangeTests(Scratch):
         self.assertIn('<li data-tile="g1" data-level="1"><a class="tile-link"', home)
         self.assertIn('<li data-tile="p1" data-level="2"><a class="tile-link" href="p1.html">', group)
         self.assertIn('<li data-tile="points" data-level="1"><a class="tile-link"', group)
-        self.assertIn('<section id="s1" data-level="2">', topic)
-        self.assertIn('<section id="s3" data-level="2">', topic)
+        self.assertIn('<details class="fold sec" id="s1" data-level="2" open>', topic)
+        self.assertIn('<details class="fold sec" id="s3" data-level="2" open>', topic)
 
     def test_arrange_js_takes_its_orders_from_the_lists_so_reset_goes_to_the_default_and_not_to_the_saved_order(self):
         script = (ENGINE / "assets" / "arrange.js").read_text(encoding="utf-8")
@@ -1103,9 +1105,8 @@ class RelatedTopicsTests(Scratch):
 
     def test_the_row_follows_the_sections_and_comes_before_the_pager(self):
         page = self.pages["p1.html"]
-        self.assertLess(
-            page.rindex("</section>", 0, page.index('<section class="related"')), page.index('<section class="related"')
-        )
+        related = page.index('<section class="related"')
+        self.assertLess(max(page.rfind("</section>", 0, related), page.rfind("</details>", 0, related)), related)
         self.assertLess(
             page.index('new Event("phrasebook:order")'),
             page.index('<section class="related"'),
@@ -1217,7 +1218,7 @@ class RelatedTopicsTests(Scratch):
 
     def test_a_page_a_link_lands_on_keeps_clear_of_the_title_bar(self):
         css = (ENGINE / "assets" / "style.css").read_text(encoding="utf-8")
-        self.assertIn("section[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}", css)
+        self.assertIn("section[id],.fold.sec[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) + 1rem)}", css)
 
     def test_the_heading_is_a_message_so_it_can_be_translated(self):
         messages = json.loads((ENGINE / "messages" / "en.json").read_text(encoding="utf-8"))
@@ -1264,9 +1265,22 @@ class OnePageGroupTests(Scratch):
     def test_inside_an_accordion_the_sections_are_a_level_down_and_carry_no_level(self):
         body = self.page[self.page.index('id="topic-p1"') : self.page.index('id="topic-points"')]
         self.assertIn("qaa lede", body)
-        self.assertIn('<section id="s2"><h3>', body)
-        self.assertNotRegex(body, r"<section[^>]*data-level", "the accordions are put in order, not the sections")
+        self.assertIn('<details class="fold sec" id="s2" open><summary><h3>', body)
+        self.assertNotRegex(
+            body, r'<(section|details class="fold sec")[^>]*data-level', "the accordions are put in order, not the sections"
+        )
         self.assertIn('<tr id="s1.c1">', body)
+
+    def test_each_section_is_an_accordion_open_to_begin_with_whose_summary_is_its_heading(self):
+        body = self.page[self.page.index('id="topic-p1"') : self.page.index('id="topic-points"')]
+        for sid in ("s1", "s2"):
+            at = body.index(f'<details class="fold sec" id="{sid}"')
+            tag = body[at : body.index(">", at)]
+            self.assertTrue(tag.endswith(" open"), sid)
+            summary = body[body.index("<summary>", at) : body.index("</summary>", at)]
+            self.assertIn("<h3>", summary, sid)
+            self.assertNotIn("<table", summary, sid)
+            self.assertIn('<table class="terms pair">', body[body.index("</summary>", at) :], sid)
 
     def test_settings_order_puts_the_accordions_in_order_on_the_page(self):
         self.assertLess(self.page.rindex("</details>"), self.page.index('new Event("phrasebook:order")'))

@@ -696,7 +696,8 @@ class Site:
         return [s for s in self.sections(slug) if not set(s["concepts"]) <= covered]
 
     def render_section(self, slug, section, nested=False):
-        """One section: its heading, order line, intro, the table of rows, and its box. `nested` is a section inside a topic's
+        """One section: its heading, order line, intro, the table of rows, and its box, as an accordion that is open to begin with
+        (the heading is the summary), or as plain content when it has no heading. `nested` is a section inside a topic's
         accordion on a one-page group: its heading goes a level down, and it carries no level, since there the accordions are
         what is put in order, not the sections."""
         frm, to, sid = self.frm, self.to, section["id"]
@@ -756,12 +757,15 @@ class Site:
                 f'<span class="l2"{self.la(to)}>{e(self.pack_section(to, slug, sid)["title"])}</span></{hx}>'
             )
         graded = "" if nested else f' data-level="{self.levels["sections"].get((slug, sid), 1)}"'
-        return (
-            f'<section id="{sid}"{graded}>{heading}{order}{intro}'
+        table = (
             f'<div class="card"><table class="terms pair"><thead class="sr-only"><tr><th scope="col">{self.inline(frm, self.endonym(frm))}</th>'
             f'<th scope="col">{self.inline(to, self.endonym(to))}</th></tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div>{box}</section>'
+            f'<tbody>{"".join(rows)}</tbody></table></div>'
         )
+        if not heading:  # nothing to put on the summary: the section says what the page title says
+            return f'<section id="{sid}"{graded}>{order}{intro}{table}{box}</section>'
+        # Open to begin with, so nothing is hidden until the person shuts it; its heading is the summary.
+        return self.fold(heading, f"{order}{intro}{table}{box}", open_=True, attrs=f' id="{sid}"{graded}', cls="sec")
 
     def search_scope(self, current):
         """The page files the person is browsing: a topic is its own page, a group is its pages, anywhere else is nothing.
