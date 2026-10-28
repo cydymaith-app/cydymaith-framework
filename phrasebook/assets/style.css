@@ -200,7 +200,6 @@ li.is-dragging .tile{transform:scale(1.06)}
 /* sections and term tables */
 section{margin-top:2.25rem}
 section.figure{margin-top:0}
-.fold.sec{margin-top:2.25rem}
 h2{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .75rem;margin:0;font:600 1.1rem/1.3 var(--font-ui)}
 h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .intro{max-width:38rem;margin:.5rem 0 0;color:var(--muted);font-size:.95rem}
@@ -421,7 +420,7 @@ html[data-helping] a.help-icon{display:inline-grid;place-items:center;width:2.75
   .trail .l2{display:inline;margin-inline-start:.3rem;font-family:var(--font-l2)}
   .has-trail .brand small{display:block}
   .terms .l2{font-size:1.2rem}
-  section,.fold.sec{margin-top:2.75rem}
+  section{margin-top:2.75rem}
 }
 @media (min-width:960px){
   .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -458,7 +457,13 @@ section[id],.fold.sec[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) +
 .fold[open] > summary::after{margin-block:.3rem 0;transform:rotate(-135deg)}
 .fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 .l10n-body .fold > summary > h2,.about-text .fold > summary > h2,.fold.sec > summary > :is(h2,h3){margin:0}
-.fold.sec > .fold-body{padding-block-start:0}  /* the card and the order line keep their own gap under the heading */
+/* A section of a topic is itself the card, in the surface colour, and the table inside it is see-through, so the heading and the rows
+   sit on one surface. The cards are set close together, since each is a line until it is opened. */
+.fold.sec{margin-top:.6rem;padding-inline:1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.fold.sec:first-child{margin-top:1.25rem}
+.fold.sec[open]{padding-block-end:.5rem}
+.fold.sec > .fold-body{padding-block-start:0}
+.fold.sec .card{margin-top:.25rem;padding:0;background:none;border:0;border-radius:0}
 .fold-body{padding-block-start:.5rem}
 .l10n-body .card.fold{padding-block:.35rem 1rem}
 .l10n-body .card.fold:not([open]){padding-block-end:.35rem}
