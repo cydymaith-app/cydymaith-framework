@@ -7,6 +7,15 @@ python3 build.py [OUTDIR] --strict           also fail while any included source
 python3 build.py [OUTDIR] --channel NAME     release (default) leaves out held-back sections; development keeps them
 python3 build.py --grades                    print how demanding each group, page and section is, from beginner to advanced
                                              (builds nothing; takes --project, --edition and --channel)
+python3 build.py --check LANG                print what in a language has no verdict yet from a reference book: the words to
+                                             look up, stale verdicts and the changes the notes mention (builds nothing; the
+                                             development channel unless --channel says otherwise)
+python3 build.py --check LANG --out FILE [--source ID] [--by NAME]
+                                             write the same sheet as a Markdown worklist to edit, with the commands at its head
+python3 build.py --apply FILE [--by NAME]    bring an edited worklist back: record a verdict for each row marked in it
+python3 build.py --mark LANG SOURCE RESULT WORD... --by NAME [--note TEXT]
+                                             record a verdict (ok, changed or query) for words, or for entries written
+                                             page/section/id, in the sidecar checks/LANG.json beside the content
 python3 build.py [OUTDIR] --screenshots [DIR]  also screenshot every theme (palette, light and dark) on one example
                                              page into DIR (default docs/screenshots); needs Chrome, Chromium or Edge
 """
@@ -18,9 +27,9 @@ import pathlib
 import shutil
 import sys
 
-from . import content, grading, screenshots
+from . import checks, content, grading, screenshots
 from .content import ContentError
-from .channels import RELEASE, select as select_channel
+from .channels import DEVELOPMENT, RELEASE, select as select_channel
 from .dictionary import index as dictionary_index
 from .help import Book
 from .messages import Messages
@@ -173,12 +182,43 @@ def main(argv=None, projects_dir=None):
             return value
         return None
 
-    edition, project, channel = option("--edition"), option("--project"), option("--channel") or RELEASE
+    edition, project, asked = option("--edition"), option("--project"), option("--channel")
+    channel = asked or RELEASE
+    check_lang, by, note = option("--check"), option("--by"), option("--note")
+    mark_lang, out_file, apply_file, source = option("--mark"), option("--out"), option("--apply"), option("--source")
     show_grades = "--grades" in argv
     if show_grades:
         argv.remove("--grades")
     strict = "--strict" in argv
     args = [a for a in argv if not a.startswith("--")]
+    if check_lang or mark_lang or apply_file:  # the reference check; nothing is built
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8")  # the words are in the language, whatever the console's code page
+        try:
+            where = pathlib.Path(project) if project else find_project(projects_dir)
+            raw = content.read(where)
+            content.validate(raw)
+            if apply_file:
+                text = pathlib.Path(apply_file).read_text(encoding="utf-8")
+                lang, count = checks.apply(where, raw, text, by)
+                print(f"recorded {count} in {checks.path_for(where, lang)}")
+            elif mark_lang:
+                if len(args) < 3:
+                    raise ContentError("--mark LANG SOURCE RESULT WORD...: name a source, a result and at least one word")
+                written = checks.mark(where, raw, mark_lang, args[0], args[1], args[2:], by, note)
+                print(f"recorded {len(args) - 2} in {checks.path_for(where, mark_lang)} ({len(written['words'])} words)")
+            else:
+                view = select_channel(raw, asked or DEVELOPMENT)
+                side = checks.load(where, check_lang)
+                if out_file:
+                    text = checks.worklist(check_lang, view, side, source or "", by or "", file=out_file)
+                    pathlib.Path(out_file).write_text(text, encoding="utf-8")
+                    print(f"wrote the worklist to {out_file}: edit it, then run --apply {out_file}")
+                else:
+                    print(checks.report(check_lang, checks.sheet(view, check_lang, side)))
+        except ContentError as err:
+            sys.exit(f"content error: {err}")
+        return
     out = args[0] if args else "dist"
     if show_grades:  # the grades, for checking by eye; nothing is built
         try:

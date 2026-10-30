@@ -6,7 +6,7 @@ To make another translator, create a repository with a `content/<project>/` fold
 
 ```
 phrasebook/                 the framework
-  cli.py content.py site.py messages.py plural.py figures.py errors.py colour.py palettes.py icons.py tree.py channels.py dictionary.py
+  cli.py content.py checks.py site.py messages.py plural.py figures.py errors.py colour.py palettes.py icons.py tree.py channels.py dictionary.py
   messages/en.json          every word the framework shows itself (the source of truth for the keys)
   palettes/                 the framework's colour palettes (OKLCH, light and dark each)
   assets/                   style.css, app.js (preferences), order.js (tiles and sections in order), nav.js (keys and swipes), arrange.js and search.js, copied to every site
@@ -17,7 +17,7 @@ tests/                      framework tests, on a neutral made-up project (fixtu
 A project (in its own repository, beside this framework in framework/):
 
 content/<project>/          one translator
-  structure.json  pages/  packs/<code>/  editions/  palettes/  icons/  static/
+  structure.json  pages/  packs/<code>/  editions/  palettes/  icons/  static/  checks/   (checks/ is optional, and never built)
 ```
 
 `tests/test_framework.py` fails if the framework names a language, a phrase or a project (`EngineIsLanguageNeutral`). It checks the made-up fixture project by default. A project repository sets `PHRASEBOOK_PROJECT` to its own content folder and runs that test, so its real words are checked too.
@@ -242,6 +242,67 @@ weather-forecast                   level 2   median  1.5  over 120 entries
 **Reviewing them.** A level is a judgement about difficulty, so it wants a fluent speaker's review like the rest of the content. Read the report as a learner would: the simple things should come first and the complex ones follow. Where one looks wrong, first ask whether the rule is the problem (a different `bounds` might suit the language), and only then set the level by hand. A project should test the grades it cares about, as the English and Welsh project does in `tests/test_project.py`: that single words come below the phrases built on them, that sentence patterns are level 3, and how many levels are set by hand.
 
 The rule is `grading.py` and has no language in it; `tests/test_grading.py` covers counting, the median, the levels and their bounds, the language heard, regional forms, overrides, the validation messages and the report.
+
+## Checking against a reference book: the checks sidecar
+
+A developer who is not a fluent speaker can still check **single words, genders, plurals and the changes a word goes through** against a printed dictionary or a word list, which is most of what a review turns up. The framework keeps the bookkeeping so that the check is a short loop and the verdicts are not lost. It does not check anything itself and calls no service.
+
+```
+python3 build.py --check LANG                                  the sheet: what has no verdict yet
+python3 build.py --check LANG --out FILE [--source ID] [--by NAME]   the same sheet as a Markdown worklist to edit
+python3 build.py --apply FILE [--by NAME]                      bring an edited worklist back
+python3 build.py --mark LANG SOURCE RESULT WORD... --by NAME   record a verdict without a file (add --note TEXT)
+```
+
+**The sheet** (`phrasebook/checks.py`, `--check`) reads the project as the *development* channel (held-back sections are where most unchecked text is; add `--channel release` to leave them out) and prints, for one language:
+
+- the counts: words and entries with no verdict;
+- **stale** verdicts, where an entry's text changed after it was checked;
+- every **word to look up**, once, with up to three of the entries that use it, ordered by the letters of the word with a leading apostrophe or hyphen ignored;
+- the **changes to check**: entries whose note marks a stretch with `{{ }}`, which are the ones about a change in a word's shape, so the grammar notes can be checked too.
+
+A word is a run of letters, with an apostrophe or hyphen allowed between letters, folded to lower case. The framework counts and compares text and knows no language, so it cannot tell *llaeth* from *llefrith*; it lists both.
+
+**The sidecar** is `<project>/checks/<language>.json`:
+
+```json
+{
+  "sources": {"dict": "A printed dictionary, its publisher and edition"},
+  "words":   {"milk": {"source": "dict", "result": "ok", "by": "A. Person", "date": "2026-10-30", "note": "optional"}},
+  "entries": {"p1/s1/c1": {"hash": "3f2a9c1b04", "source": "dict", "result": "ok", "by": "A. Person", "date": "2026-10-30"}}
+}
+```
+
+- `sources` describes each source once, **by hand**. `--mark` refuses an id that is not described, so a typo cannot create a source.
+- `result` is `ok`, `changed` (the text was corrected to match) or `query` (the source and the content disagree, and a person must decide).
+- A **word** verdict covers every entry that uses the word. An **entry** is named `page/section/id`; its verdict carries a hash of the entry's text, its regional forms and its "also heard as" forms (not its note), so changing any of them makes the verdict **stale** and puts the entry back on the sheet.
+- **Only verdicts are kept.** The file never holds text from the source: the fields are fixed, `note` is at most 200 characters and in the developer's own words, and a copyrighted source is cited, not quoted. This is the framework's rule for any reference, because a sidecar that quoted a dictionary would be a copy of it (`ASSETS.md`, and rule 4 of a project's principles).
+- The build **does not read the sidecar and does not ship it**, so a verdict cannot change a site. A test builds a project with and without one and compares the pages. `--check` and `--mark` validate it and name the file and the field at fault.
+
+**What a verdict means.** It records that *the developer looked the word up in that source*, on that day. It is not a fluent speaker's review, and a project should say so wherever it records review (the `cydymaith` project keeps its list in `docs/REVIEW.md` and links a reference check from there). A reference book cannot tell you whether a whole phrase is natural on air; use it for the words, spellings, genders, plurals, mutations and register labels, and keep the phrase for a speaker.
+
+**The worklist** is the sheet as a Markdown file you edit and bring back (`--check LANG --out FILE`, then `--apply FILE`). The two commands are at its head, with the instructions, so the file explains itself. Under them are three lines to fill in (`Language:`, `Source:` and `By:`; the source is filled in when the sidecar has only one), then the rows:
+
+```
+- [ ] `afon` - Rhybudd llifogydd ar Afon Tywi (and 2 more)
+- [x] `allt` - Ar y llethr | found, a hillside
+- [c] `aber` - Aber yr afon
+- [?] `braf` - Mae hi'n braf
+```
+
+- The space in `[ ]` becomes `x` (found, and right), `c` (found, and you corrected the content) or `?` (a question for a person). A row left as `[ ]` is skipped.
+- The text after the name is only the context: the first entry that uses the word, so the row can be looked up without going back to the site. A note goes after a ` | ` at the end of the row.
+- The name in backticks is how a row is found again, so leave it as written. A row that is a word is recorded for the word; a row written `page/section/id` is an entry, recorded against its text as it is now.
+- The file can hold three kinds of row: **entries checked before their text changed** (stale), **changes in the notes** (entries whose note marks a changing word, so check the note and not the words), and the **words**.
+- `--apply` reads the file, checks every row, and writes the sidecar only if all of them are sound: one bad row (an unknown marker, a note over 200 characters, an entry that does not exist) stops it with the line number and writes nothing. It can be run again after a further edit; a row already recorded is recorded again with the new date.
+- Make the next worklist from `--check` again: recorded rows are gone. The worklist is a working file, not a record, so it does not belong in the repository; the sidecar is the record.
+
+**Working through a worklist.**
+
+1. `python3 build.py --check cy --out docs/worklist-cy.md --by "A. Person"`, and open the file and the source.
+2. For each word, look it up. If it is right, mark it `x`; if you fixed the pack file, mark it `c`; if you cannot tell, mark it `?` and say why.
+3. `python3 build.py --apply docs/worklist-cy.md`.
+4. Run the first command again: the rows you marked are gone and the counts fall. `?` rows stay recorded as queries, to be settled by a person.
 
 ## Themes and palettes
 
