@@ -5,7 +5,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const { parse, same, plan } = require(path.join(__dirname, "..", "phrasebook", "assets", "backdrop.js"));
+const { parse, same, plan, between } = require(path.join(__dirname, "..", "phrasebook", "assets", "backdrop.js"));
 
 test("a place is two numbers with one space between", () => {
   assert.deepEqual(parse("232 95"), [232, 95]);
@@ -52,4 +52,16 @@ test("a page off the route returned to keeps the place in its history entry", ()
 test("with nothing remembered the drawing starts at the start, and does not move", () => {
   assert.deepEqual(plan(null, null, null, [232, 95]), { from: null, to: [232, 95] });
   assert.deepEqual(plan([10, 20], null, null, [232, 95]), { from: null, to: [10, 20] });
+});
+
+test("a drawing dragged with a page is the same fraction of the way to the other page's place", () => {
+  assert.deepEqual(between([232, 95], [292, 95], 0), [232, 95]);
+  assert.deepEqual(between([232, 95], [292, 95], 0.5), [262, 95]);
+  assert.deepEqual(between([232, 95], [292, 95], 1), [292, 95]);
+  assert.deepEqual(between([292, 90], [232, 100], 0.25), [277, 92.5]);
+});
+
+test("a drag that goes past either end holds the drawing at that end", () => {
+  assert.deepEqual(between([0, 0], [10, 10], 1.4), [10, 10]);
+  assert.deepEqual(between([0, 0], [10, 10], -0.3), [0, 0]);
 });

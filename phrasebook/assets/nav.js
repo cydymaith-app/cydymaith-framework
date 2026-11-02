@@ -362,6 +362,7 @@
   function springBack() {
     if (!main) return;
     if (stage) {
+      document.dispatchEvent(new CustomEvent("phrasebook:travel", { detail: { page: null, ms: SPRING_MS } }));  // the backdrop goes back too
       glide(0, SPRING_MS, clearStage);
       return;
     }
@@ -449,6 +450,8 @@
       main.style.transition = "none";
       if (stage) stage.page.style.transition = "none";
       place(start.travelled);
+      // The site's backdrop (backdrop.js) follows the finger, as far along its way to the other page as the page has gone.
+      if (stage) document.dispatchEvent(new CustomEvent("phrasebook:follow", { detail: { page: stage.page, progress: start.travelled / stage.width } }));
       if (event.cancelable) event.preventDefault();
     }, { passive: false });
     function release(cancelled) {

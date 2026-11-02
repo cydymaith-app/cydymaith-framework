@@ -538,14 +538,17 @@ class Site:
         return keys
 
     def route_places(self):
-        """{page key: (x, y)}: where each page of the route sits on the drawing, spread evenly along the route by distance,
-        the home page at its first place and the last page at its last."""
+        """{page key: (x, y)}: where each page of the route sits on the drawing, the home page at its first place. The pages are
+        spread evenly along the route by distance, the last page at its last place, but no further apart than the route's "step"
+        (when it has one), so that the drawing moves less than the page does from one page to the next, as a background should; a
+        short run of pages then covers only the start of the route."""
         points = [tuple(p) for p in self.route["route"]]
         legs = [math.dist(a, b) for a, b in zip(points, points[1:])]
         keys = self.route_pages()
+        gap = min(self.route.get("step", math.inf), sum(legs) / (len(keys) - 1)) if len(keys) > 1 else 0
         places = {}
         for i, key in enumerate(keys):
-            left = sum(legs) * i / (len(keys) - 1) if len(keys) > 1 else 0
+            left = gap * i
             at = points[0]
             for (a, b), leg in zip(zip(points, points[1:]), legs):
                 if left <= leg:

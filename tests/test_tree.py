@@ -6,6 +6,7 @@ The panel script's moves are tested in nav.test.js. Run from the repo root: pyth
 
 import html
 import json
+import math
 import pathlib
 import re
 import sys
@@ -311,6 +312,24 @@ class SiteBackdropTests(Scratch):
         along = [site.places[k][0] + site.places[k][1] for k in keys]  # this route only ever goes right, then down
         self.assertEqual(along, sorted(along))
 
+    def test_a_step_keeps_the_pages_no_further_apart_than_it_says_so_the_drawing_moves_less_than_the_page(self):
+        proj = self.routed({**ROUTE, "step": 2})
+        site = Site(content.read(proj), content.pick_edition(content.read(proj))[1])
+        keys = site.route_pages()
+        spots = [site.places[k] for k in keys]
+        self.assertEqual(spots[0], (4, 4))
+        for a, b in zip(spots, spots[1:]):
+            self.assertAlmostEqual(math.dist(a, b), 2, delta=0.11)  # places are rounded to a tenth
+        self.assertNotEqual(spots[-1], (20, 20), "a short run of pages does not reach the end of the route")
+
+    def test_a_step_longer_than_an_even_spread_changes_nothing(self):
+        proj = self.routed({**ROUTE, "step": 1000})
+        site = Site(content.read(proj), content.pick_edition(content.read(proj))[1])
+        self.assertEqual(site.places[site.route_pages()[-1]], (20, 20))
+
+    def test_a_valid_step_is_accepted(self):
+        content.validate(content.read(self.routed({**ROUTE, "step": 2.5})))
+
     def test_a_page_off_the_route_has_the_drawing_at_the_start_and_no_place_of_its_own(self):
         pages = self.built(self.routed())
         for name in ("settings.html", "sources.html", "how-to.html"):
@@ -345,6 +364,9 @@ class SiteBackdropTests(Scratch):
             {**ROUTE, "route": [[1, 2, 3]]},
             {**ROUTE, "route": [["a", 1]]},
             {**ROUTE, "route": [[30, 1]]},
+            {**ROUTE, "step": 0},
+            {**ROUTE, "step": True},
+            {**ROUTE, "step": "far"},
         ]
         for route in bad:
             with self.assertRaises(ContentError, msg=route) as ctx:

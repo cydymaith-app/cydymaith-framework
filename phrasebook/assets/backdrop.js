@@ -4,7 +4,10 @@
    page carries the drawing from where it was to that page's place, so going back carries it back again. A page that is not on the
    route (Settings, About, Help) keeps the drawing where the page before left it, and keeps that place in its history entry for a
    reload or a return. Where it was is kept for this tab only (sessionStorage), as one place and nothing else; it is never sent
-   anywhere. When nav.js slides two pages together, the drawing moves with them; otherwise the new page moves it as it arrives.
+   anywhere. When nav.js slides two pages together, the drawing moves with them, the same way and at the same pace, but a shorter
+   way than the page (the build spaces the pages no further apart than the route's step), so it reads as a background moving
+   behind the page: it follows a finger that drags a page back, and goes back if the drag is let go; otherwise the new page moves
+   it as it arrives.
    The page asks for this with a line right after the drawing, which runs before anything is painted. Without this script each page
    shows its own place, and a page off the route shows the first. */
 (function () {
@@ -13,6 +16,7 @@
   var NAME = /^[a-z0-9][a-z0-9._-]*$/;
   var PLACE = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
   var MOVE_MS = 600;  // the stylesheet's own move between places (.backdrop.route.moving)
+  var EASE = "cubic-bezier(.2,.8,.2,1)";  // the pages' own, in nav.js, so the drawing and the pages arrive together
 
   // ---- the moves, with no page in sight so they can be tested on their own
 
@@ -32,7 +36,14 @@
     return { from: last && !same(last, to) ? last : null, to: to };
   }
 
-  var api = { parse: parse, same: same, plan: plan };
+  // The place a fraction `p` (0 to 1) of the way from `from` to `to`: where the drawing is while a finger has dragged the page that
+  // far. `p` is held to 0 to 1.
+  function between(from, to, p) {
+    var t = Math.min(1, Math.max(0, p));
+    return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+  }
+
+  var api = { parse: parse, same: same, plan: plan, between: between };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -78,18 +89,27 @@
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
+  // Stop the drawing moving by itself: the class that gives it a transition goes, and so does the duration an earlier move left on it,
+  // which would otherwise still make it glide to the next place it is put at.
+  function still() {
+    drawing.classList.remove("moving");
+    drawing.style.transitionDuration = "";
+    drawing.style.transitionTimingFunction = "";
+  }
+
   function put(place) {
     drawing.style.setProperty("--x", String(place[0]));
     drawing.style.setProperty("--y", String(place[1]));
   }
 
-  // Carry the drawing to `place` over `ms`, from wherever it is now.
-  function move(place, ms) {
+  // Carry the drawing to `place` over `ms`, from wherever it is now, with the easing `ease` (the stylesheet's own if none).
+  function move(place, ms, ease) {
     if (reducedMotion()) {
       put(place);
       return;
     }
     drawing.style.transitionDuration = ms + "ms";
+    drawing.style.transitionTimingFunction = ease || "";
     drawing.classList.add("moving");
     put(place);
   }
@@ -97,7 +117,7 @@
   // Put the drawing at `from` and carry it to `to`: two frames, the first painting it where it was, the second starting it moving.
   // With no `from`, or no motion wanted, it is simply at `to`.
   function arrive(from, to) {
-    drawing.classList.remove("moving");
+    still();
     if (!from || reducedMotion()) {
       put(to);
       return;
@@ -120,17 +140,26 @@
     write(way.to);
     if (!own) keep(way.to);
     arrive(way.from, way.to);
-    drawing.addEventListener("transitionend", function () { drawing.classList.remove("moving"); });
+    drawing.addEventListener("transitionend", function () { still(); });
   });
 
-  // nav.js is sliding to another page: go with it, to that page's place if it has one. Where the page is going is kept now, so it
-  // arrives already there.
+  // nav.js is sliding to another page: go with it, to that page's place if it has one, or, with no page, back to this page's own
+  // place (a drag let go too soon). Where the page is going is kept now, so it arrives already there.
   document.addEventListener("phrasebook:travel", function (event) {
     var page = event.detail && event.detail.page;
-    var place = page && page.getAttribute ? parse(page.getAttribute("data-place")) : null;
+    var place = page ? (page.getAttribute ? parse(page.getAttribute("data-place")) : null) : mine;
     if (!drawing || !place) return;
     write(place);
-    move(place, event.detail.ms || MOVE_MS);
+    move(place, event.detail.ms || MOVE_MS, EASE);
+  });
+
+  // nav.js has a finger dragging this page toward another: the drawing follows, the fraction `progress` of the way to that page's place.
+  document.addEventListener("phrasebook:follow", function (event) {
+    var detail = event.detail || {};
+    var target = detail.page && detail.page.getAttribute ? parse(detail.page.getAttribute("data-place")) : null;
+    if (!drawing || !target || !mine) return;
+    still();
+    put(between(mine, target, detail.progress));
   });
 
   // Coming back to this page from the browser's cache: carry the drawing back from wherever the last page left it.

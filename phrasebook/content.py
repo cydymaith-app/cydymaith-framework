@@ -260,21 +260,29 @@ def check_backdrop(where, name, available):
 
 
 ROUTE_KEYS = {"name", "window", "route"}
+ROUTE_OPTIONAL = {"step"}
 
 
 def check_route(route, available):
     """The site's optional backdrop, "backdrop" at the top of structure.json: {"name": a file in backdrops/, "window": how many
     of the drawing's units wide the part in view is, "route": the [x, y] places, in the drawing's units, that the pages are
-    spread along, the home page at the first}. Every place must be inside the drawing's viewBox."""
+    spread along, the home page at the first, and optionally "step": the most, in the drawing's units, that the drawing moves from one
+    page to the next, which keeps it moving less than the page does, so it reads as a background and not as part of the page}. Every
+    place must be inside the drawing's viewBox."""
     if route is None:
         return
     where = "structure.json backdrop"
-    if not isinstance(route, dict) or set(route) != ROUTE_KEYS:
-        raise ContentError(f"{where}: must be an object with exactly {', '.join(sorted(ROUTE_KEYS))}")
+    if not isinstance(route, dict) or not ROUTE_KEYS <= set(route) <= ROUTE_KEYS | ROUTE_OPTIONAL:
+        raise ContentError(
+            f"{where}: must be an object with {', '.join(sorted(ROUTE_KEYS))}, and optionally {', '.join(sorted(ROUTE_OPTIONAL))}"
+        )
     check_backdrop(where, route["name"], available)
     window = route["window"]
     if isinstance(window, bool) or not isinstance(window, (int, float)) or window <= 0:
         raise ContentError(f"{where}: 'window' must be a positive number of the drawing's units")
+    step = route.get("step", 1)
+    if isinstance(step, bool) or not isinstance(step, (int, float)) or step <= 0:
+        raise ContentError(f"{where}: 'step' must be a positive number of the drawing's units")
     places = route["route"]
     if (
         not isinstance(places, list)
