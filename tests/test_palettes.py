@@ -385,54 +385,95 @@ class PaletteCssTests(unittest.TestCase):
         self.assertNotIn("@import", self.css)
 
 
-class BackdropStrengthTests(unittest.TestCase):
-    """How strongly a backdrop is drawn in each palette (palettes.backdrop_opacity), and that it is said in palettes.css."""
+class BackdropShadeTests(unittest.TestCase):
+    """The colours a backdrop is drawn in (palettes.backdrop_shades, backdrop_colour), and that palettes.css says them."""
 
     @classmethod
     def setUpClass(cls):
         cls.all = palettes.load()
-        cls.strength = {pid: palettes.backdrop_opacity(p) for pid, p in cls.all.items()}
+        cls.shade = {pid: palettes.backdrop_shades(p) for pid, p in cls.all.items()}
 
     def test_the_high_contrast_level_draws_no_backdrop(self):
         for pid, palette in self.all.items():
             if palettes.access_level(palette) == "high":
-                self.assertEqual(self.strength[pid], {"light": 0.0, "dark": 0.0}, pid)
+                self.assertEqual(self.shade[pid], {"light": 0.0, "dark": 0.0}, pid)
 
-    def test_a_backdrop_is_drawn_no_stronger_than_the_most_and_never_fainter_than_the_least(self):
-        for pid, strength in self.strength.items():
-            for variant, alpha in strength.items():
-                self.assertTrue(alpha == 0 or palettes.BACKDROP_FLOOR <= alpha <= palettes.BACKDROP_OPACITY, (pid, variant))
+    def test_a_shade_is_never_more_than_the_most_nor_less_than_the_least(self):
+        for pid, shade in self.shade.items():
+            for variant, amount in shade.items():
+                self.assertTrue(
+                    amount == 0 or palettes.BACKDROP_FLOOR <= amount <= palettes.BACKDROP_SHADE + 1e-9, (pid, variant)
+                )
 
-    def test_where_a_backdrop_is_drawn_every_text_colour_keeps_its_contrast_across_its_lines(self):
+    def test_a_light_variant_draws_a_shade_darker_than_its_background_and_a_dark_one_a_shade_lighter(self):
+        for pid, palette in self.all.items():
+            for variant, colours in palettes.resolve(palette).items():
+                amount = self.shade[pid][variant]
+                if not amount:
+                    continue
+                bg = colour.rgb_to_oklab(colours["bg"])[0]
+                for tint in palettes.TINTS:
+                    line = colour.rgb_to_oklab(palettes.backdrop_colour(colours["bg"], variant, amount, tint))[0]
+                    self.assertAlmostEqual(
+                        line, bg - amount if variant == "light" else bg + amount, delta=0.01, msg=(pid, variant, tint)
+                    )
+
+    def test_the_tints_are_dusky_so_a_red_dragon_is_not_the_flags_red(self):
+        for tint, (chroma, hue) in palettes.TINTS.items():
+            self.assertLessEqual(chroma, 0.08, tint)  # the flag's red has a chroma of about 0.21
+        red = palettes.backdrop_colour(colour.parse("oklch(0.95 0.03 85)"), "light", 0.05, "red")
+        self.assertNotEqual(colour.rgb_to_hex(red), "#c8102e")
+        self.assertLess(colour.oklab_to_oklch(*colour.rgb_to_oklab(red))[1], 0.1)
+
+    def test_a_red_tint_is_redder_than_a_green_one_and_a_green_one_is_greener(self):
+        bg = colour.parse("oklch(0.15 0.01 250)")
+        red = palettes.backdrop_colour(bg, "dark", 0.08, "red")
+        green = palettes.backdrop_colour(bg, "dark", 0.08, "green")
+        self.assertGreater(red[0], red[1])
+        self.assertGreater(green[1], green[0])
+
+    def test_where_a_backdrop_is_drawn_every_text_colour_keeps_its_contrast_across_its_lines_of_every_tint(self):
         for pid, palette in self.all.items():
             needed = palettes.LEVELS[palette.get("level", "AA")]["text"]
             for variant, colours in palettes.resolve(palette).items():
-                alpha = self.strength[pid][variant]
+                amount = self.shade[pid][variant]
+                if not amount:
+                    continue
                 for kind in [None, *palette.get("colour_vision", [])]:
                     seen = {r: colour.simulate(c, kind) if kind else c for r, c in colours.items()}
-                    line = colour.over(seen["bg"], seen["muted"], alpha)
-                    card = colour.over(line, seen["surface"], palettes.BACKDROP_CARD)
-                    for role in palettes.TEXT_ROLES:
-                        for ground in (line, card):
-                            self.assertGreaterEqual(colour.contrast(seen[role], ground), needed, (pid, variant, kind, role))
+                    for tint in palettes.TINTS:
+                        line = palettes.backdrop_colour(colours["bg"], variant, amount, tint)
+                        line = colour.simulate(line, kind) if kind else line
+                        card = colour.over(line, seen["surface"], palettes.BACKDROP_CARD)
+                        for role in palettes.TEXT_ROLES:
+                            for ground in (line, card):
+                                self.assertGreaterEqual(
+                                    colour.contrast(seen[role], ground), needed, (pid, variant, kind, tint, role)
+                                )
 
     def test_a_safe_palette_whose_text_would_lose_contrast_draws_none(self):
-        # Light sepia-safe: as seen with protanopia, the faintest line already takes the third key colour under its level.
-        self.assertEqual(self.strength["sepia-safe"]["light"], 0.0)
-        self.assertGreater(self.strength["sepia-safe"]["dark"], 0.0)
+        # Light sepia-safe: as seen with protanopia, the faintest line already takes a key colour under its level.
+        self.assertEqual(self.shade["sepia-safe"]["light"], 0.0)
+        self.assertGreater(self.shade["sepia-safe"]["dark"], 0.0)
 
     def test_the_card_share_is_the_stylesheets(self):
         style = (pathlib.Path(palettes.__file__).parent / "assets" / "style.css").read_text(encoding="utf-8")
         self.assertIn(f"color-mix(in srgb,var(--surface) {round(palettes.BACKDROP_CARD * 100)}%,transparent)", style)
 
-    def test_every_rule_says_how_strongly_and_whether_the_backdrop_is_drawn(self):
+    def test_the_stylesheet_has_a_rule_for_every_tint(self):
+        style = (pathlib.Path(palettes.__file__).parent / "assets" / "style.css").read_text(encoding="utf-8")
+        for tint in palettes.TINTS:
+            self.assertIn(f"--backdrop-{tint}", style)
+
+    def test_every_rule_says_the_backdrops_colours_or_that_it_is_not_drawn(self):
         css = palettes.css(self.all, list(self.all))
         for line in css.splitlines():
             if "--bg:" in line:
-                self.assertRegex(line, r"--backdrop-opacity:[\d.]+;--backdrop-display:(block|none);color-scheme:")
-        self.assertIn('[data-palette="high-contrast"]{', css)
+                drawn = all(f"--backdrop-{tint}:#" in line for tint in palettes.TINTS) and "--backdrop-display:block" in line
+                self.assertTrue(drawn or "--backdrop-display:none" in line, line[:60])
         high = next(l for l in css.splitlines() if l.startswith(':root[data-palette="high-contrast"]{'))
-        self.assertIn("--backdrop-opacity:0;--backdrop-display:none", high)
+        self.assertIn("--backdrop-display:none", high)
+        self.assertNotIn("--backdrop-red", high)
 
 
 class LoadingTests(unittest.TestCase):

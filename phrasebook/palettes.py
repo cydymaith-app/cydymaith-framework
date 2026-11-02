@@ -248,43 +248,66 @@ def keys_by_line(palette):
     return access_level(palette) == "high" or "achromat" in palette.get("colour_vision", [])
 
 
-BACKDROP_OPACITY = 0.2  # the most a backdrop's lines are drawn at: the muted colour at this opacity
-BACKDROP_FLOOR = 0.05  # fainter than this the drawing is hardly there, so it is not drawn at all
+# The colours a backdrop is drawn in: dusky tints of the palette's own background, never the vivid colour of a flag. Each is a
+# (chroma, hue in degrees) in OKLCH; the lightness is the background's, a little darker in a light variant and a little lighter in a
+# dark one (backdrop_shades). A project names one for each drawing in structure.json ("backdrop_tints"); with none it is grey.
+TINTS = {"grey": (0.0, 0), "red": (0.075, 22), "green": (0.07, 150), "blue": (0.07, 255), "gold": (0.075, 85)}
+DEFAULT_TINT = "grey"
+BACKDROP_SHADE = 0.10  # the most, in OKLab lightness, that a backdrop's lines are shaded from the background
+BACKDROP_STEP = 0.005
+BACKDROP_FLOOR = 0.02  # less than this and the drawing is hardly there, so it is not drawn at all
 BACKDROP_CARD = 0.8  # how much of the surface a card keeps over a backdrop (style.css), so a line shows faintly through it
 
 
-def backdrop_opacity(palette):
-    """{'light': opacity, 'dark': opacity}: how strongly a backdrop is drawn in each variant, 0 for not at all. Never at the
-    high-contrast level. Otherwise the most, up to BACKDROP_OPACITY, at which every text colour still has the level's contrast
-    where it crosses a line (the muted colour at that opacity, on the background, and through a card), as seen normally and
-    with each kind of colour blindness the palette promises. Under BACKDROP_FLOOR the drawing is left out."""
+def backdrop_colour(bg, variant, shade, tint):
+    """The sRGB colour of a backdrop's lines: the background `bg` shaded by `shade` (darker in a light variant, lighter in a dark one)
+    and given the chroma and hue of `tint`."""
+    lightness = colour.rgb_to_oklab(bg)[0]
+    chroma, hue = TINTS[tint]
+    lightness = lightness - shade if variant == "light" else lightness + shade
+    return colour.oklab_to_rgb(*colour.oklch_to_oklab(lightness, chroma, hue))
+
+
+def backdrop_shades(palette):
+    """{'light': shade, 'dark': shade}: how far a backdrop's lines are shaded from the background in each variant, 0 for not
+    drawn at all. Never at the high-contrast level. Otherwise the most, up to BACKDROP_SHADE, at which every text colour still has
+    the level's contrast where it crosses a line of any tint (on the background, and through a card), as seen normally and with
+    each kind of colour blindness the palette promises. Under BACKDROP_FLOOR the drawing is left out."""
     out = {"light": 0.0, "dark": 0.0}
     if access_level(palette) == "high":
         return out
     needed = LEVELS[palette.get("level", "AA")]["text"]
+    kinds = palette.get("colour_vision", [])
     for variant, colours in resolve(palette).items():
-        views = [colours] + [
-            {role: colour.simulate(rgb, kind) for role, rgb in colours.items()} for kind in palette.get("colour_vision", [])
-        ]
 
-        def holds(alpha):
-            for seen in views:
-                line = colour.over(seen["bg"], seen["muted"], alpha)
-                for ground in (line, colour.over(line, seen["surface"], BACKDROP_CARD)):
-                    if any(colour.contrast(seen[role], ground) < needed for role in TEXT_ROLES):
-                        return False
+        def holds(shade):
+            for kind in [None, *kinds]:
+                seen = {role: colour.simulate(rgb, kind) if kind else rgb for role, rgb in colours.items()}
+                for tint in TINTS:
+                    line = backdrop_colour(colours["bg"], variant, shade, tint)
+                    line = colour.simulate(line, kind) if kind else line
+                    for ground in (line, colour.over(line, seen["surface"], BACKDROP_CARD)):
+                        if any(colour.contrast(seen[role], ground) < needed for role in TEXT_ROLES):
+                            return False
             return True
 
         steps = 0
-        while steps < round(BACKDROP_OPACITY * 100) and holds((steps + 1) / 100):
+        while (steps + 1) * BACKDROP_STEP <= BACKDROP_SHADE + 1e-9 and holds((steps + 1) * BACKDROP_STEP):
             steps += 1
-        out[variant] = steps / 100 if steps / 100 >= BACKDROP_FLOOR else 0.0
+        shade = round(steps * BACKDROP_STEP, 4)
+        out[variant] = shade if shade >= BACKDROP_FLOOR else 0.0
     return out
 
 
-def backdrop_tokens(alpha):
-    """The backdrop's strength in one variant (see backdrop_opacity): drawn at `alpha`, or not drawn at all."""
-    return f"--backdrop-opacity:{alpha:g};--backdrop-display:{'block' if alpha else 'none'}"
+def backdrop_tokens(colours, variant, shade):
+    """The backdrop's colours in one variant, as custom properties: a colour for each tint (backdrop_colour), and whether the drawing
+    is drawn at all (see backdrop_shades)."""
+    if not shade:
+        return "--backdrop-display:none"
+    tints = ";".join(
+        f"--backdrop-{tint}:{colour.rgb_to_hex(backdrop_colour(colours['bg'], variant, shade, tint))}" for tint in TINTS
+    )
+    return f"{tints};--backdrop-display:block"
 
 
 def tokens(colours, prefix="--"):
@@ -298,15 +321,15 @@ def css(palettes, ids, baseline=DEFAULT):
       light:         the variant when nothing says dark
       system dark:   the dark variant when the system prefers dark and the visitor has not chosen light
       chosen dark:   the dark variant when the visitor chose dark
-    Each also says how strongly a backdrop is drawn in it (backdrop_opacity). A palette at the high-contrast level also gets
+    Each also says the colours a backdrop is drawn in (backdrop_shades). A palette at the high-contrast level also gets
     rules that draw key words as underlines, not colour.
     """
     out = ["/* Generated by the phrasebook builder from the palettes. Do not edit. */"]
     for pid in ids:
         resolved = resolve(palettes[pid])
-        strength = backdrop_opacity(palettes[pid])
-        light = f"{tokens(resolved['light'])};{backdrop_tokens(strength['light'])}"
-        dark = f"{tokens(resolved['dark'])};{backdrop_tokens(strength['dark'])}"
+        shade = backdrop_shades(palettes[pid])
+        light = f"{tokens(resolved['light'])};{backdrop_tokens(resolved['light'], 'light', shade['light'])}"
+        dark = f"{tokens(resolved['dark'])};{backdrop_tokens(resolved['dark'], 'dark', shade['dark'])}"
         mark = "" if pid == baseline else f'[data-palette="{pid}"]'
         out.append(f":root{mark}{{{light};color-scheme:light}}")
         out.append(f'@media (prefers-color-scheme:dark){{:root{mark}:not([data-theme="light"]){{{dark};color-scheme:dark}}}}')

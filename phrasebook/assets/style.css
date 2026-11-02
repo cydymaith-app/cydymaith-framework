@@ -213,11 +213,16 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .terms td{padding:.55rem 0;vertical-align:baseline;overflow-wrap:anywhere}
 .terms .l2{font:500 1.1rem/1.3 var(--font-l2)}
 .card{margin-top:.75rem;padding:.25rem 1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
-/* a page's backdrop: a faded drawing fixed behind everything, never a control and never read aloud; the cards let it show through,
-   and the title bar and the rail cover it. How strongly it is drawn is the palette's (palettes.backdrop_opacity, in palettes.css):
-   not at all at the high-contrast level, or where its lines would cost the text its contrast. */
-.backdrop{position:fixed;inset:0;z-index:-1;margin:auto;block-size:92vh;max-inline-size:96vw;inline-size:auto;color:var(--muted);
-  opacity:var(--backdrop-opacity,.08);display:var(--backdrop-display,block);pointer-events:none}
+/* a page's backdrop: a drawing fixed behind everything, never a control and never read aloud; the cards let it show through, and the
+   title bar and the rail cover it. Its colour is a tint of the palette's own background (palettes.backdrop_shades, in palettes.css), a
+   shade darker in a light variant and lighter in a dark one: the tint the project names for the drawing (data-tint), else grey. Not
+   drawn at all at the high-contrast level, or where its lines would cost the text its contrast. */
+.backdrop{position:fixed;inset:0;z-index:-1;margin:auto;block-size:92vh;max-inline-size:96vw;inline-size:auto;color:var(--backdrop-grey,var(--muted));
+  display:var(--backdrop-display,block);pointer-events:none}
+.backdrop[data-tint="red"]{color:var(--backdrop-red)}
+.backdrop[data-tint="green"]{color:var(--backdrop-green)}
+.backdrop[data-tint="blue"]{color:var(--backdrop-blue)}
+.backdrop[data-tint="gold"]{color:var(--backdrop-gold)}
 :is(.backdrop ~ .app,main:has(.backdrop)) .card{background:color-mix(in srgb,var(--surface) 80%,transparent)}
 /* the site's backdrop (backdrop.js): a window --window units wide on a drawing --w by --h units, scaled to the page area's width
    (at most 1.2 times its height), and on a tall screen to at least 0.8 times its height. The place (--x, --y) sits across the

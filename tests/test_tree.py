@@ -273,6 +273,43 @@ ROUTE = {"name": "outline", "window": 12, "route": [[4, 4], [20, 4], [20, 20]]}
 PLACE = re.compile(r'<main id="main" data-place="([\d.]+) ([\d.]+)"')
 
 
+class BackdropTintTests(Scratch):
+    """ "backdrop_tints" at the top of structure.json: the colour each drawing is drawn in."""
+
+    def tinted(self, tints, group_backdrop=False):
+        proj = self.project()
+        add_backdrop(proj)
+        fixture.edit(proj / "structure.json", lambda d: d.update(backdrop_tints=tints))
+        if group_backdrop:
+            fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(backdrop="outline"))
+        return proj
+
+    def test_a_tinted_drawing_is_marked_with_its_tint_where_it_is_drawn(self):
+        pages = self.built(self.tinted({"outline": "green"}, group_backdrop=True))
+        self.assertIn('<svg class="backdrop" data-tint="green" aria-hidden="true"', pages["group-g1.html"])
+
+    def test_a_drawing_with_no_tint_is_not_marked_so_it_is_grey(self):
+        pages = self.built(self.tinted({}, group_backdrop=True))
+        self.assertIn('<svg class="backdrop" aria-hidden="true"', pages["group-g1.html"])
+        self.assertNotIn("data-tint", pages["group-g1.html"])
+
+    def test_the_sites_own_drawing_takes_its_tint_too(self):
+        proj = self.tinted({"outline": "red"})
+        fixture.edit(proj / "structure.json", lambda d: d.update(backdrop=ROUTE))
+        self.assertIn('class="backdrop route" style="', self.built(proj)["index.html"])
+        self.assertIn('data-tint="red"', self.built(proj)["index.html"])
+
+    def test_a_tint_must_be_a_known_one_for_a_drawing_that_has_a_file(self):
+        for bad in ({"outline": "purple"}, {"outline": 7}, {"ghost": "red"}, ["red"], "red"):
+            with self.assertRaises(ContentError, msg=bad) as ctx:
+                content.validate(content.read(self.tinted(bad)))
+            self.assertIn("structure.json backdrop_tints", str(ctx.exception), bad)
+
+    def test_every_tint_the_palettes_know_is_accepted(self):
+        for tint in phrasebook.palettes.TINTS:
+            content.validate(content.read(self.tinted({"outline": tint})))
+
+
 class SiteBackdropTests(Scratch):
     """The site's backdrop: "backdrop" at the top of structure.json, a drawing that moves along its route from page to page."""
 

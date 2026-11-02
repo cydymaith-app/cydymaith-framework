@@ -152,6 +152,7 @@ def validate(raw):
         check_icon(f"structure.json group {g['id']!r}", g.get("icon"), raw["icons"])
         check_backdrop(f"structure.json group {g['id']!r}", g.get("backdrop"), raw.get("backdrops", {}))
     check_route(structure.get("backdrop"), raw.get("backdrops", {}))
+    check_tints(structure.get("backdrop_tints"), raw.get("backdrops", {}))
     for slug, p in pages.items():
         check_icon(f"pages/{slug}.json", p.get("icon"), raw["icons"])
     for code, pack in packs.items():
@@ -257,6 +258,21 @@ def check_backdrop(where, name, available):
             if isinstance(name, str)
             else f"{where}: 'backdrop' must be the name of a file in backdrops/"
         )
+
+
+def check_tints(tints, available):
+    """The optional "backdrop_tints" at the top of structure.json: {backdrop name: tint}, the colour each drawing is drawn in. Each name
+    must be a file in backdrops/ and each tint one the palettes know (palettes.TINTS); a drawing with none is grey."""
+    if tints is None:
+        return
+    where = "structure.json backdrop_tints"
+    if not isinstance(tints, dict):
+        raise ContentError(f"{where}: must map a backdrop's name to its tint")
+    for name, tint in tints.items():
+        if name not in available:
+            raise ContentError(f"{where}: {name!r} has no file backdrops/{name}.svg")
+        if tint not in palettes.TINTS:
+            raise ContentError(f"{where}: {name!r} has the tint {tint!r}; it must be one of {', '.join(palettes.TINTS)}")
 
 
 ROUTE_KEYS = {"name", "window", "route"}

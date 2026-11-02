@@ -52,8 +52,11 @@ class Site:
         # Only pages with at least one row available in both languages are published for this pair.
         self.slugs = [s for g in raw["structure"]["groups"] for s in g["pages"] if self.count_entries(s)]
         self.icons = {name: icons.markup(text) for name, text in raw["icons"].items()}
+        tints = raw["structure"].get("backdrop_tints", {})  # the colour each drawing is drawn in (palettes.TINTS); grey with none
         self.backdrops = {
-            name: icons.markup(text).replace('class="icon"', 'class="backdrop"', 1)
+            name: icons.markup(text).replace(
+                'class="icon"', 'class="backdrop"' + (f' data-tint="{tints[name]}"' if name in tints else ""), 1
+            )
             for name, text in raw.get("backdrops", {}).items()
         }
         self.ui_icons = {f.stem: icons.markup(f.read_text(encoding="utf-8")) for f in sorted(UI_ICONS.glob("*.svg"))}
