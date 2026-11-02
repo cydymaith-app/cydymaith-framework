@@ -12,7 +12,7 @@ const SOURCE = fs.readFileSync(path.join(__dirname, "..", "phrasebook", "assets"
 // Run in this realm, not a sandbox, so objects it returns compare equal to the ones written here.
 const exported = { exports: {} };
 vm.runInThisContext(`(function (module) {${SOURCE}\n})`)(exported);
-const { keyMove, step, lock, offset, shouldDismiss, places, marked, anchorOf, cameFrom } = exported.exports;
+const { keyMove, step, lock, offset, shouldDismiss, places, marked, anchorOf, cameFrom, centredIn } = exported.exports;
 
 test("keys: Right opens the focused tile and Left goes back, mirrored in right-to-left", () => {
   assert.equal(keyMove("ArrowRight", false), "open");
@@ -199,4 +199,14 @@ test("the page glue guards the cases the plan names", () => {
   assert.ok(SOURCE.includes("event.touches.length !== 1"), "a second finger is ignored");
   assert.ok(SOURCE.includes("reducedMotion()"), "reduced motion skips the slide");
   assert.ok(SOURCE.includes('"pageshow"'), "a page restored from the cache is put back");
+});
+
+test("a drawing fixed to the middle of the screen is put in the middle of the screen as a place in the box that moves", () => {
+  const size = { width: 377, height: 784 };
+  const screen = { width: 393, height: 852 };
+  assert.deepEqual(centredIn(size, screen, { left: 0, top: 0 }), { left: 8, top: 34 });
+  // The sliding page sits under the title bar and beside the rail: the same screen place, seen from its top-left corner.
+  assert.deepEqual(centredIn(size, screen, { left: 56, top: 60 }), { left: -48, top: -26 });
+  // A page scrolled up by 100px has its corner above the screen's top, so the drawing is 100px further down the page.
+  assert.deepEqual(centredIn(size, screen, { left: 56, top: -40 }), { left: -48, top: 74 });
 });

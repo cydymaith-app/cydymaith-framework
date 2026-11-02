@@ -104,7 +104,15 @@
     return typeof from === "string" && PAGE.test(from) ? from : null;
   }
 
-  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places, marked: marked, anchorOf: anchorOf, cameFrom: cameFrom };
+  // Where a drawing of `size` ({width, height}) that is fixed to the middle of a screen of `screen` ({width, height}) sits inside a box
+  // whose top-left corner is at `origin` ({left, top}) on that screen: a drawing fixed behind a page (a group's own backdrop) is only
+  // fixed to the screen while nothing that holds it is moving, so while it moves it is put where the screen's middle is, as a place in
+  // the box that moves.
+  function centredIn(size, screen, origin) {
+    return { left: (screen.width - size.width) / 2 - origin.left, top: (screen.height - size.height) / 2 - origin.top };
+  }
+
+  var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places, marked: marked, anchorOf: anchorOf, cameFrom: cameFrom, centredIn: centredIn };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -132,6 +140,53 @@
     // Where the browser slides the pages itself, a mark that has to go in the address (the topic Back returns to, a section)
     // says "none", so its own move stands down rather than racing the head's clean-up of the address.
     return marked(href, native ? "none" : direction, from);
+  }
+
+  // ---- a drawing behind a page
+  // A group's own backdrop is part of its page and is fixed to the screen, but anything fixed inside a page that has a transform (a
+  // page that is sliding) is fixed to that page instead, so the drawing would jump when the move begins or ends. While the pages move,
+  // each drawing is therefore put at the place on the page that it has on the screen, and let go again when they have landed.
+
+  var held = false;  // the real page's drawings are held in place
+
+  function hold(map, left, top) {
+    map.style.setProperty("position", "absolute");
+    map.style.setProperty("inset", "auto");
+    map.style.setProperty("margin", "0");
+    map.style.setProperty("left", left + "px");
+    map.style.setProperty("top", top + "px");
+  }
+
+  function drawingsOf(page) { return Array.prototype.slice.call(page.querySelectorAll(".backdrop")); }
+
+  // The real page's drawings, where they are now, before it is given a transform.
+  function holdDrawings() {
+    if (held || !main) return;
+    held = true;
+    var box = main.getBoundingClientRect();
+    drawingsOf(main).forEach(function (map) {
+      var at = map.getBoundingClientRect();
+      hold(map, at.left - box.left, at.top - box.top);
+    });
+  }
+
+  function releaseDrawings() {
+    if (!held || !main) return;
+    held = false;
+    drawingsOf(main).forEach(function (map) {
+      ["position", "inset", "margin", "left", "top"].forEach(function (name) { map.style.removeProperty(name); });
+    });
+  }
+
+  // The drawings of the copy of the other page, put where they will be on the screen when that page is the real one.
+  function holdCopyDrawings(copy) {
+    var box = copy.getBoundingClientRect();
+    var screen = { width: root.clientWidth, height: root.clientHeight };
+    drawingsOf(copy).forEach(function (map) {
+      var size = map.getBoundingClientRect();
+      var at = centredIn(size, screen, box);
+      hold(map, at.left, at.top);
+    });
   }
 
   // ---- the other page
@@ -208,12 +263,14 @@
       var most = Math.max(0, copy.offsetHeight - layer.clientHeight);
       copy.style.top = -Math.min(Math.max(0, down), most) + "px";
     }
+    holdCopyDrawings(copy);
     place(along);
     void layer.offsetWidth;  // settle the first place, so that the next one is animated from it
   }
 
   function place(x) {
     along = x;
+    holdDrawings();
     if (!stage) {
       main.style.transform = "translateX(" + sign(rtl()) * x + "px)";
       return;
@@ -233,6 +290,7 @@
     if (main) {
       main.style.transition = "";
       main.style.transform = "";
+      releaseDrawings();
     }
   }
 
