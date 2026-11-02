@@ -1149,6 +1149,17 @@ class InstallTests(Scratch):
         self.assertEqual(set(files), on_disk)
         self.assertNotIn("sw.js", files)
 
+    def test_the_service_worker_fetches_every_file_past_the_browsers_http_cache_when_it_installs(self):
+        """A host may let the browser keep a page for minutes. Without "reload" a new release could cache some pages from an older copy
+        (the home page new, a topic old) and keep serving that mix until the next release."""
+        proj = self.project()
+        out = self.tmp / "sw-reload-out"
+        quiet_build(out, project_dir=proj)
+        sw = (out / "sw.js").read_text(encoding="utf-8")
+        self.assertIn('new Request(file, { cache: "reload" })', sw)
+        self.assertIn("cache.addAll(requests)", sw)
+        self.assertNotIn("cache.addAll(FILES)", sw)
+
     def test_the_cache_version_changes_when_a_built_file_changes(self):
         proj = self.project()
         out1 = self.tmp / "v1"

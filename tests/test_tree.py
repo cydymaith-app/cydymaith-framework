@@ -299,8 +299,31 @@ class BackdropTintTests(Scratch):
         self.assertIn('class="backdrop route" style="', self.built(proj)["index.html"])
         self.assertIn('data-tint="red"', self.built(proj)["index.html"])
 
+    def test_a_drawing_may_have_a_body_of_one_tint_under_lines_of_another(self):
+        pages = self.built(self.tinted({"outline": {"lines": "grey", "body": "red"}}, group_backdrop=True))
+        self.assertIn('<svg class="backdrop" data-tint="grey" data-body="red" aria-hidden="true"', pages["group-g1.html"])
+
+    def test_a_body_with_no_lines_named_has_grey_lines(self):
+        pages = self.built(self.tinted({"outline": {"body": "gold"}}, group_backdrop=True))
+        self.assertIn('data-tint="grey" data-body="gold"', pages["group-g1.html"])
+
+    def test_the_stylesheet_gives_a_body_its_own_colour_for_every_tint(self):
+        style = (pathlib.Path(phrasebook.__file__).parent / "assets" / "style.css").read_text(encoding="utf-8")
+        for tint in phrasebook.palettes.TINTS:
+            self.assertIn(f'.backdrop[data-body="{tint}"] > :first-child{{color:var(--backdrop-{tint})}}', style)
+
     def test_a_tint_must_be_a_known_one_for_a_drawing_that_has_a_file(self):
-        for bad in ({"outline": "purple"}, {"outline": 7}, {"ghost": "red"}, ["red"], "red"):
+        for bad in (
+            {"outline": "purple"},
+            {"outline": 7},
+            {"ghost": "red"},
+            ["red"],
+            "red",
+            {"outline": {"lines": "purple"}},
+            {"outline": {"body": 3}},
+            {"outline": {"fill": "red"}},
+            {"outline": {}},
+        ):
             with self.assertRaises(ContentError, msg=bad) as ctx:
                 content.validate(content.read(self.tinted(bad)))
             self.assertIn("structure.json backdrop_tints", str(ctx.exception), bad)

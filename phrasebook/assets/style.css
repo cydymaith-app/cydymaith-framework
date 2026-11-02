@@ -226,6 +226,12 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .backdrop[data-tint="green"]{color:var(--backdrop-green)}
 .backdrop[data-tint="blue"]{color:var(--backdrop-blue)}
 .backdrop[data-tint="gold"]{color:var(--backdrop-gold)}
+/* a drawing whose first element is a body, drawn under its lines, may give the body a tint of its own */
+.backdrop[data-body="grey"] > :first-child{color:var(--backdrop-grey)}
+.backdrop[data-body="red"] > :first-child{color:var(--backdrop-red)}
+.backdrop[data-body="green"] > :first-child{color:var(--backdrop-green)}
+.backdrop[data-body="blue"] > :first-child{color:var(--backdrop-blue)}
+.backdrop[data-body="gold"] > :first-child{color:var(--backdrop-gold)}
 :is(.backdrop ~ .app,main:has(.backdrop)) .card{background:color-mix(in srgb,var(--surface) 80%,transparent)}
 /* the site's backdrop (backdrop.js): a window --window units wide on a drawing --w by --h units, scaled to the page area's width
    (at most 1.2 times its height), and on a tall screen to at least 0.8 times its height. The place (--x, --y) sits across the

@@ -44,8 +44,11 @@ SERVICE_WORKER = """\
 const CACHE = "phrasebook-{version}";
 const FILES = {files};
 
+// Every file is asked for past the browser's own HTTP cache ("reload"), which a host may let keep a page for minutes: without that a
+// new release can cache some of its pages from an older copy and then keep serving that mix until the next release.
 self.addEventListener("install", (event) => {{
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  const requests = FILES.map((file) => new Request(file, {{ cache: "reload" }}));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(requests)).then(() => self.skipWaiting()));
 }});
 
 self.addEventListener("activate", (event) => {{

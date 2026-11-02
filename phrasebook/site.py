@@ -54,9 +54,7 @@ class Site:
         self.icons = {name: icons.markup(text) for name, text in raw["icons"].items()}
         tints = raw["structure"].get("backdrop_tints", {})  # the colour each drawing is drawn in (palettes.TINTS); grey with none
         self.backdrops = {
-            name: icons.markup(text).replace(
-                'class="icon"', 'class="backdrop"' + (f' data-tint="{tints[name]}"' if name in tints else ""), 1
-            )
+            name: icons.markup(text).replace('class="icon"', 'class="backdrop"' + self.tint_marks(tints.get(name)), 1)
             for name, text in raw.get("backdrops", {}).items()
         }
         self.ui_icons = {f.stem: icons.markup(f.read_text(encoding="utf-8")) for f in sorted(UI_ICONS.glob("*.svg"))}
@@ -76,6 +74,18 @@ class Site:
         self.homes = {s: g["id"] for g in self.groups if g["layout"] == "one-page" for s in g["pages"]}
         self.route = raw["structure"].get("backdrop")  # the site's backdrop, moving along its drawing from page to page
         self.places = self.route_places() if self.route else {}
+
+    @staticmethod
+    def tint_marks(tint):
+        """The attributes that tell the stylesheet a drawing's colours: data-tint for its lines (all of it, with no body), and data-body
+        for its first element, a body drawn under the lines. `tint` is a tint name, or {"lines": ..., "body": ...}, or None."""
+        if tint is None:
+            return ""
+        if isinstance(tint, str):
+            return f' data-tint="{tint}"'
+        return f' data-tint="{tint.get("lines", palettes.DEFAULT_TINT)}"' + (
+            f' data-body="{tint["body"]}"' if "body" in tint else ""
+        )
 
     # -- lookups
 

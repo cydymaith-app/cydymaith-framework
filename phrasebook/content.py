@@ -261,8 +261,10 @@ def check_backdrop(where, name, available):
 
 
 def check_tints(tints, available):
-    """The optional "backdrop_tints" at the top of structure.json: {backdrop name: tint}, the colour each drawing is drawn in. Each name
-    must be a file in backdrops/ and each tint one the palettes know (palettes.TINTS); a drawing with none is grey."""
+    """The optional "backdrop_tints" at the top of structure.json: {backdrop name: tint}, the colour each drawing is drawn in, or
+    {backdrop name: {"lines": tint, "body": tint}} for a drawing whose first element is a body drawn under its lines (the lines are
+    grey if only the body is named). Each name must be a file in backdrops/ and each tint one the palettes know (palettes.TINTS); a
+    drawing with none is grey."""
     if tints is None:
         return
     where = "structure.json backdrop_tints"
@@ -271,8 +273,15 @@ def check_tints(tints, available):
     for name, tint in tints.items():
         if name not in available:
             raise ContentError(f"{where}: {name!r} has no file backdrops/{name}.svg")
-        if tint not in palettes.TINTS:
-            raise ContentError(f"{where}: {name!r} has the tint {tint!r}; it must be one of {', '.join(palettes.TINTS)}")
+        if isinstance(tint, dict):
+            if not tint or set(tint) - {"lines", "body"}:
+                raise ContentError(f"{where}: {name!r} may name only 'lines' and 'body'")
+            named = tint.values()
+        else:
+            named = [tint]
+        for one in named:
+            if one not in palettes.TINTS:
+                raise ContentError(f"{where}: {name!r} has the tint {one!r}; it must be one of {', '.join(palettes.TINTS)}")
 
 
 ROUTE_KEYS = {"name", "window", "route"}
