@@ -207,6 +207,11 @@ class FixtureBuildTests(Scratch):
     def test_the_figure_names_the_languages_with_the_names_the_pack_gives(self):
         self.assertIn("Compass rose labelled in Betan and Alphan", self.pages["points.html"])
 
+    def test_the_figure_is_skipped_when_the_first_language_lacks_one_of_its_concepts(self):
+        proj = self.project()
+        fixture.edit(proj / "packs" / "qaa" / "pages" / "points.json", lambda d: d["sections"]["dirs"]["concepts"].pop("north"))
+        self.assertNotIn('class="rose"', self.built(proj)["points.html"])
+
     def test_the_page_title_comes_from_a_message(self):
         self.assertIn("<title>qaa page | Demo Book</title>", self.pages["p1.html"])
 

@@ -104,6 +104,7 @@ def make_project(root, interface="qaa", ui_extra=None):
             "interface": interface,
             "default_pair": ["qaa", "qab"],
             "contact": "reports@example.org",
+            "credits": [{"title": "A picture", "licence": "CC0-1.0"}],
             "about_page": {
                 code: {
                     "title": f"{code} about",

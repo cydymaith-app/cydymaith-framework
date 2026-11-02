@@ -223,6 +223,80 @@ class IconSiteTests(Scratch):
             self.assertNotIn("<img", page.read_text(encoding="utf-8"), page.name)
 
 
+def add_backdrop(proj, name="outline", svg=None):
+    path = proj / "backdrops" / f"{name}.svg"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(svg or SVG.format(body='<path d="M1 2l3 4z" />'), encoding="utf-8")
+
+
+class BackdropSiteTests(Scratch):
+    def test_a_backdrop_is_inlined_first_on_the_group_page_that_names_it_and_hidden_from_a_screen_reader(self):
+        proj = self.project()
+        add_backdrop(proj)
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(backdrop="outline"))
+        pages = self.built(proj)
+        self.assertIn('<svg class="backdrop" aria-hidden="true" focusable="false"', pages["group-g1.html"])
+        self.assertLess(pages["group-g1.html"].index('class="backdrop"'), pages["group-g1.html"].index("<h1>"))
+        for name in ("index.html", "p1.html", "points.html"):
+            self.assertNotIn('class="backdrop"', pages[name], name)
+
+    def test_a_backdrop_nobody_names_is_not_inlined(self):
+        proj = self.project()
+        add_backdrop(proj)
+        self.assertNotIn("M1 2l3 4z", "".join(self.built(proj).values()))
+
+    def test_a_named_backdrop_must_have_a_file(self):
+        proj = self.project()
+        fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(backdrop="ghost"))
+        with self.assertRaises(ContentError) as ctx:
+            content.validate(content.read(proj))
+        self.assertIn("backdrops/ghost.svg", str(ctx.exception))
+
+    def test_the_backdrop_must_be_a_name_not_something_else(self):
+        for bad in (7, ["a"], {"a": 1}, True):
+            proj = self.project()
+            fixture.edit(proj / "structure.json", lambda d, b=bad: d["groups"][0].update(backdrop=b))
+            with self.assertRaises(ContentError, msg=bad):
+                content.validate(content.read(proj))
+
+    def test_an_unsafe_backdrop_file_fails_the_build_naming_the_file(self):
+        proj = self.project()
+        add_backdrop(proj, "evil", SVG.format(body='<path d="M0 0" onclick="x()" />'))
+        with self.assertRaises(ContentError) as ctx:
+            quiet_build(self.tmp / "evil-out", project_dir=proj)
+        self.assertIn("backdrops/evil.svg", str(ctx.exception))
+
+
+class CreditsTests(Scratch):
+    CREDIT = {"title": "An outline", "url": "https://example.org/data", "licence": "OGL-3.0", "statement": "Source: Example."}
+
+    def test_credits_are_listed_on_the_sources_page_with_their_licence_and_statement(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d.update(credits=[self.CREDIT]))
+        sources = self.built(proj)["sources.html"]
+        self.assertIn('<section id="credits">', sources)
+        self.assertIn('<a href="https://example.org/data">An outline</a>', sources)
+        self.assertIn("Open Government Licence v3.0", sources)
+        self.assertIn("Source: Example.", sources)
+
+    def test_no_credits_means_no_credits_section(self):
+        proj = self.project()
+        fixture.edit(proj / "editions" / "demo.json", lambda d: d.pop("credits"))
+        self.assertNotIn('id="credits"', self.built(proj)["sources.html"])
+
+    def test_a_credit_needs_a_title_a_known_licence_and_an_https_address(self):
+        bad = {
+            "no title": {**self.CREDIT, "title": ""},
+            "an unknown licence": {**self.CREDIT, "licence": "all-rights-reserved"},
+            "a plain http address": {**self.CREDIT, "url": "http://example.org/data"},
+        }
+        for why, credit in bad.items():
+            proj = self.project()
+            fixture.edit(proj / "editions" / "demo.json", lambda d, c=credit: d.update(credits=[c]))
+            with self.assertRaises(ContentError, msg=why):
+                content.validate(content.read(proj))
+
+
 class TreeTests(Scratch):
     @classmethod
     def setUpClass(cls):

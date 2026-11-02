@@ -51,11 +51,16 @@ class Site:
         # Only pages with at least one row available in both languages are published for this pair.
         self.slugs = [s for g in raw["structure"]["groups"] for s in g["pages"] if self.count_entries(s)]
         self.icons = {name: icons.markup(text) for name, text in raw["icons"].items()}
+        self.backdrops = {
+            name: icons.markup(text).replace('class="icon"', 'class="backdrop"', 1)
+            for name, text in raw.get("backdrops", {}).items()
+        }
         self.ui_icons = {f.stem: icons.markup(f.read_text(encoding="utf-8")) for f in sorted(UI_ICONS.glob("*.svg"))}
         self.groups = [
             {
                 "id": g["id"],
                 "icon": g.get("icon"),
+                "backdrop": g.get("backdrop"),
                 "pages": [s for s in g["pages"] if s in self.slugs],
                 "links": [s for s in g.get("links", []) if s in self.slugs],
                 "layout": g.get("layout", "tiles"),
@@ -980,7 +985,7 @@ class Site:
     def group_page(self, group):
         """One group's topics as tiles, or on a one-page group as accordions (see one_page)."""
         frm, to, gid = self.frm, self.to, group["id"]
-        head = (
+        head = (self.backdrops[group["backdrop"]] if group["backdrop"] else "") + (
             f"<header><h1>{self.inline(frm, self.group_title(frm, gid))}</h1>"
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
@@ -1057,6 +1062,24 @@ class Site:
                     counts[key] = counts.get(key, 0) + 1
         return counts
 
+    def credits_section(self):
+        """The edition's `credits`: pictures and data that are not phrases, each with its licence and the statement it asks for."""
+        rows = []
+        for c in self.edition.get("credits", []):
+            title = e(c["title"])
+            if c.get("url"):
+                title = f'<a href="{e(c["url"])}">{title}</a>'
+            note = f'<small class="note">{e(c["statement"])}</small>' if c.get("statement") else ""
+            rows.append(f'<tr><th scope="row" class="l1">{title}{note}</th><td>{self.licence_html(c["licence"])}</td></tr>')
+        if not rows:
+            return ""
+        return (
+            f'<section id="credits"><h2>{self.h("sources_credits")}</h2>'
+            f'<table class="terms"><thead><tr><th scope="col">{self.h("col_source")}</th>'
+            f'<th scope="col">{self.h("col_licence")}</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table></section>'
+        )
+
     def sources_page(self):
         """One table per page: each source, its language, its licence and how many entries come from it."""
         sections = []
@@ -1086,6 +1109,7 @@ class Site:
                 f'<th scope="col">{self.h("col_entries")}</th></tr></thead>'
                 f'<tbody>{"".join(rows)}</tbody></table></section>'
             )
+        sections.append(self.credits_section())
         second, lang2 = self.ui_text(self.to, "sources")
         head = (
             "<header>"

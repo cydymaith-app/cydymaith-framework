@@ -8,6 +8,7 @@ A project is a folder:
     packs/<code>/help.json          optional: that language's text for the help book (see help.py)
     editions/<name>.json            which languages to publish, the default pair, branding and stylesheets
     icons/<name>.svg                line icons that groups and pages name with "icon" (see icons.py)
+    backdrops/<name>.svg            faded drawings behind a group's page, named with "backdrop" (decoration only)
     palettes/<id>.json              colour palettes the visitor can choose, added to the framework's own (see palettes.py)
     static/                         files copied to the output as they are (project stylesheet, icons)
 
@@ -85,6 +86,10 @@ def read(project_dir):
     raw["palettes"] = palettes.load(d / "palettes")
     icon_dir = d / "icons"
     raw["icons"] = {f.stem: f.read_text(encoding="utf-8") for f in sorted(icon_dir.glob("*.svg"))} if icon_dir.is_dir() else {}
+    backdrop_dir = d / "backdrops"
+    raw["backdrops"] = (
+        {f.stem: f.read_text(encoding="utf-8") for f in sorted(backdrop_dir.glob("*.svg"))} if backdrop_dir.is_dir() else {}
+    )
     return raw
 
 
@@ -141,8 +146,11 @@ def validate(raw):
     for slug, p in pages.items():
         check_related(slug, p, pages)
     icons.validate(raw["icons"])
+    for name, text in raw.get("backdrops", {}).items():
+        icons.parse(f"backdrops/{name}.svg", text)  # the same safe subset as an icon
     for g in structure["groups"]:
         check_icon(f"structure.json group {g['id']!r}", g.get("icon"), raw["icons"])
+        check_backdrop(f"structure.json group {g['id']!r}", g.get("backdrop"), raw.get("backdrops", {}))
     for slug, p in pages.items():
         check_icon(f"pages/{slug}.json", p.get("icon"), raw["icons"])
     for code, pack in packs.items():
@@ -236,6 +244,18 @@ def check_level(where, holder):
         grading.validate_level(where, holder)
     except ValueError as err:
         raise ContentError(str(err)) from None
+
+
+def check_backdrop(where, name, available):
+    """An optional "backdrop" must name a file in the project's backdrops/ folder."""
+    if name is None:
+        return
+    if not isinstance(name, str) or name not in available:
+        raise ContentError(
+            f"{where}: backdrop {name!r} has no file backdrops/{name}.svg"
+            if isinstance(name, str)
+            else f"{where}: 'backdrop' must be the name of a file in backdrops/"
+        )
 
 
 def check_icon(where, name, available):
@@ -498,8 +518,25 @@ def validate_edition(name, ed, packs, available_palettes):
             )
     if ed.get("contact") is not None and not CONTACT.match(str(ed["contact"])):
         raise ContentError(f"{where}: 'contact' must be one email address, such as name@example.org")
+    validate_credits(where, ed.get("credits"))
     validate_about(where, ed.get("about_page"), langs)
     validate_text(where, ed)
+
+
+def validate_credits(where, credits):
+    """The optional credits of an edition: pictures and data that need an acknowledgement, shown on the Sources page."""
+    if credits is None:
+        return
+    if not isinstance(credits, list):
+        raise ContentError(f"{where}: 'credits' must be a list")
+    for i, c in enumerate(credits):
+        here = f"{where}: credits[{i}]"
+        if not isinstance(c, dict) or not c.get("title"):
+            raise ContentError(f"{here} needs a title")
+        if c.get("licence") not in LICENCES:
+            raise ContentError(f"{here}: licence {c.get('licence')!r} is not one of {', '.join(LICENCES)}")
+        if c.get("url") is not None and not str(c["url"]).startswith("https://"):
+            raise ContentError(f"{here}: 'url' must be an https:// address")
 
 
 def validate_about(where, about, langs):

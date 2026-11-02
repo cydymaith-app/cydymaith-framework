@@ -40,14 +40,15 @@ python3 build.py --grades                   # print how demanding each group, pa
 
 | File | What it holds |
 |---|---|
-| `structure.json` | Navigation groups and page order. A group may name an `icon`, a `level` and a `layout` (`tiles`, the default, or `one-page`; see *One-page groups*). Language neutral. |
+| `structure.json` | Navigation groups and page order. A group may name an `icon`, a `backdrop`, a `level` and a `layout` (`tiles`, the default, or `one-page`; see *One-page groups*). Language neutral. |
 | `pages/<slug>.json` | A page skeleton: sections and the ids of their **concepts**. No words. May name a `figure`, an `icon`, a `level` and `related` topics; a section may name a `level` too (see *Grading* and *Related topics*). |
 | `packs/<code>/pack.json` | One language: `code`, `name`, `names`, `dir`, `ui`, `groups`, `sources`, `varieties`, `commentary_lang`. |
 | `packs/<code>/pages/<slug>.json` | That language's title, lede, default `source`, an optional `more` note, and per section a title, optional `intro` and `box` commentary, and one entry per concept. `more` is a list of body blocks as in an About section (a paragraph, `{"list"}`, `{"quote"}`, `{"links": [{"text", "href"}]}`, `{"share"}`). It closes the topic, after the related row, from the first language of the pair that has one; use it to point to a fuller source. |
 | `packs/<code>/help.json` | Optional. That language's text for the help book: `chapters` and `features`, keyed by id. Overrides the framework's English in `phrasebook/help/en.json` where it names the same id. See *The help book*. |
-| `editions/<name>.json` | `name`, `languages`, `interface`, `default_pair`, `home` copy, `fonts`, `stylesheets`, and optionally `grading`. |
+| `editions/<name>.json` | `name`, `languages`, `interface`, `default_pair`, `home` copy, `fonts`, `stylesheets`, and optionally `grading`. It may list `credits`: pictures and data that are not phrases, each `{title, licence, url?, statement?}` (a licence key as in `LICENCES`), shown in a *Pictures and data* section on the Sources page (`Site.credits_section`). |
 | `palettes/<id>.json` | Optional. A colour palette added to the framework's own, or one with a framework id that replaces it. See *Themes and palettes*. |
 | `icons/<name>.svg` | Optional line icons. A group in `structure.json` or a page skeleton names one with `"icon": "<name>"`. See *Navigation*. |
+| `backdrops/<name>.svg` | Optional. A faded drawing behind a group's page, named by a group in `structure.json` with `"backdrop": "<name>"`. It sits behind that group's page only, whether its layout is tiles or one-page. Decoration only: fixed behind the content, ignored by taps and screen readers, hidden in forced-colours mode. Inlined (it makes no request), in the same safe SVG subset as an icon. `Site.backdrops`; the style is `.backdrop` in `style.css`. |
 | `static/` | Files copied to the site as they are. They may add to the framework's files or replace them. |
 
 A concept is `{ "text": "...", "note": "...", "source": "id" }` or `{ "forms": [{ "text": "...", "varieties": ["north"] }] }`. A concept missing from a pack is simply not shown for that language.
