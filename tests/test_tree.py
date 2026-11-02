@@ -318,10 +318,12 @@ class SiteBackdropTests(Scratch):
             self.assertNotIn("data-place=", pages[name], name)
             self.assertIn("--x:4;--y:4", pages[name], name)
 
-    def test_a_group_with_its_own_backdrop_keeps_it_still_and_its_topics_stay_on_the_route(self):
+    def test_a_group_with_its_own_backdrop_keeps_it_in_the_page_and_its_topics_stay_on_the_route(self):
         pages = self.built(self.routed(group_backdrop=True))
         group = pages["group-g1.html"]
         self.assertIn('<svg class="backdrop" aria-hidden="true"', group)
+        # In the page, so nav.js reads it with the page and slides it in with the tiles.
+        self.assertLess(group.index('<main id="main"'), group.index('class="backdrop"'))
         self.assertNotIn("backdrop route", group)
         self.assertIsNone(self.place(group))
         self.assertIsNotNone(self.place(pages["p1.html"]))

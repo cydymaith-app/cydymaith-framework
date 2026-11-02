@@ -558,14 +558,13 @@ class Site:
         return places
 
     def backdrop(self, current):
-        """(markup, place) for the drawing behind a page. A group's page with a backdrop of its own has it, still. Every other
-        page has the site's backdrop, if there is one, put at the page's place on the route; a page that is not on the route
-        (Settings, About, Help) has no place, and backdrop.js keeps the drawing where the page before left it. Without the
-        script each page shows its own place, and the others the first."""
+        """(markup, place) for the site's drawing behind a page, outside the page. A group's page with a backdrop of its own
+        has none of it: its own drawing is in the page (group_page), so it slides in with the page. Every other page has the
+        site's backdrop, if there is one, put at the page's place on the route; a page that is not on the route (Settings,
+        About, Help) has no place, and backdrop.js keeps the drawing where the page before left it. Without the script each
+        page shows its own place, and the others the first."""
         group = next((g for g in self.groups if f"group-{g['id']}" == current), None)
-        if group and group["backdrop"]:
-            return self.backdrops[group["backdrop"]], None
-        if not self.route:
+        if (group and group["backdrop"]) or not self.route:
             return "", None
         place = self.places.get(current)
         x, y = place or self.places["index"]
@@ -1039,7 +1038,8 @@ class Site:
     def group_page(self, group):
         """One group's topics as tiles, or on a one-page group as accordions (see one_page)."""
         frm, to, gid = self.frm, self.to, group["id"]
-        head = (
+        # The group's own drawing is part of the page, so nav.js reads it with the page and slides it in with the tiles.
+        head = (self.backdrops[group["backdrop"]] if group["backdrop"] else "") + (
             f"<header><h1>{self.inline(frm, self.group_title(frm, gid))}</h1>"
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
