@@ -104,12 +104,12 @@
     return typeof from === "string" && PAGE.test(from) ? from : null;
   }
 
-  // Where a drawing of `size` ({width, height}) that is fixed to the middle of a screen of `screen` ({width, height}) sits inside a box
-  // whose top-left corner is at `origin` ({left, top}) on that screen: a drawing fixed behind a page (a group's own backdrop) is only
-  // fixed to the screen while nothing that holds it is moving, so while it moves it is put where the screen's middle is, as a place in
-  // the box that moves.
-  function centredIn(size, screen, origin) {
-    return { left: (screen.width - size.width) / 2 - origin.left, top: (screen.height - size.height) / 2 - origin.top };
+  // Where a drawing of `size` ({width, height}) that is fixed to the middle of the page area (`area`, {width, height}: what the title bar
+  // and the rail leave) sits inside a box whose top-left corner is at `origin` ({left, top}) in that area: a drawing fixed behind a page
+  // (a group's own backdrop) is only fixed to the screen while nothing that holds it is moving, so while it moves it is put where the
+  // middle of the area is, as a place in the box that moves.
+  function centredIn(size, area, origin) {
+    return { left: (area.width - size.width) / 2 - origin.left, top: (area.height - size.height) / 2 - origin.top };
   }
 
   var api = { keyMove: keyMove, step: step, lock: lock, offset: offset, shouldDismiss: shouldDismiss, places: places, marked: marked, anchorOf: anchorOf, cameFrom: cameFrom, centredIn: centredIn };
@@ -179,12 +179,13 @@
   }
 
   // The drawings of the copy of the other page, put where they will be on the screen when that page is the real one.
-  function holdCopyDrawings(copy) {
+  function holdCopyDrawings(copy, layer) {
     var box = copy.getBoundingClientRect();
-    var screen = { width: root.clientWidth, height: root.clientHeight };
+    var area = layer.getBoundingClientRect();  // the layer is exactly the page area
+    var origin = { left: box.left - area.left, top: box.top - area.top };
     drawingsOf(copy).forEach(function (map) {
       var size = map.getBoundingClientRect();
-      var at = centredIn(size, screen, box);
+      var at = centredIn(size, area, origin);
       hold(map, at.left, at.top);
     });
   }
@@ -263,7 +264,7 @@
       var most = Math.max(0, copy.offsetHeight - layer.clientHeight);
       copy.style.top = -Math.min(Math.max(0, down), most) + "px";
     }
-    holdCopyDrawings(copy);
+    holdCopyDrawings(copy, layer);
     place(along);
     void layer.offsetWidth;  // settle the first place, so that the next one is animated from it
   }

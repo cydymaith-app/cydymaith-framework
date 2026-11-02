@@ -201,12 +201,12 @@ test("the page glue guards the cases the plan names", () => {
   assert.ok(SOURCE.includes('"pageshow"'), "a page restored from the cache is put back");
 });
 
-test("a drawing fixed to the middle of the screen is put in the middle of the screen as a place in the box that moves", () => {
-  const size = { width: 377, height: 784 };
-  const screen = { width: 393, height: 852 };
-  assert.deepEqual(centredIn(size, screen, { left: 0, top: 0 }), { left: 8, top: 34 });
-  // The sliding page sits under the title bar and beside the rail: the same screen place, seen from its top-left corner.
-  assert.deepEqual(centredIn(size, screen, { left: 56, top: 60 }), { left: -48, top: -26 });
-  // A page scrolled up by 100px has its corner above the screen's top, so the drawing is 100px further down the page.
-  assert.deepEqual(centredIn(size, screen, { left: 56, top: -40 }), { left: -48, top: 74 });
+test("a drawing fixed to the middle of the page area is put in the middle of the area as a place in the box that moves", () => {
+  const size = { width: 323, height: 401 };
+  const area = { width: 337, height: 792 };  // what the title bar and the rail leave of a phone's screen
+  assert.deepEqual(centredIn(size, area, { left: 0, top: 0 }), { left: 7, top: 195.5 });
+  // A box that has slid half a screen away has its corner that far from the area's, so the drawing is that far the other way.
+  assert.deepEqual(centredIn(size, area, { left: 168.5, top: 0 }), { left: -161.5, top: 195.5 });
+  // A page scrolled up by 100px has its corner above the area's top, so the drawing is 100px further down the page.
+  assert.deepEqual(centredIn(size, area, { left: 0, top: -100 }), { left: 7, top: 295.5 });
 });
