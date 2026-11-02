@@ -30,6 +30,8 @@ a{color:inherit}
 
 /* frame: a title bar across the full width, then a rail beside the page */
 :root{--bar:3.75rem;--rail:3.5rem}
+/* a card is its surface colour, 15% transparent, so a backdrop shows faintly through it (palettes.BACKDROP_CARD keeps the text legible there) */
+:root{--card:color-mix(in srgb,var(--surface) 85%,transparent)}
 .app{display:grid;grid-template-columns:3.5rem minmax(0,1fr);grid-template-rows:auto 1fr;min-height:100vh;min-height:100dvh;overflow-x:clip}
 .topbar{
   grid-column:1/-1;grid-row:1;position:sticky;top:var(--inset-top);z-index:5;
@@ -141,7 +143,7 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
 .search-topics[hidden]{display:none}
 .terms tr{scroll-margin-top:calc(var(--bar) + 1rem)}
 .terms tr:target{background:var(--bg)}
-.page{max-width:44rem}
+.page{max-width:none}  /* cards and their rows stretch across the page area; paragraphs keep their own readable width */
 .page.wide{max-width:64rem}
 
 /* page head */
@@ -212,7 +214,7 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .terms th.l1{padding-block:.7rem;padding-inline:0 1rem;text-align:start;font-weight:400;vertical-align:baseline;overflow-wrap:anywhere}
 .terms td{padding:.55rem 0;vertical-align:baseline;overflow-wrap:anywhere}
 .terms .l2{font:500 1.1rem/1.3 var(--font-l2)}
-.card{margin-top:.75rem;padding:.25rem 1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.card{margin-top:.75rem;padding:.25rem 1rem;background:var(--card);border:1px solid var(--rule);border-radius:12px}
 /* a page's backdrop: a drawing fixed behind everything, never a control and never read aloud; the cards let it show through, and the
    title bar and the rail cover it, so it is sized and centred within the page area they leave (below the bar, beside the rail), where
    it is all in view. Its colour is a tint of the palette's own background (palettes.backdrop_shades, in palettes.css), a
@@ -232,7 +234,6 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .backdrop[data-body="green"] > :first-child{color:var(--backdrop-green)}
 .backdrop[data-body="blue"] > :first-child{color:var(--backdrop-blue)}
 .backdrop[data-body="gold"] > :first-child{color:var(--backdrop-gold)}
-:is(.backdrop ~ .app,main:has(.backdrop)) .card{background:color-mix(in srgb,var(--surface) 80%,transparent)}
 /* the site's backdrop (backdrop.js): a window --window units wide on a drawing --w by --h units, scaled to the page area's width
    (at most 1.2 times its height), and on a tall screen to at least 0.8 times its height. The place (--x, --y) sits across the
    middle of the page area and --backdrop-rise of the way down it. Moving from page to page is a transition between places.
@@ -497,7 +498,7 @@ section[id],.fold.sec[id]{scroll-margin-top:calc(var(--inset-top) + var(--bar) +
 .l10n-body .fold > summary > h2,.about-text .fold > summary > h2,.fold.sec > summary > :is(h2,h3){margin:0}
 /* A section of a topic is itself the card, in the surface colour, and the table inside it is see-through, so the heading and the rows
    sit on one surface. The cards are set close together, since each is a line until it is opened. */
-.fold.sec{margin-top:.6rem;padding-inline:1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.fold.sec{margin-top:.6rem;padding-inline:1rem;background:var(--card);border:1px solid var(--rule);border-radius:12px}
 .fold.sec:first-child{margin-top:1.25rem}
 .fold.sec > summary{padding-block:.55rem}  /* a heading of two lines needs room above and below */
 .fold.sec[open]{padding-block-end:.5rem}

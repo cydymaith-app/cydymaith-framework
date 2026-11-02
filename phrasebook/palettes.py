@@ -256,7 +256,7 @@ DEFAULT_TINT = "grey"
 BACKDROP_SHADE = 0.10  # the most, in OKLab lightness, that a backdrop's lines are shaded from the background
 BACKDROP_STEP = 0.005
 BACKDROP_FLOOR = 0.02  # less than this and the drawing is hardly there, so it is not drawn at all
-BACKDROP_CARD = 0.8  # how much of the surface a card keeps over a backdrop (style.css), so a line shows faintly through it
+BACKDROP_CARD = 0.85  # how much of the surface a card keeps over a backdrop (style.css, --card: 15% transparent), so a line shows faintly through it
 
 
 def backdrop_colour(bg, variant, shade, tint):
