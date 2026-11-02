@@ -8,7 +8,7 @@ A project is a folder:
     packs/<code>/help.json          optional: that language's text for the help book (see help.py)
     editions/<name>.json            which languages to publish, the default pair, branding and stylesheets
     icons/<name>.svg                line icons that groups and pages name with "icon" (see icons.py)
-    backdrops/<name>.svg            faded drawings behind a group's page, named with "backdrop" (decoration only)
+    backdrops/<name>.svg            faded drawings behind the pages, named with "backdrop" (decoration only)
     palettes/<id>.json              colour palettes the visitor can choose, added to the framework's own (see palettes.py)
     static/                         files copied to the output as they are (project stylesheet, icons)
 
@@ -151,6 +151,7 @@ def validate(raw):
     for g in structure["groups"]:
         check_icon(f"structure.json group {g['id']!r}", g.get("icon"), raw["icons"])
         check_backdrop(f"structure.json group {g['id']!r}", g.get("backdrop"), raw.get("backdrops", {}))
+    check_route(structure.get("backdrop"), raw.get("backdrops", {}))
     for slug, p in pages.items():
         check_icon(f"pages/{slug}.json", p.get("icon"), raw["icons"])
     for code, pack in packs.items():
@@ -256,6 +257,38 @@ def check_backdrop(where, name, available):
             if isinstance(name, str)
             else f"{where}: 'backdrop' must be the name of a file in backdrops/"
         )
+
+
+ROUTE_KEYS = {"name", "window", "route"}
+
+
+def check_route(route, available):
+    """The site's optional backdrop, "backdrop" at the top of structure.json: {"name": a file in backdrops/, "window": how many
+    of the drawing's units wide the part in view is, "route": the [x, y] places, in the drawing's units, that the pages are
+    spread along, the home page at the first}. Every place must be inside the drawing's viewBox."""
+    if route is None:
+        return
+    where = "structure.json backdrop"
+    if not isinstance(route, dict) or set(route) != ROUTE_KEYS:
+        raise ContentError(f"{where}: must be an object with exactly {', '.join(sorted(ROUTE_KEYS))}")
+    check_backdrop(where, route["name"], available)
+    window = route["window"]
+    if isinstance(window, bool) or not isinstance(window, (int, float)) or window <= 0:
+        raise ContentError(f"{where}: 'window' must be a positive number of the drawing's units")
+    places = route["route"]
+    if (
+        not isinstance(places, list)
+        or not places
+        or any(
+            not isinstance(p, list) or len(p) != 2 or any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in p)
+            for p in places
+        )
+    ):
+        raise ContentError(f"{where}: 'route' must be a list of [x, y] places")
+    x0, y0, width, height = icons.view_box(available[route["name"]])
+    for x, y in places:
+        if not (x0 <= x <= x0 + width and y0 <= y <= y0 + height):
+            raise ContentError(f"{where}: the place [{x}, {y}] is outside backdrops/{route['name']}.svg")
 
 
 def check_icon(where, name, available):

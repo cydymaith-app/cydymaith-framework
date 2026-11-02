@@ -270,7 +270,10 @@
       }
       if (!stage) stageBeside(other, forward, anchorOf(href));
       var width = stage.width;
-      glide(width, Math.max(MIN_MS, Math.round(SLIDE_MS * (1 - along / width))), function () {
+      var ms = Math.max(MIN_MS, Math.round(SLIDE_MS * (1 - along / width)));
+      // The site's backdrop (backdrop.js) moves to the other page's place as the two slide.
+      document.dispatchEvent(new CustomEvent("phrasebook:travel", { detail: { page: stage.page, ms: ms } }));
+      glide(width, ms, function () {
         window.location.href = marked(href, "none", from);
       });
     });

@@ -11,6 +11,7 @@ writing direction differs, dir="...". The document itself carries the interface 
 import datetime
 import html
 import json
+import math
 import pathlib
 import re
 import unicodedata
@@ -70,6 +71,8 @@ class Site:
         self.groups = [g for g in self.groups if g["pages"]]
         # A page of a one-page group has no file of its own: it is an accordion on the group's page (see one_page).
         self.homes = {s: g["id"] for g in self.groups if g["layout"] == "one-page" for s in g["pages"]}
+        self.route = raw["structure"].get("backdrop")  # the site's backdrop, moving along its drawing from page to page
+        self.places = self.route_places() if self.route else {}
 
     # -- lookups
 
@@ -526,6 +529,52 @@ class Site:
             seq += [f"group-{g['id']}"] if g["layout"] == "one-page" else g["pages"]
         return seq
 
+    def route_pages(self):
+        """The pages the site's backdrop moves along, in reading order: the home page, then each group's page and its topics'
+        own pages. A group's page with a backdrop of its own keeps that drawing, and is left out."""
+        keys = ["index"]
+        for g in self.groups:
+            keys += ([] if g["backdrop"] else [f"group-{g['id']}"]) + [s for s in g["pages"] if s not in self.homes]
+        return keys
+
+    def route_places(self):
+        """{page key: (x, y)}: where each page of the route sits on the drawing, spread evenly along the route by distance,
+        the home page at its first place and the last page at its last."""
+        points = [tuple(p) for p in self.route["route"]]
+        legs = [math.dist(a, b) for a, b in zip(points, points[1:])]
+        keys = self.route_pages()
+        places = {}
+        for i, key in enumerate(keys):
+            left = sum(legs) * i / (len(keys) - 1) if len(keys) > 1 else 0
+            at = points[0]
+            for (a, b), leg in zip(zip(points, points[1:]), legs):
+                if left <= leg:
+                    share = left / leg if leg else 0
+                    at = (a[0] + (b[0] - a[0]) * share, a[1] + (b[1] - a[1]) * share)
+                    break
+                left -= leg
+                at = b
+            places[key] = (round(at[0], 1), round(at[1], 1))
+        return places
+
+    def backdrop(self, current):
+        """(markup, place) for the drawing behind a page. A group's page with a backdrop of its own has it, still. Every other
+        page has the site's backdrop, if there is one, put at the page's place on the route; a page that is not on the route
+        (Settings, About, Help) has no place, and backdrop.js keeps the drawing where the page before left it. Without the
+        script each page shows its own place, and the others the first."""
+        group = next((g for g in self.groups if f"group-{g['id']}" == current), None)
+        if group and group["backdrop"]:
+            return self.backdrops[group["backdrop"]], None
+        if not self.route:
+            return "", None
+        place = self.places.get(current)
+        x, y = place or self.places["index"]
+        x0, y0, width, height = icons.view_box(self.raw["backdrops"][self.route["name"]])
+        style = f"--x0:{x0:g};--y0:{y0:g};--w:{width:g};--h:{height:g};--window:{self.route['window']:g};--x:{x:g};--y:{y:g}"
+        mark = f' data-place="{x:g} {y:g}"' if place else ""
+        svg = self.backdrops[self.route["name"]].replace('class="backdrop"', f'class="backdrop route" style="{style}"{mark}', 1)
+        return svg + self.BACKDROP_HOOK, place
+
     def href(self, slug, anchor=None):
         """The address of a topic, or of a place in it (`anchor`, a section id or a row's section.concept): its own page, or on a
         one-page group the group's page, at the topic's accordion or at the place."""
@@ -641,6 +690,8 @@ class Site:
     # it asks order.js (loaded in the head) to put them in order, so they are never seen moving. Without that script nothing happens and
     # they stay as written. It is written without a closing brace pair, which the project's check for unrendered templates rejects.
     ORDER_HOOK = '<script>(function(d){var v=new Event("phrasebook:order");v.page=d.currentScript.parentNode;d.dispatchEvent(v)})(document)</script>'
+    # Right after the site's backdrop, so backdrop.js (loaded in the head) puts it in place before anything is painted. Written the same way.
+    BACKDROP_HOOK = '<script>(function(d){var v=new Event("phrasebook:backdrop");v.page=d.currentScript.previousElementSibling;d.dispatchEvent(v)})(document)</script>'
 
     def tile(self, href, first, second, icon, ident, level=None, related=False):
         """A large touch target: the icon on a tile, with the name in both languages beneath. No icon, the name goes in the tile.
@@ -852,14 +903,17 @@ class Site:
                 f'<button type="button" class="rail-link arrange-toggle" id="arrange-button" hidden aria-pressed="false" '
                 f'aria-label="{arrange_name}" title="{arrange_name}">{self.ui_icons["tools"]}</button>'
             )
+        # The drawing sits outside the page, so it stays put while pages slide (nav.js) and moves along on its own.
+        backdrop, place = self.backdrop(current)
+        placed = f' data-place="{place[0]:g} {place[1]:g}"' if place else ""
         return (
-            f'<a class="skip" href="#main">{self.h("skip_to_content")}</a>'
+            f'<a class="skip" href="#main">{self.h("skip_to_content")}</a>{backdrop}'
             '<div class="app">'
             f'<header class="topbar"><div class="titles{" has-trail" if trail else ""}"><a class="brand" href="index.html"><span class="word">{e(self.name)}</span>'
             f"<small>{self.brand_small()}</small></a>{trail}</div>{trail_help}</header>"
             f'<nav class="rail" aria-label="{e(self.plain("settings"))}"><div class="rail-group">{search}{back}</div>'
             f'<div class="rail-group">{helping}{arrange}{about}{settings}</div></nav>'
-            f'<main id="main"><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
+            f'<main id="main"{placed}><div class="{"page wide" if wide else "page"}">{content}{pager}</div></main>'
             f"{self.search_card(current)}{card}"
             "</div>"
         )
@@ -985,7 +1039,7 @@ class Site:
     def group_page(self, group):
         """One group's topics as tiles, or on a one-page group as accordions (see one_page)."""
         frm, to, gid = self.frm, self.to, group["id"]
-        head = (self.backdrops[group["backdrop"]] if group["backdrop"] else "") + (
+        head = (
             f"<header><h1>{self.inline(frm, self.group_title(frm, gid))}</h1>"
             f'<p class="title-l2"{self.la(to)}>{e(self.group_title(to, gid))}</p></header>'
         )
@@ -1450,7 +1504,9 @@ class Site:
     def document(self, title, body, parent=None):
         # The script is blocking on purpose: it sets the saved preferences before the first paint.
         script = (
-            '<script src="app.js"></script>\n<script src="order.js"></script>\n<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
+            '<script src="app.js"></script>\n<script src="order.js"></script>\n'
+            + ('<script src="backdrop.js"></script>\n' if self.route else "")
+            + '<script src="nav.js" defer></script>\n<script src="search.js" defer></script>\n'
             '<script src="arrange.js" defer></script>\n<script src="help.js" defer></script>\n'
         )
         fonts = "".join(f'<link rel="stylesheet" href="{e(href)}">\n' for href in self.edition.get("fonts", []))

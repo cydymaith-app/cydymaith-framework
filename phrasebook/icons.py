@@ -117,3 +117,9 @@ def validate(icons):
 
 def markup(text):
     return parse("icon", text)
+
+
+def view_box(text):
+    """(x, y, width, height) of an accepted SVG's viewBox."""
+    x, y, width, height = (float(v) for v in re.search(r'viewBox="([^"]+)"', markup(text)).group(1).replace(",", " ").split())
+    return x, y, width, height

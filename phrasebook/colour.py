@@ -128,6 +128,11 @@ def contrast(first, second):
     return (a + 0.05) / (b + 0.05)
 
 
+def over(ground, top, alpha):
+    """`top` drawn over `ground` at opacity `alpha`, mixed in sRGB as a browser composites."""
+    return tuple(g + (t - g) * alpha for g, t in zip(ground, top))
+
+
 def distance(first, second):
     """Euclidean distance in OKLab. About 0.02 is just noticeable; 0.1 and more is plainly different."""
     return math.dist(rgb_to_oklab(first), rgb_to_oklab(second))

@@ -41,7 +41,7 @@ a{color:inherit}
   height:calc(100vh - var(--inset-top) - var(--bar));height:calc(100dvh - var(--inset-top) - var(--bar));
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;
   padding-block:.75rem;padding-inline-start:calc(var(--safe-start) - 16px);
-  border-inline-end:1px solid var(--rule-strong);
+  border-inline-end:1px solid var(--rule-strong);background:var(--bg);
 }
 .rail-group{display:flex;flex-direction:column;align-items:center;gap:.5rem}
 .rail-link{display:grid;place-items:center;width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);text-decoration:none;font:inherit}
@@ -78,7 +78,8 @@ main{grid-column:2;grid-row:2;min-width:0;padding-block:1.5rem 3rem;padding-inli
    the copy. The rail is given a background so that pages go under it, and the title bar (z-index 5) already has one. */
 .peek{position:fixed;z-index:3;inset-block:calc(var(--inset-top) + var(--bar)) 0;inset-inline:var(--rail) 0;overflow:hidden;pointer-events:none}
 .peek-page{position:absolute;inset-block-start:0;inset-inline-start:0;inline-size:100%;min-block-size:100%;box-sizing:border-box;background:var(--bg);will-change:transform}
-.is-sliding .rail{z-index:4;background:var(--bg)}
+.backdrop ~ .peek .peek-page{background:transparent}  /* the drawing behind stays in view while the two pages slide over it */
+.is-sliding .rail{z-index:4}
 /* Where the browser can animate a move between two pages of this site (a head script sets data-slide on <html>), the pages
    slide as if they sat side by side: going in, the old page leaves toward the start and the new one arrives from the end;
    going back, the reverse. Only the page moves: the title bar and the rail are named so they stay where they are. The
@@ -211,10 +212,25 @@ h2 .l2{font:500 1.05rem/1.3 var(--font-l2);color:var(--muted)}
 .terms td{padding:.55rem 0;vertical-align:baseline;overflow-wrap:anywhere}
 .terms .l2{font:500 1.1rem/1.3 var(--font-l2)}
 .card{margin-top:.75rem;padding:.25rem 1rem;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
-/* a page's backdrop: a faded drawing fixed behind the content, never a control and never read aloud; the cards let it show through */
-.backdrop{position:fixed;inset:0;z-index:0;margin:auto;block-size:92vh;max-inline-size:96vw;inline-size:auto;color:var(--muted);opacity:.14;pointer-events:none}
-.backdrop ~ *{position:relative;z-index:1}
-main:has(.backdrop) .card{background:color-mix(in srgb,var(--surface) 80%,transparent)}
+/* a page's backdrop: a faded drawing fixed behind everything, never a control and never read aloud; the cards let it show through,
+   and the title bar and the rail cover it. How strongly it is drawn is the palette's (palettes.backdrop_opacity, in palettes.css):
+   not at all at the high-contrast level, or where its lines would cost the text its contrast. */
+.backdrop{position:fixed;inset:0;z-index:-1;margin:auto;block-size:92vh;max-inline-size:96vw;inline-size:auto;color:var(--muted);
+  opacity:var(--backdrop-opacity,.08);display:var(--backdrop-display,block);pointer-events:none}
+.backdrop ~ .app .card{background:color-mix(in srgb,var(--surface) 80%,transparent)}
+/* the site's backdrop (backdrop.js): a window --window units wide on a drawing --w by --h units, as big as the page area allows,
+   with the place (--x, --y) in the middle of the page area. Moving from page to page is a transition between places. The lines
+   keep one weight at any size. */
+.backdrop.route{
+  --s:calc(min(100vw - var(--rail), 1.2 * (100vh - var(--inset-top) - var(--bar))) / var(--window));
+  inset:auto;margin:0;max-inline-size:none;
+  left:calc((100vw + var(--rail)) / 2);top:calc((100vh + var(--inset-top) + var(--bar)) / 2);
+  inline-size:calc(var(--w) * var(--s));block-size:calc(var(--h) * var(--s));
+  transform:translate(calc((var(--x0) - var(--x)) * var(--s)),calc((var(--y0) - var(--y)) * var(--s)));
+}
+:root[dir="rtl"] .backdrop.route{left:calc((100vw - var(--rail)) / 2)}
+.backdrop.route.moving{transition:transform .6s cubic-bezier(.4,0,.2,1)}
+.backdrop.route *{vector-effect:non-scaling-stroke;stroke-width:1.25px}
 @media (forced-colors:active){.backdrop{display:none}}
 .card .terms{margin-top:0;border-top:0}
 .card .terms tbody tr:first-child{border-top:0}

@@ -21,6 +21,7 @@ import phrasebook  # noqa: E402
 from phrasebook import content, icons, tree  # noqa: E402
 from phrasebook.help import Book  # noqa: E402
 from phrasebook.errors import ContentError  # noqa: E402
+from phrasebook.site import Site  # noqa: E402
 from test_framework import ENGINE, Scratch, quiet_build  # noqa: E402
 
 SVG = (
@@ -265,6 +266,88 @@ class BackdropSiteTests(Scratch):
         with self.assertRaises(ContentError) as ctx:
             quiet_build(self.tmp / "evil-out", project_dir=proj)
         self.assertIn("backdrops/evil.svg", str(ctx.exception))
+
+
+ROUTE = {"name": "outline", "window": 12, "route": [[4, 4], [20, 4], [20, 20]]}
+PLACE = re.compile(r'<main id="main" data-place="([\d.]+) ([\d.]+)"')
+
+
+class SiteBackdropTests(Scratch):
+    """The site's backdrop: "backdrop" at the top of structure.json, a drawing that moves along its route from page to page."""
+
+    def routed(self, route=ROUTE, group_backdrop=False):
+        proj = self.project()
+        add_backdrop(proj)
+        fixture.edit(proj / "structure.json", lambda d: d.update(backdrop=route))
+        if group_backdrop:
+            fixture.edit(proj / "structure.json", lambda d: d["groups"][0].update(backdrop="outline"))
+        return proj
+
+    def place(self, page):
+        found = PLACE.search(page)
+        return (float(found.group(1)), float(found.group(2))) if found else None
+
+    def test_every_page_has_the_drawing_outside_the_page_hidden_from_a_screen_reader(self):
+        for name, page in self.built(self.routed()).items():
+            self.assertIn('<svg class="backdrop route" style="', page, name)
+            self.assertIn('aria-hidden="true" focusable="false"', page[page.index('class="backdrop route"') :][:400], name)
+            self.assertLess(page.index('class="backdrop route"'), page.index('<div class="app">'), name)
+            self.assertIn('<script src="backdrop.js"></script>', page, name)
+
+    def test_the_home_page_is_at_the_first_place_and_the_last_page_of_the_route_at_the_last(self):
+        proj = self.routed()
+        pages = self.built(proj)
+        site = Site(content.read(proj), content.pick_edition(content.read(proj))[1])
+        keys = site.route_pages()
+        self.assertEqual(keys[0], "index")
+        self.assertEqual(self.place(pages["index.html"]), (4, 4))
+        self.assertEqual(self.place(pages[f"{keys[-1]}.html"]), (20, 20))
+
+    def test_the_route_pages_are_spread_along_the_route_in_reading_order(self):
+        proj = self.routed()
+        site = Site(content.read(proj), content.pick_edition(content.read(proj))[1])
+        keys = site.route_pages()
+        self.assertEqual(len(set(site.places.values())), len(keys), "each page has a place of its own")
+        along = [site.places[k][0] + site.places[k][1] for k in keys]  # this route only ever goes right, then down
+        self.assertEqual(along, sorted(along))
+
+    def test_a_page_off_the_route_has_the_drawing_at_the_start_and_no_place_of_its_own(self):
+        pages = self.built(self.routed())
+        for name in ("settings.html", "sources.html", "how-to.html"):
+            self.assertIsNone(self.place(pages[name]), name)
+            self.assertNotIn("data-place=", pages[name], name)
+            self.assertIn("--x:4;--y:4", pages[name], name)
+
+    def test_a_group_with_its_own_backdrop_keeps_it_still_and_its_topics_stay_on_the_route(self):
+        pages = self.built(self.routed(group_backdrop=True))
+        group = pages["group-g1.html"]
+        self.assertIn('<svg class="backdrop" aria-hidden="true"', group)
+        self.assertNotIn("backdrop route", group)
+        self.assertIsNone(self.place(group))
+        self.assertIsNotNone(self.place(pages["p1.html"]))
+
+    def test_without_a_site_backdrop_there_is_no_script_and_no_place(self):
+        for name, page in self.built(self.project()).items():
+            self.assertNotIn("backdrop.js", page, name)
+            self.assertNotIn("data-place=", page, name)
+
+    def test_a_site_backdrop_must_be_well_formed(self):
+        bad = [
+            "outline",
+            {"name": "outline", "route": [[1, 1]]},
+            {**ROUTE, "extra": 1},
+            {**ROUTE, "name": "ghost"},
+            {**ROUTE, "window": 0},
+            {**ROUTE, "window": True},
+            {**ROUTE, "route": []},
+            {**ROUTE, "route": [[1, 2, 3]]},
+            {**ROUTE, "route": [["a", 1]]},
+            {**ROUTE, "route": [[30, 1]]},
+        ]
+        for route in bad:
+            with self.assertRaises(ContentError, msg=route) as ctx:
+                content.validate(content.read(self.routed(route)))
+            self.assertIn("structure.json backdrop", str(ctx.exception), route)
 
 
 class CreditsTests(Scratch):

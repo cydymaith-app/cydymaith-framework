@@ -385,6 +385,56 @@ class PaletteCssTests(unittest.TestCase):
         self.assertNotIn("@import", self.css)
 
 
+class BackdropStrengthTests(unittest.TestCase):
+    """How strongly a backdrop is drawn in each palette (palettes.backdrop_opacity), and that it is said in palettes.css."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.all = palettes.load()
+        cls.strength = {pid: palettes.backdrop_opacity(p) for pid, p in cls.all.items()}
+
+    def test_the_high_contrast_level_draws_no_backdrop(self):
+        for pid, palette in self.all.items():
+            if palettes.access_level(palette) == "high":
+                self.assertEqual(self.strength[pid], {"light": 0.0, "dark": 0.0}, pid)
+
+    def test_a_backdrop_is_drawn_no_stronger_than_the_most_and_never_fainter_than_the_least(self):
+        for pid, strength in self.strength.items():
+            for variant, alpha in strength.items():
+                self.assertTrue(alpha == 0 or palettes.BACKDROP_FLOOR <= alpha <= palettes.BACKDROP_OPACITY, (pid, variant))
+
+    def test_where_a_backdrop_is_drawn_every_text_colour_keeps_its_contrast_across_its_lines(self):
+        for pid, palette in self.all.items():
+            needed = palettes.LEVELS[palette.get("level", "AA")]["text"]
+            for variant, colours in palettes.resolve(palette).items():
+                alpha = self.strength[pid][variant]
+                for kind in [None, *palette.get("colour_vision", [])]:
+                    seen = {r: colour.simulate(c, kind) if kind else c for r, c in colours.items()}
+                    line = colour.over(seen["bg"], seen["muted"], alpha)
+                    card = colour.over(line, seen["surface"], palettes.BACKDROP_CARD)
+                    for role in palettes.TEXT_ROLES:
+                        for ground in (line, card):
+                            self.assertGreaterEqual(colour.contrast(seen[role], ground), needed, (pid, variant, kind, role))
+
+    def test_a_safe_palette_whose_text_would_lose_contrast_draws_none(self):
+        # Light sepia-safe: as seen with protanopia, the faintest line already takes the third key colour under its level.
+        self.assertEqual(self.strength["sepia-safe"]["light"], 0.0)
+        self.assertGreater(self.strength["sepia-safe"]["dark"], 0.0)
+
+    def test_the_card_share_is_the_stylesheets(self):
+        style = (pathlib.Path(palettes.__file__).parent / "assets" / "style.css").read_text(encoding="utf-8")
+        self.assertIn(f"color-mix(in srgb,var(--surface) {round(palettes.BACKDROP_CARD * 100)}%,transparent)", style)
+
+    def test_every_rule_says_how_strongly_and_whether_the_backdrop_is_drawn(self):
+        css = palettes.css(self.all, list(self.all))
+        for line in css.splitlines():
+            if "--bg:" in line:
+                self.assertRegex(line, r"--backdrop-opacity:[\d.]+;--backdrop-display:(block|none);color-scheme:")
+        self.assertIn('[data-palette="high-contrast"]{', css)
+        high = next(l for l in css.splitlines() if l.startswith(':root[data-palette="high-contrast"]{'))
+        self.assertIn("--backdrop-opacity:0;--backdrop-display:none", high)
+
+
 class LoadingTests(unittest.TestCase):
     def test_a_project_palette_is_added_after_the_framework_ones(self):
         import tempfile
