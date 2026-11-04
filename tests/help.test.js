@@ -10,7 +10,7 @@ const vm = require("node:vm");
 
 const FILE = path.join(__dirname, "..", "phrasebook", "assets", "help.js");
 const SOURCE = fs.readFileSync(FILE, "utf8");
-const { apply, toggle, place, say, anchor, fit, context, message, mailto, copied, sections, MAX_CONTEXT } = require(FILE);
+const { apply, toggle, place, say, anchor, fit, context, message, contribution, mailto, copied, sections, MAX_CONTEXT } = require(FILE);
 
 function fakeRoot() {
   const attrs = {};
@@ -136,6 +136,13 @@ test("the message is the person's words, then the lines the app adds", () => {
   assert.equal(message("It is wrong.", "Page: a.html"), "It is wrong.\n\nPage: a.html");
   assert.equal(message("   ", "Page: a.html"), "Page: a.html");
   assert.equal(message(undefined, "Page: a.html"), "Page: a.html");
+});
+
+test("a contribution names each language that has words in it, then the lines the app adds", () => {
+  const both = [{ name: "Cymraeg", text: " Llefrith " }, { name: "English", text: "Milk" }];
+  assert.equal(contribution(both, "Page: a.html"), "Cymraeg:\nLlefrith\n\nEnglish:\nMilk\n\nPage: a.html");
+  assert.equal(contribution([both[0], { name: "English", text: "  " }], "Page: a.html"), "Cymraeg:\nLlefrith\n\nPage: a.html");
+  assert.equal(contribution([{ name: "A", text: "" }, { name: "B" }], "Page: a.html"), "Page: a.html");
 });
 
 test("the mail link encodes the subject and the body", () => {

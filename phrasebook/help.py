@@ -99,6 +99,7 @@ SECTIONS = [
             {"id": "help-button"},
             {"id": "help-icons"},
             {"id": "report-a-problem", "requires": "contact"},
+            {"id": "contribute", "requires": "contact"},
         ],
     },
 ]

@@ -314,7 +314,7 @@
     "help-icons": {
       "title": "Asking about a feature",
       "body": [
-        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second, where the site has an address for reports. A toggle at the top of the window switches between the two languages, and the small x closes it."
+        "Choose an icon to open a small sheet. What's this? comes first and shows the help for that feature in a window you can close; the same words are in the help book. Report a problem comes second and Contribute third, where the site has an address. A toggle at the top of the window switches between the two languages, and the small x closes it."
       ],
       "keys": "Tab to an icon, then Enter. Escape closes the window.",
       "touch": "Tap an icon, then What's this?. Tap the x, or outside the window, to dismiss it."
@@ -326,6 +326,15 @@
       ],
       "keys": "Tab to Open email or Copy, then Enter.",
       "touch": "Tap Open email or Copy."
+    },
+    "contribute": {
+      "title": "Contributing",
+      "body": [
+        "Contribute is for a word, a phrase or a correction you would like to see in the app. There is a box for each language of the pair; fill in one or both. It shows the email it would write, with the same few lines the app adds (never more than 256 characters), before anything leaves your device. Open email opens your own mail app and Copy copies the text; the app never sends anything itself.",
+        "A suggestion is not added until it has been reviewed. If it is reviewed and added to the app, it is released under the MIT licence with the rest of the work."
+      ],
+      "keys": "Tab to Contribute, then Enter.",
+      "touch": "Tap an icon, then Contribute."
     }
   }
 }

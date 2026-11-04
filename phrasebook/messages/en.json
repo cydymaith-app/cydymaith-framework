@@ -129,5 +129,9 @@
   "help_copy": "Copy",
   "help_copied": "Copied.",
   "help_copy_failed": "Could not copy. Select the text and copy it yourself.",
-  "help_subject": "{site}: problem report"
+  "help_subject": "{site}: problem report",
+  "help_contribute": "Contribute",
+  "help_contribute_lede": "Suggest a word, a phrase or a correction, in one language or both. This is the email that will be written: the app sends nothing, and you send it from your own mail app.",
+  "help_contribute_licence": "A suggestion is not added until it has been reviewed. If it is reviewed and added to the app, it is released under the MIT licence with the rest of the work.",
+  "help_contribute_subject": "{site}: contribution"
 }

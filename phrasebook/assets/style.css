@@ -316,6 +316,7 @@ html[data-keys="line"] .key[data-k="3"]{text-decoration-style:wavy}
 .help-label{display:block;margin-top:.9rem;font-weight:600}
 .help-label textarea{display:block;box-sizing:border-box;width:100%;margin-top:.3rem;padding:.5rem;border:1px solid var(--rule-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:400 .95rem/1.4 var(--font-ui)}
 .help-label textarea[readonly]{color:var(--muted)}
+.help-note{margin:.9rem 0 0;color:var(--muted);font-size:.9rem}
 .help-status{margin:.5rem 0 0;color:var(--muted)}
 .help-text{margin-top:.75rem}
 .help-text + .help-text{padding-top:.75rem;border-top:1px solid var(--rule)}

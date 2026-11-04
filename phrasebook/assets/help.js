@@ -3,7 +3,8 @@
    data-help="<chapter>#<feature>") carries the button, hidden, and a shut card for the sheet. The stylesheet hides the icons until
    the page says it is helping: this script sets data-helping on the document element and the icons show. Pressing the button
    again, or Escape, puts the page back as it was.
-   Pressing an icon opens a sheet over the page: "What's this?" first, then "Report a problem" where the site has an address.
+   Pressing an icon opens a sheet over the page: "What's this?" first, then "Report a problem" and "Contribute" where the site has an
+   address. "Contribute" has a box for each language of the pair and writes the email the same way, with the same few lines.
    "What's this?" reads the help book's own page for that feature (the service worker has it cached, so it works offline) and shows
    just that feature's text, in each language the chapter is written in; it makes no other request. "Report a problem" shows the
    email it would write: what the person types, then a few lines the app adds (the page, the feature, when the app was built and
@@ -74,6 +75,16 @@
     return said ? said + "\n\n" + added : added;
   }
 
+  // A contribution: each language's box that has words in it, headed by the language's name, then the lines the app adds.
+  function contribution(parts, added) {
+    var said = [];
+    for (var i = 0; i < parts.length; i++) {
+      var text = String(parts[i].text || "").trim();
+      if (text) said.push(String(parts[i].name || "") + ":\n" + text);
+    }
+    return said.length ? said.join("\n\n") + "\n\n" + added : added;
+  }
+
   // The link that opens the person's own mail app. Nothing is sent by this script.
   function mailto(address, subject, body) {
     return "mailto:" + address + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
@@ -113,7 +124,7 @@
   var api = {
     place: place,
     say: say,
-    apply: apply, toggle: toggle, anchor: anchor, fit: fit, context: context, message: message, mailto: mailto,
+    apply: apply, toggle: toggle, anchor: anchor, fit: fit, context: context, message: message, contribution: contribution, mailto: mailto,
     copied: copied, sections: sections, MAX_CONTEXT: MAX_CONTEXT
   };
 
@@ -264,6 +275,41 @@
       }
     }
 
+    // ---- Contribute
+    function contributed() {
+      return contribution([
+        { name: card.getAttribute("data-first"), text: card.querySelector("[data-contribute-first]").value },
+        { name: card.getAttribute("data-second"), text: card.querySelector("[data-contribute-second]").value }
+      ], added());
+    }
+
+    function previewContribution() {
+      var link = card.querySelector("[data-contribute-mail]");
+      card.querySelector("[data-contribute-added]").value = added();
+      if (link) link.setAttribute("href", mailto(address(), card.getAttribute("data-contribute-subject"), contributed()));
+    }
+
+    function contribute() {
+      say(card.querySelector("[data-contribute-status]"), null);
+      previewContribution();
+      show("contribute");
+    }
+
+    function copyContribution() {
+      var status = card.querySelector("[data-contribute-status]");
+      var text = copied(address(), card.getAttribute("data-contribute-subject"), contributed());
+      var nav = typeof navigator !== "undefined" ? navigator : {};
+      if (nav.clipboard && nav.clipboard.writeText) {
+        nav.clipboard.writeText(text).then(function () {
+          say(status, "copied");
+        }, function () {
+          say(status, "copy-failed");
+        });
+      } else {
+        say(status, "copy-failed");
+      }
+    }
+
     if (card) {
       card.addEventListener("click", function (event) {
         var target = event.target && event.target.closest ? event.target.closest("[data-act]") : null;
@@ -272,10 +318,15 @@
         if (act === "help") loadHelp();
         else if (act === "report") report();
         else if (act === "copy") copyMessage();
+        else if (act === "contribute") contribute();
+        else if (act === "copy-contribute") copyContribution();
         else if (act === "back") view("sheet");
         else if (act === "close") close(true);
       });
-      card.querySelector("[data-report-words]").addEventListener("input", preview);
+      var typed = card.querySelector("[data-report-words]");
+      if (typed) typed.addEventListener("input", preview);
+      var boxes = card.querySelectorAll("[data-contribute-first], [data-contribute-second]");
+      for (var b = 0; b < boxes.length; b++) boxes[b].addEventListener("input", previewContribution);
       // Tapping the dimmed page around the card dismisses it.
       layer.addEventListener("click", function (event) { if (event.target === layer) close(true); });
       // A revealed icon opens the sheet. A click with a modifier key, or a middle click, stays an ordinary link.

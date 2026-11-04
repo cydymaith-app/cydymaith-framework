@@ -61,6 +61,7 @@ ANCHORS = [
     "help-button",
     "help-icons",
     "report-a-problem",
+    "contribute",
 ]
 
 EN = json.loads((ENGINE / "help" / "en.json").read_text(encoding="utf-8"))
@@ -386,6 +387,9 @@ class BuiltBookTests(Scratch):
         self.assertIn('id="help-icons"', pages["help-using-help.html"])
         self.assertNotIn('data-act="report"', pages["index.html"])
         self.assertNotIn('data-view="report"', pages["index.html"])
+        self.assertNotIn('data-act="contribute"', pages["index.html"])
+        self.assertNotIn('data-view="contribute"', pages["index.html"])
+        self.assertNotIn('id="contribute"', pages["help-using-help.html"])
         self.assertIn('data-act="help"', pages["index.html"], "What's this? is always there")
 
     def test_every_help_entry_is_well_formed(self):
@@ -524,6 +528,20 @@ class HelpButtonTests(Scratch):
         self.assertIn('data-view="report" hidden', page)
         self.assertIn("data-report-words", page)
         self.assertIn("readonly data-report-added", page)
+
+    def test_contribute_is_third_and_has_a_box_for_each_language_of_the_pair_and_says_what_happens_to_it(self):
+        page = self.pages["index.html"]
+        sheet = page[page.index('data-view="sheet"') : page.index('data-view="help"')]
+        self.assertLess(sheet.index('data-act="report"'), sheet.index('data-act="contribute"'))
+        view = page[page.index('data-view="contribute"') :]
+        view = view[: view.index("</p></div>", view.index("data-contribute-status"))]
+        self.assertLess(view.index("data-contribute-first"), view.index("data-contribute-second"))
+        self.assertIn("readonly data-contribute-added", view)
+        self.assertIn("MIT licence", view)
+        self.assertIn('data-first="', page)
+        self.assertIn('data-second="', page)
+        self.assertIn('data-contribute-subject="', page)
+        self.assertNotIn("reports@example.org", page)
 
     def test_the_address_is_in_two_pieces_and_never_whole_in_a_page(self):
         for name, page in self.pages.items():

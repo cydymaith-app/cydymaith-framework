@@ -1382,7 +1382,8 @@ class Site:
         subject = self.plain("help_subject", site=self.name)
         data = (
             f' data-contact-user="{e(user)}" data-contact-host="{e(host)}" data-built="{e(built)}" data-pair="{e(pair)}"'
-            f' data-subject="{e(subject)}"'
+            f' data-subject="{e(subject)}" data-contribute-subject="{e(self.plain("help_contribute_subject", site=self.name))}"'
+            f' data-first="{e(self.endonym(self.frm))}" data-second="{e(self.endonym(self.to))}"'
         )
         radios, bar = self.language_toggle("help-lang", [self.frm, self.to])
         close_name = e(
@@ -1392,7 +1393,25 @@ class Site:
         report_view = ""
         if contact:
             sheet_buttons += f'<button type="button" data-act="report">{self.both("help_report")}</button>'
-            report_view = (
+            sheet_buttons += f'<button type="button" data-act="contribute">{self.both("help_contribute")}</button>'
+            report_view += (
+                '<div class="help-view" data-view="contribute" hidden>'
+                f'<h3>{self.both("help_contribute")}</h3>'
+                f'<p>{self.both("help_contribute_lede")}</p>'
+                f'<label class="help-label">{e(self.endonym(self.frm))}'
+                '<textarea rows="3" data-contribute-first></textarea></label>'
+                f'<label class="help-label">{e(self.endonym(self.to))}'
+                '<textarea rows="3" data-contribute-second></textarea></label>'
+                f'<label class="help-label">{self.both("help_report_context")}'
+                '<textarea rows="3" readonly data-contribute-added></textarea></label>'
+                f'<p class="help-note">{self.both("help_contribute_licence")}</p>'
+                f'<p class="help-actions"><a class="help-button" data-contribute-mail href="#">{self.both("help_open_email")}</a>'
+                f'<button type="button" data-act="copy-contribute">{self.both("help_copy")}</button>'
+                f'<button type="button" data-act="back">{self.both("back")}</button></p>'
+                f'<p class="help-status" role="status" data-contribute-status>{self.help_status("copied", "help_copied")}'
+                f'{self.help_status("copy-failed", "help_copy_failed")}</p></div>'
+            )
+            report_view += (
                 '<div class="help-view" data-view="report" hidden>'
                 f'<h3>{self.both("help_report")}</h3>'
                 f'<p>{self.both("help_report_lede")}</p>'
